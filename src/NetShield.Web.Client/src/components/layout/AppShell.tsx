@@ -58,7 +58,7 @@ export function AppShell({ children }: AppShellProps) {
               })}
         />
         <main className="min-h-0 flex-1 overflow-y-auto p-content">
-          <div className="mx-auto max-w-content">{children}</div>
+          <div className="mx-auto max-w-page">{children}</div>
         </main>
       </div>
     </div>

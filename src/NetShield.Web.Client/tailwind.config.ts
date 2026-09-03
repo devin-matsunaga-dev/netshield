@@ -102,7 +102,10 @@ const config: Config = {
         gutter: '20px',
       },
       maxWidth: {
-        content: '1600px',
+        // Not `content`: `max-w-*` resolves against the spacing scale first, so a spacing key of
+        // the same name shadows the entry here and the content column would cap at 24px rather
+        // than 1600px. No key may appear in both scales — `tokens.test.ts` fails if one does.
+        page: '1600px',
         search: '400px',
       },
       borderRadius: {
