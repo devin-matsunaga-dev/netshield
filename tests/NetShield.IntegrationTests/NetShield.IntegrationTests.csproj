@@ -19,6 +19,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\NetShield.Contracts\NetShield.Contracts.csproj" />
     <ProjectReference Include="..\..\src\NetShield.Platform\NetShield.Platform.csproj" />
+    <ProjectReference Include="..\..\src\Modules\NetShield.Identity\NetShield.Identity.csproj" />
   </ItemGroup>
 
   <ItemGroup>

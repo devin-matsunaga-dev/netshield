@@ -54,8 +54,19 @@ public sealed class OrchestrationTests(AppHostModel model) : IClassFixture<AppHo
     {
         IReadOnlyList<string> references = RelationshipsOf("web-host", "Reference");
 
-        references.Should().BeEquivalentTo(["netshield", "cache", "mail"],
-            "the API reads PostgreSQL, Redis and the SMTP sink, and Aspire supplies all three");
+        references.Should().BeEquivalentTo(["netshield", "cache", "mail", "identity-admin-password"],
+            "the API reads PostgreSQL, Redis and the SMTP sink, Aspire supplies all three, and the "
+            + "first-run administrator's password reaches it the same way rather than from a file");
+    }
+
+    [Fact]
+    public void TheAdministratorSeedPassword_IsASecretParameter_SoItIsNeverWrittenIntoTheRepository()
+    {
+        ParameterResource parameter = model.Resource("identity-admin-password")
+            .Should().BeAssignableTo<ParameterResource>().Subject;
+
+        parameter.Secret.Should().BeTrue(
+            "the dashboard must mask it and it must not be written to the manifest in plaintext");
     }
 
     [Fact]

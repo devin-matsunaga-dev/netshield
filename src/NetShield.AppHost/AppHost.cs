@@ -47,12 +47,31 @@ IResourceBuilder<IResourceWithConnectionString> mailConnection = builder.AddConn
     ReferenceExpression.Create(
         $"smtp://{smtp.Property(EndpointProperty.Host)}:{smtp.Property(EndpointProperty.Port)}"));
 
+// The first-run administrator's initial password. Aspire generates it on first run and
+// persists it to the AppHost's user-secrets store, so it survives a restart and the
+// account it created still opens with it. The operator reads it once from the dashboard's
+// parameter list and is made to change it at first sign-in. It is never written into this
+// repository and never logged (SPEC.md §5).
+IResourceBuilder<ParameterResource> administratorPassword = builder.AddParameter(
+    "identity-admin-password",
+    new GenerateParameterDefault
+    {
+        MinLength = 20,
+        MinLower = 1,
+        MinUpper = 1,
+        MinNumeric = 1,
+        MinSpecial = 1
+    },
+    secret: true,
+    persist: true);
+
 // The API. /health/ready covers PostgreSQL and Redis, so the dashboard reports this
 // resource healthy only once the stores it depends on are actually reachable.
 builder.AddProject<Projects.NetShield_Web_Host>("web-host")
     .WithReference(database).WaitFor(database)
     .WithReference(cache).WaitFor(cache)
     .WithReference(mailConnection).WaitFor(mail)
+    .WithEnvironment("Identity__Seed__Password", administratorPassword)
     .WithHttpHealthCheck("/health/ready");
 
 // The push-ingest worker. Registered so that aspire run models every runtime process

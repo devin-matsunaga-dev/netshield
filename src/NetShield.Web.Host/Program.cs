@@ -1,6 +1,10 @@
 // NetShield.Web.Host is the composition root: the API, RBAC, and SPA hosting
 // (ARCHITECTURE.md §2 and §4). Endpoint mapping and module registration arrive in
 // later packages; this wires the host to the infrastructure Aspire supplies.
+using NetShield.Identity;
+using NetShield.Identity.Endpoints;
+using NetShield.Identity.Persistence;
+
 using NetShield.Platform;
 using NetShield.Platform.Persistence;
 using NetShield.Platform.Problems;
@@ -19,9 +23,18 @@ builder.AddNpgsqlDbContext<PlatformDbContext>(
     configureDbContextOptions: options => options.UseNetShieldConventions());
 builder.AddRedisClient(ConnectionNames.Cache);
 
+// The Identity module's tables live in the same database. Its readiness is already covered
+// by the context above, so this one contributes no second check on the same connection.
+builder.AddNpgsqlDbContext<IdentityDbContext>(
+    ConnectionNames.Database,
+    settings => settings.DisableHealthChecks = true,
+    options => options.UseIdentityConventions());
+
 builder.AddNetShieldPlatform();
 builder.AddOutboxDispatcher();
 builder.Services.AddNetShieldProblemDetails();
+
+builder.AddNetShieldIdentity();
 
 WebApplication app = builder.Build();
 
@@ -29,6 +42,10 @@ WebApplication app = builder.Build();
 // else has a chance to render it (SPEC.md §5).
 app.UseNetShieldProblemDetails();
 
+app.UseAuthentication();
+app.UseAuthorization();
+
 app.MapDefaultEndpoints();
+app.MapIdentityEndpoints();
 
 app.Run();

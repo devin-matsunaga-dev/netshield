@@ -39,6 +39,56 @@ public sealed partial class ConfigurationTests
             + "environment; Aspire supplies all three (SPEC.md §5)");
     }
 
+    [Fact]
+    public void NoSettingsFile_DeclaresASecretValue()
+    {
+        IReadOnlyList<string> offenders = SettingsFiles
+            .SelectMany(path => SecretValuesIn(path)
+                .Select(member => $"{Repository.RelativeToRoot(path)}: {member}"))
+            .ToList();
+
+        offenders.Should().BeEmpty(
+            "a password, a token, a community string or a key reaches a NetShield process from "
+            + "its environment — an Aspire parameter in development, a mounted secret in "
+            + "deployment — and is never committed (SPEC.md §5, CLAUDE.md)");
+    }
+
+    /// <summary>
+    /// Every leaf in <paramref name="path"/> whose member name reads as a secret and whose value
+    /// is not empty. An empty value is a placeholder declaring the shape, which is fine.
+    /// </summary>
+    private static IEnumerable<string> SecretValuesIn(string path)
+    {
+        using JsonDocument document = JsonDocument.Parse(File.ReadAllText(path));
+
+        return Walk(document.RootElement, prefix: string.Empty).ToList();
+
+        static IEnumerable<string> Walk(JsonElement element, string prefix)
+        {
+            if (element.ValueKind != JsonValueKind.Object)
+            {
+                yield break;
+            }
+
+            foreach (JsonProperty member in element.EnumerateObject())
+            {
+                string name = prefix.Length == 0 ? member.Name : $"{prefix}:{member.Name}";
+
+                if (SecretMemberName().IsMatch(member.Name)
+                    && member.Value.ValueKind == JsonValueKind.String
+                    && member.Value.GetString() is { Length: > 0 })
+                {
+                    yield return name;
+                }
+
+                foreach (string nested in Walk(member.Value, name))
+                {
+                    yield return nested;
+                }
+            }
+        }
+    }
+
     private static bool DeclaresAConnectionString(string path)
     {
         using JsonDocument document = JsonDocument.Parse(File.ReadAllText(path));
@@ -53,6 +103,17 @@ public sealed partial class ConfigurationTests
 
     private static IReadOnlyList<string> SourceFiles { get; } =
         Repository.EnumerateFiles(Path.Combine(Repository.Root, "src"), "*.cs");
+
+    /// <summary>
+    /// A configuration member name that must never carry a committed value. Kept in step with
+    /// <c>NetShield.Platform.Logging.SecretRedactor</c>, and deliberately restated here rather
+    /// than referenced: these tests read the repository as files and take no dependency on the
+    /// code they are judging.
+    /// </summary>
+    [GeneratedRegex(
+        """(pass(word|wd|phrase)|pwd|secret|token|api[-_]?key|credential|community|private[-_]?key|authorization|cookie|kek|dek)""",
+        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
+    private static partial Regex SecretMemberName();
 
     /// <summary>A single-line C# string literal, interpolated or not, with escapes honoured.</summary>
     [GeneratedRegex(""""
