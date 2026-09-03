@@ -25,6 +25,12 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\src\NetShield.Contracts\NetShield.Contracts.csproj" />
+    <ProjectReference Include="..\..\src\NetShield.Platform\NetShield.Platform.csproj" />
+    <ProjectReference Include="..\..\src\NetShield.ServiceDefaults\NetShield.ServiceDefaults.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Using Include="Xunit" />
   </ItemGroup>
 

@@ -406,3 +406,10 @@ dotnet_naming_style.s_camelcase.required_suffix =
 dotnet_naming_style.s_camelcase.word_separator = 
 dotnet_naming_style.s_camelcase.capitalization = camel_case
 
+
+# EF Core migrations (WP-0.3)
+# `dotnet ef migrations add` writes these, and CONVENTIONS.md §3 forbids editing one after it
+# merges. Marking them generated keeps `dotnet format --verify-no-changes` from failing on a
+# file the tooling produced and nobody may touch.
+[**/Persistence/Migrations/*.cs]
+generated_code = true

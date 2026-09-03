@@ -17,7 +17,7 @@ public sealed partial class ConfigurationTests
     {
         IReadOnlyList<string> offenders = SettingsFiles
             .Where(DeclaresAConnectionString)
-            .Select(RelativeToRoot)
+            .Select(Repository.RelativeToRoot)
             .ToList();
 
         offenders.Should().BeEmpty(
@@ -31,7 +31,7 @@ public sealed partial class ConfigurationTests
             .SelectMany(path => StringLiteral()
                 .Matches(File.ReadAllText(path))
                 .Where(literal => ConnectionShape().IsMatch(literal.Value))
-                .Select(literal => $"{RelativeToRoot(path)}: {literal.Value}"))
+                .Select(literal => $"{Repository.RelativeToRoot(path)}: {literal.Value}"))
             .ToList();
 
         offenders.Should().BeEmpty(
@@ -48,6 +48,12 @@ public sealed partial class ConfigurationTests
             && section.EnumerateObject().Any();
     }
 
+    private static IReadOnlyList<string> SettingsFiles { get; } =
+        Repository.EnumerateFiles(Repository.Root, "appsettings*.json");
+
+    private static IReadOnlyList<string> SourceFiles { get; } =
+        Repository.EnumerateFiles(Path.Combine(Repository.Root, "src"), "*.cs");
+
     /// <summary>A single-line C# string literal, interpolated or not, with escapes honoured.</summary>
     [GeneratedRegex(""""
         "(?:[^"\\\r\n]|\\.)*"
@@ -63,38 +69,4 @@ public sealed partial class ConfigurationTests
         """(Host|Server|Data Source|User ID|User Id|Username|Password|Pwd)\s*=|(postgres|postgresql|redis|amqp)://|localhost|127\.0\.0\.1""",
         RegexOptions.IgnoreCase)]
     private static partial Regex ConnectionShape();
-
-    private static string RepositoryRoot { get; } = FindRepositoryRoot();
-
-    private static IReadOnlyList<string> SettingsFiles { get; } =
-        EnumerateFiles(RepositoryRoot, "appsettings*.json");
-
-    private static IReadOnlyList<string> SourceFiles { get; } =
-        EnumerateFiles(Path.Combine(RepositoryRoot, "src"), "*.cs");
-
-    private static IReadOnlyList<string> EnumerateFiles(string root, string pattern) =>
-        Directory.EnumerateFiles(root, pattern, SearchOption.AllDirectories)
-            .Where(path => !IsBuildOutput(path))
-            .OrderBy(path => path, StringComparer.Ordinal)
-            .ToList();
-
-    private static bool IsBuildOutput(string path) =>
-        Path.GetRelativePath(RepositoryRoot, path)
-            .Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
-            .Any(segment => segment is "bin" or "obj" or "node_modules");
-
-    private static string RelativeToRoot(string path) => Path.GetRelativePath(RepositoryRoot, path);
-
-    private static string FindRepositoryRoot()
-    {
-        DirectoryInfo? directory = new(AppContext.BaseDirectory);
-
-        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "NetShield.sln")))
-        {
-            directory = directory.Parent;
-        }
-
-        return directory?.FullName
-            ?? throw new InvalidOperationException("Could not locate NetShield.sln above the test assembly.");
-    }
 }
