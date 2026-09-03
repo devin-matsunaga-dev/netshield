@@ -1,0 +1,41 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(dotnet build:*)",
+      "Bash(dotnet test:*)",
+      "Bash(dotnet ef:*)",
+      "Bash(dotnet format:*)",
+      "Bash(dotnet new:*)",
+      "Bash(dotnet sln:*)",
+      "Bash(dotnet add:*)",
+      "Bash(npm run:*)",
+      "Bash(npm test:*)",
+      "Bash(npm ci:*)",
+      "Bash(npx vitest:*)",
+      "Bash(uv run:*)",
+      "Bash(uv add:*)",
+      "Bash(uv sync:*)",
+      "Bash(ruff:*)",
+      "Bash(mypy:*)",
+      "Bash(pytest:*)",
+      "Bash(git status)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)",
+      "Bash(git branch:*)"
+    ],
+    "deny": [
+      "Bash(git push:*)",
+      "Bash(git reset --hard:*)",
+      "Bash(rm -rf:*)",
+      "Bash(snmpset:*)",
+      "Bash(ssh:*)",
+      "Bash(curl:*)",
+      "Bash(wget:*)",
+      "Read(./**/.env)",
+      "Read(./**/.env.*)",
+      "Read(./**/*.pem)",
+      "Read(./**/*.key)",
+      "Read(./**/secrets/**)"
+    ]
+  }
+}
