@@ -100,6 +100,33 @@ public sealed class OrchestrationTests(AppHostModel model) : IClassFixture<AppHo
     }
 
     [Fact]
+    public void WebClient_IsOrchestrated_SoOneCommandBringsUpTheWholeStack()
+    {
+        model.Resource("web-client").Should().NotBeNull(
+            "ARCHITECTURE.md §2 counts the SPA among the runtime processes, and a developer "
+            + "should not have to start it by hand");
+    }
+
+    [Fact]
+    public void WebClient_ReferencesTheApi_SoTheDevServerLearnsItsAddressRatherThanCarryingOne()
+    {
+        RelationshipsOf("web-client", "Reference").Should().BeEquivalentTo(["web-host"],
+            "the Vite proxy target reaches the SPA as a service-discovery variable; SPEC.md §5 "
+            + "keeps the address out of the repository");
+    }
+
+    [Fact]
+    public void WebClient_WaitsForItsPackagesAndTheApi_SoAFreshCloneComesUpWithOneCommand()
+    {
+        model.Resource("web-client")
+            .Annotations.OfType<WaitAnnotation>()
+            .Select(wait => wait.Resource.Name)
+            .Should().BeEquivalentTo(["web-client-installer", "web-host"],
+                "npm install runs first, and the dev server's proxy needs somewhere to send its "
+                + "first request");
+    }
+
+    [Fact]
     public void TheMailConnectionString_PointsAtTheSmtpSink_RatherThanAnExternalRelay()
     {
         RelationshipsOf("mail", "Reference").Should().BeEquivalentTo(["mailpit"]);

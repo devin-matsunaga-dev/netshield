@@ -1,0 +1,109 @@
+@import 'tailwindcss';
+@import '@fontsource-variable/inter';
+
+@config '../../tailwind.config.ts';
+
+/*
+  The one place a NetShield colour is written as a hex.
+
+  DESIGN.md §3 is the source; `theme.test.ts` reads that document and fails if a value here is
+  not the one it names. Components never see a hex — they see the token names the Tailwind theme
+  builds from these properties (DESIGN.md §9.1 and §9.3).
+*/
+
+:root {
+  color-scheme: dark;
+
+  /* Surfaces — three levels, low contrast, separated by borders rather than shadows. */
+  --ns-bg-base: #080b14;
+  --ns-bg-sidebar: #0b0f1a;
+  --ns-bg-surface: #111726;
+  --ns-bg-raised: #161d2e;
+  --ns-border-subtle: #1c2438;
+  --ns-border-strong: #2a3448;
+
+  /* Text */
+  --ns-text-primary: #e8ecf5;
+  --ns-text-secondary: #9ba6bf;
+  --ns-text-muted: #5e6a85;
+
+  /* Semantic — a solid value and its 12%-alpha tint. */
+  --ns-accent: #3b82f6;
+  --ns-accent-tint: #3b82f61f;
+  --ns-success: #22c55e;
+  --ns-success-tint: #22c55e1f;
+  --ns-warning: #f59e0b;
+  --ns-warning-tint: #f59e0b1f;
+  --ns-danger: #ef4444;
+  --ns-danger-tint: #ef44441f;
+  --ns-info: #38bdf8;
+  --ns-info-tint: #38bdf81f;
+  --ns-violet: #a855f7;
+  --ns-violet-tint: #a855f71f;
+  --ns-orange: #f97316;
+  --ns-orange-tint: #f973161f;
+
+  /* Categorical chart palette, in order, for series with no semantic meaning. */
+  --ns-chart-1: #a855f7;
+  --ns-chart-2: #3b82f6;
+  --ns-chart-3: #22c55e;
+  --ns-chart-4: #38bdf8;
+  --ns-chart-5: #64748b;
+}
+
+/*
+  Light is derived, not designed (DESIGN.md §2). Only the surface and text roles move: each is
+  the dark ramp read from the other end, so a surface that was one step above the page background
+  stays one step above it. Every semantic hue is unchanged, because a hue in NetShield encodes
+  state and state does not depend on which way round the chrome is.
+*/
+[data-theme='light'] {
+  color-scheme: light;
+
+  --ns-bg-base: #eef1f7;
+  --ns-bg-sidebar: #f6f8fc;
+  --ns-bg-surface: #ffffff;
+  --ns-bg-raised: #eaeef6;
+  --ns-border-subtle: #dde3ee;
+  --ns-border-strong: #c3ccdc;
+
+  --ns-text-primary: #101623;
+  --ns-text-secondary: #4a5570;
+  --ns-text-muted: #77839c;
+}
+
+@layer base {
+  html {
+    background-color: var(--ns-bg-base);
+  }
+
+  body {
+    @apply bg-base font-sans text-body text-secondary antialiased;
+  }
+
+  /*
+    Every interactive element is keyboard reachable with a visible focus ring
+    (CONVENTIONS.md §6). Set once, here, rather than remembered per control.
+  */
+  :focus-visible {
+    @apply rounded-control outline-2 outline-offset-2 outline-accent;
+  }
+
+  /* Tabular numerals on every metric value, table number column and chart axis. */
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+/*
+  DESIGN.md §7: restrained, and all of it inside prefers-reduced-motion: no-preference.
+*/
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

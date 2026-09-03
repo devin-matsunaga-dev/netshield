@@ -20,6 +20,7 @@
   </ItemGroup>
 
   <ItemGroup Label="Aspire hosting (AppHost only)">
+    <PackageVersion Include="Aspire.Hosting.JavaScript" Version="13.5.3" />
     <PackageVersion Include="Aspire.Hosting.PostgreSQL" Version="13.5.3" />
     <PackageVersion Include="Aspire.Hosting.Redis" Version="13.5.3" />
     <PackageVersion Include="Aspire.Hosting.Testing" Version="13.5.3" />
@@ -52,6 +53,13 @@
     <!-- .NET ships no Argon2. WP-0.4 names Argon2id, and Konscious is the maintained
          MIT-licensed managed implementation. -->
     <PackageVersion Include="Konscious.Security.Cryptography.Argon2" Version="1.3.1" />
+  </ItemGroup>
+
+  <ItemGroup Label="API description">
+    <!-- CONVENTIONS.md §4: OpenAPI generated from the endpoints, and the TypeScript client
+         generated from that. Microsoft.AspNetCore.OpenApi is not part of the shared framework,
+         so NetShield.Platform references it explicitly. -->
+    <PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="10.0.11" />
   </ItemGroup>
 
   <ItemGroup Label="Validation">

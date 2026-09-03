@@ -6,6 +6,7 @@ using NetShield.Identity.Endpoints;
 using NetShield.Identity.Persistence;
 
 using NetShield.Platform;
+using NetShield.Platform.Api;
 using NetShield.Platform.Auditing;
 using NetShield.Platform.Persistence;
 using NetShield.Platform.Problems;
@@ -42,11 +43,21 @@ builder.AddNetShieldAudit();
 
 builder.AddNetShieldIdentity();
 
+// The OpenAPI description of every /api endpoint. CONVENTIONS.md §4 generates it from the
+// endpoints and generates the TypeScript client from it; src/NetShield.Web.Host/openapi/v1.json
+// is the committed copy the client is built from.
+builder.AddNetShieldApiDocument();
+
 WebApplication app = builder.Build();
 
 // First in the pipeline: an unhandled exception must become problem details before anything
 // else has a chance to render it (SPEC.md §5).
 app.UseNetShieldProblemDetails();
+
+// Before authentication, so the SPA's own assets are served without touching the auth pipeline.
+// They are the shell that renders the sign-in page; there is no session yet to check.
+app.UseDefaultFiles();
+app.UseStaticFiles();
 
 app.UseAuthentication();
 
@@ -57,6 +68,10 @@ app.UseNetShieldAudit();
 app.UseAuthorization();
 
 app.MapDefaultEndpoints();
+app.MapNetShieldApiDocument();
 app.MapIdentityEndpoints();
+
+// Last: every path the API did not claim is a client-side route.
+app.MapNetShieldSpa();
 
 app.Run();

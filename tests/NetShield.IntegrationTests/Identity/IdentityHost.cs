@@ -19,6 +19,7 @@ using NetShield.IntegrationTests.Authorization;
 using NetShield.IntegrationTests.Platform;
 
 using NetShield.Platform;
+using NetShield.Platform.Api;
 using NetShield.Platform.Auditing;
 using NetShield.Platform.Persistence;
 using NetShield.Platform.Problems;
@@ -57,7 +58,8 @@ internal sealed class IdentityHost(
         PostgresFixture postgres,
         CancellationToken cancellationToken,
         string? seedPassword = null,
-        bool applyMigrations = true)
+        bool applyMigrations = true,
+        bool mapSpa = false)
     {
         string connectionString = await postgres.CreateDatabaseAsync(cancellationToken);
 
@@ -131,6 +133,13 @@ internal sealed class IdentityHost(
         application.UseAuthorization();
         application.MapIdentityEndpoints();
         application.MapProbeEndpoints();
+
+        // Off by default: the SPA fallbacks claim every path nothing else serves, which would
+        // turn the 404s the other tests rely on into something else.
+        if (mapSpa)
+        {
+            application.MapNetShieldSpa();
+        }
 
         await application.StartAsync(cancellationToken);
 

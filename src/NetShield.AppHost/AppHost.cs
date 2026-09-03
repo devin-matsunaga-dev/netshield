@@ -67,12 +67,21 @@ IResourceBuilder<ParameterResource> administratorPassword = builder.AddParameter
 
 // The API. /health/ready covers PostgreSQL and Redis, so the dashboard reports this
 // resource healthy only once the stores it depends on are actually reachable.
-builder.AddProject<Projects.NetShield_Web_Host>("web-host")
+IResourceBuilder<ProjectResource> webHost = builder.AddProject<Projects.NetShield_Web_Host>("web-host")
     .WithReference(database).WaitFor(database)
     .WithReference(cache).WaitFor(cache)
     .WithReference(mailConnection).WaitFor(mail)
     .WithEnvironment("Identity__Seed__Password", administratorPassword)
     .WithHttpHealthCheck("/health/ready");
+
+// The SPA, under the Vite dev server. In deployment Web.Host serves the built bundle out of its
+// own wwwroot and this resource does not exist; in development the dev server owns the page and
+// proxies /api to the reference below, which is the only way it learns the API's address
+// (SPEC.md §5). npm install runs first, so a fresh clone comes up with one command.
+builder.AddViteApp("web-client", "../NetShield.Web.Client")
+    .WithNpm()
+    .WithReference(webHost)
+    .WaitFor(webHost);
 
 // The push-ingest worker. Registered so that aspire run models every runtime process
 // and its traces reach the dashboard. The syslog and flow receivers, and any store it

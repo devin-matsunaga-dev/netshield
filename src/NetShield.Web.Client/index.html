@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="dark light" />
+    <title>NetShield</title>
+  </head>
+  <body>
+    <script>
+      // The theme before the first paint, so a reader who chose light does not see a dark frame
+      // on every load. The same key `src/lib/useTheme.ts` writes; a browser that refuses storage
+      // keeps the dark default, which is the only complete theme (DESIGN.md §2).
+      try {
+        var stored = window.localStorage.getItem('netshield.theme');
+        if (stored === 'light' || stored === 'dark') {
+          document.documentElement.dataset.theme = stored;
+        }
+      } catch (error) {
+        void error;
+      }
+    </script>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

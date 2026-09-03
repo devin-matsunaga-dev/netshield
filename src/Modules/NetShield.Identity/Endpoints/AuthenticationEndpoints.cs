@@ -26,6 +26,12 @@ namespace NetShield.Identity.Endpoints;
 /// Each route names the action its audit row carries. The row itself is written by the platform
 /// middleware whatever happens here — a refused sign-in is recorded as surely as a successful
 /// one, which is the half an operator reaches for first.
+///
+/// The response metadata on each route is what the OpenAPI document — and so the generated
+/// TypeScript client — is built from. Each handler returns <c>IResult</c> because it writes
+/// cookies as well as a body, and nothing can be inferred from that, so the shapes are declared.
+/// The declarations describe; they do not decide. Changing one changes the client, never the
+/// response.
 /// </remarks>
 public static class AuthenticationEndpoints
 {
@@ -46,17 +52,23 @@ public static class AuthenticationEndpoints
             .AddEndpointFilter<ValidationFilter<LoginRequest>>()
             .AllowAnonymous()
             .Audits("identity.login", TargetType)
-            .WithName("Login");
+            .WithName("Login")
+            .Produces<AuthenticatedUser>()
+            .ProducesValidationProblem()
+            .ProducesProblem(StatusCodes.Status401Unauthorized);
 
         group.MapPost("/refresh", RefreshAsync)
             .AllowAnonymous()
             .Audits("identity.session-refresh", TargetType)
-            .WithName("RefreshSession");
+            .WithName("RefreshSession")
+            .Produces<AuthenticatedUser>()
+            .ProducesProblem(StatusCodes.Status401Unauthorized);
 
         group.MapPost("/logout", LogoutAsync)
             .AllowAnonymous()
             .Audits("identity.logout", TargetType)
-            .WithName("Logout");
+            .WithName("Logout")
+            .Produces(StatusCodes.Status204NoContent);
 
         // A user who still owes a password change may reach exactly two authenticated routes:
         // the one that changes it, and the one that tells the client who they are so it can send
@@ -66,12 +78,19 @@ public static class AuthenticationEndpoints
             .RequireAuthorization()
             .AllowsPendingPasswordChange()
             .Audits("identity.password-change", TargetType)
-            .WithName("ChangePassword");
+            .WithName("ChangePassword")
+            .Produces<AuthenticatedUser>()
+            .ProducesValidationProblem()
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status422UnprocessableEntity);
 
         group.MapGet("/me", CurrentUserAsync)
             .RequireAuthorization()
             .AllowsPendingPasswordChange()
-            .WithName("CurrentUser");
+            .WithName("CurrentUser")
+            .Produces<AuthenticatedUser>()
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status404NotFound);
 
         return endpoints;
     }
