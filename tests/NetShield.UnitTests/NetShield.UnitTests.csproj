@@ -6,12 +6,22 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Aspire.Hosting.Testing" />
     <PackageReference Include="coverlet.collector" />
     <PackageReference Include="FluentAssertions" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" />
     <PackageReference Include="NSubstitute" />
     <PackageReference Include="xunit.v3" />
     <PackageReference Include="xunit.runner.visualstudio" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- IsAspireProjectResource="false" makes the AppHost a plain reference here rather than
+         a resource of this project, which is what generates the Projects.NetShield_AppHost
+         marker the testing builder needs. -->
+    <ProjectReference Include="..\..\src\NetShield.AppHost\NetShield.AppHost.csproj"
+                      IsAspireProjectResource="false" />
+    <ProjectReference Include="..\..\src\NetShield.ServiceDefaults\NetShield.ServiceDefaults.csproj" />
   </ItemGroup>
 
   <ItemGroup>

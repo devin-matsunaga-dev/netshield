@@ -14,6 +14,17 @@
     <PackageVersion Include="Microsoft.Extensions.Hosting" Version="10.0.0" />
   </ItemGroup>
 
+  <ItemGroup Label="Aspire hosting (AppHost only)">
+    <PackageVersion Include="Aspire.Hosting.PostgreSQL" Version="13.5.3" />
+    <PackageVersion Include="Aspire.Hosting.Redis" Version="13.5.3" />
+    <PackageVersion Include="Aspire.Hosting.Testing" Version="13.5.3" />
+  </ItemGroup>
+
+  <ItemGroup Label="Aspire client integrations">
+    <PackageVersion Include="Aspire.Npgsql" Version="13.5.3" />
+    <PackageVersion Include="Aspire.StackExchange.Redis" Version="13.5.3" />
+  </ItemGroup>
+
   <ItemGroup Label="Aspire and observability">
     <PackageVersion Include="Microsoft.Extensions.Http.Resilience" Version="10.8.0" />
     <PackageVersion Include="Microsoft.Extensions.ServiceDiscovery" Version="10.8.0" />

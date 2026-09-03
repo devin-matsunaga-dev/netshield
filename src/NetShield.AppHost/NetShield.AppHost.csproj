@@ -6,4 +6,14 @@
     <UserSecretsId>12d89adb-d15a-4205-8238-3a21d9c1ce58</UserSecretsId>
   </PropertyGroup>
 
+  <ItemGroup>
+    <PackageReference Include="Aspire.Hosting.PostgreSQL" />
+    <PackageReference Include="Aspire.Hosting.Redis" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\NetShield.Web.Host\NetShield.Web.Host.csproj" />
+    <ProjectReference Include="..\NetShield.Ingest\NetShield.Ingest.csproj" />
+  </ItemGroup>
+
 </Project>

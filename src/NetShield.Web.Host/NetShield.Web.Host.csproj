@@ -1,4 +1,10 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <ItemGroup>
+    <PackageReference Include="Aspire.Npgsql" />
+    <PackageReference Include="Aspire.StackExchange.Redis" />
+  </ItemGroup>
+
   <ItemGroup>
     <ProjectReference Include="..\NetShield.ServiceDefaults\NetShield.ServiceDefaults.csproj" />
     <ProjectReference Include="..\NetShield.Contracts\NetShield.Contracts.csproj" />
