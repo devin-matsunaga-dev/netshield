@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <ItemGroup>
+    <ProjectReference Include="..\NetShield.ServiceDefaults\NetShield.ServiceDefaults.csproj" />
+    <ProjectReference Include="..\NetShield.Contracts\NetShield.Contracts.csproj" />
+    <ProjectReference Include="..\NetShield.Platform\NetShield.Platform.csproj" />
+    <ProjectReference Include="..\Modules\NetShield.Inventory\NetShield.Inventory.csproj" />
+    <ProjectReference Include="..\Modules\NetShield.Telemetry\NetShield.Telemetry.csproj" />
+    <ProjectReference Include="..\Modules\NetShield.Flows\NetShield.Flows.csproj" />
+    <ProjectReference Include="..\Modules\NetShield.Logs\NetShield.Logs.csproj" />
+    <ProjectReference Include="..\Modules\NetShield.Alerting\NetShield.Alerting.csproj" />
+    <ProjectReference Include="..\Modules\NetShield.Configs\NetShield.Configs.csproj" />
+    <ProjectReference Include="..\Modules\NetShield.Compliance\NetShield.Compliance.csproj" />
+    <ProjectReference Include="..\Modules\NetShield.Vulnerabilities\NetShield.Vulnerabilities.csproj" />
+    <ProjectReference Include="..\Modules\NetShield.Reporting\NetShield.Reporting.csproj" />
+    <ProjectReference Include="..\Modules\NetShield.Identity\NetShield.Identity.csproj" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,41 @@
+# Build output
+**/bin/
+**/obj/
+**/node_modules/
+**/dist/
+**/.vite/
+**/__pycache__/
+**/.venv/
+**/.pytest_cache/
+**/.mypy_cache/
+**/.ruff_cache/
+
+# Version control and tooling
+.git/
+.gitignore
+.dockerignore
+.editorconfig
+.vs/
+.vscode/
+.idea/
+.claude/
+
+# Docs are not part of any image
+docs/
+CLAUDE.md
+**/*.md
+
+# Local settings, secrets, and data that must never enter an image
+# (CONVENTIONS.md §9)
+**/.env
+**/.env.*
+**/*.pem
+**/*.key
+**/*.pfx
+**/appsettings.Development.json
+**/appsettings.Local.json
+**/secrets.json
+
+# Test and coverage output
+**/TestResults/
+**/coverage/

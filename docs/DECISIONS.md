@@ -22,4 +22,12 @@ These were settled while writing the steering documents, before WP-0.1.
 
 ## Build decisions
 
-_Appended by each package as it completes._
+- Chose the classic `.sln` format over the .NET 10 default `.slnx` because `CONVENTIONS.md` §1 names `NetShield.sln` in the binding repository layout (WP-0.1, 2026-09-03)
+- Chose FluentAssertions 7.2.0 over 8.x because v7 is the last Apache-2.0 release and v8 onwards requires a paid licence for commercial use, which this project has not confirmed (WP-0.1, 2026-09-03)
+- Chose to keep the `Aspire.AppHost.Sdk` 13.5.3 version literal in `NetShield.AppHost.csproj` over moving it into `Directory.Packages.props` because it is an MSBuild SDK reference rather than a `PackageReference`, and central package management does not govern SDK imports (WP-0.1, 2026-09-03)
+- Chose `xunit.v3` over the SDK template's xUnit v2 because the test projects were still empty and the migration cost only ever grows (WP-0.1, 2026-09-03)
+- Chose to set `TargetFramework` in `Directory.Build.props` and delete it from every `.csproj` over leaving the template's per-project declarations because `ARCHITECTURE.md` §10 admits one version floor and a project cannot drift from a value it does not state (WP-0.1, 2026-09-03)
+- Chose `insert_final_newline = true` over the `dotnet new editorconfig` default of `false` because the repository will also hold TypeScript and Python, where a trailing newline is the universal convention (WP-0.1, 2026-09-03)
+- Chose to enforce this package's own "Done when" criteria as tests in `NetShield.ArchitectureTests` over accepting the zero-tests allowance in `WORK_PACKAGES.md` because `CONVENTIONS.md` §7 requires tests and the invariants have to hold for every project added after this one, not just the nineteen created here (WP-0.1, 2026-09-03)
+- Chose to check those invariants by parsing the `.csproj` files on disk over inspecting loaded assemblies because MSBuild-level rules are not observable from compiled metadata and the file-based check covers projects nothing references yet (WP-0.1, 2026-09-03)
+- Chose to delete the Worker and Hello World placeholders the templates generate over keeping them because WP-0.1 produces an empty skeleton and a stub that logs on a timer is invented behaviour a later package would have to unpick (WP-0.1, 2026-09-03)

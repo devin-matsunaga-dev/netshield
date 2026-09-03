@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk.Worker">
+
+  <PropertyGroup>
+    <UserSecretsId>dotnet-NetShield.Ingest-5f022b00-b055-4a5a-9c9c-77c0141e4b7f</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Hosting" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\NetShield.ServiceDefaults\NetShield.ServiceDefaults.csproj" />
+    <ProjectReference Include="..\NetShield.Contracts\NetShield.Contracts.csproj" />
+    <ProjectReference Include="..\NetShield.Platform\NetShield.Platform.csproj" />
+  </ItemGroup>
+</Project>

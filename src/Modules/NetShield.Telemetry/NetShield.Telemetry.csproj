@@ -1,0 +1,6 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <ProjectReference Include="..\..\NetShield.Contracts\NetShield.Contracts.csproj" />
+    <ProjectReference Include="..\..\NetShield.Platform\NetShield.Platform.csproj" />
+  </ItemGroup>
+</Project>
