@@ -1,6 +1,7 @@
 import { createFileRoute, Outlet, redirect } from '@tanstack/react-router';
 
 import { AppShell } from '@/components/layout/AppShell';
+import { SessionUnavailable } from '@/features/session/components/SessionUnavailable';
 import { SessionWatch } from '@/features/session/components/SessionWatch';
 import { ApiError, currentUserQuery } from '@/features/session/api/currentUserQuery';
 
@@ -27,6 +28,8 @@ export const Route = createFileRoute('/_app')({
         throw redirect({ to: '/login', search: { redirect: location.href } });
       }
 
+      // Anything else — the API down, or an answer the client cannot read — is not a signed-out
+      // session and must not be shown as one. It reaches `errorComponent` below.
       throw error;
     }
 
@@ -44,4 +47,5 @@ export const Route = createFileRoute('/_app')({
       </AppShell>
     </SessionWatch>
   ),
+  errorComponent: SessionUnavailable,
 });

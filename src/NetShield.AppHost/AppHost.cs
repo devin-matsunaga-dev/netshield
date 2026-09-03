@@ -76,11 +76,21 @@ IResourceBuilder<ProjectResource> webHost = builder.AddProject<Projects.NetShiel
 
 // The SPA, under the Vite dev server. In deployment Web.Host serves the built bundle out of its
 // own wwwroot and this resource does not exist; in development the dev server owns the page and
-// proxies /api to the reference below, which is the only way it learns the API's address
-// (SPEC.md §5). npm install runs first, so a fresh clone comes up with one command.
+// proxies /api to the API, which is the only way it learns the address (SPEC.md §5). npm install
+// runs first, so a fresh clone comes up with one command.
+//
+// The address is passed twice, on purpose. WithReference publishes it as Aspire's own
+// service-discovery variable, `services__web-host__http__0` — and that name can never reach the
+// dev server. `npm run dev` runs its script through `sh -c`, and a POSIX shell exports only
+// names that are valid shell identifiers, so it silently drops every variable whose name carries
+// the hyphen in "web-host". The dev server then configures no proxy and answers /api with
+// index.html, which the SPA reads as "Unexpected token '<'". NETSHIELD_API_URL carries the same
+// value under a name a shell will pass on. The reference stays for the dashboard's dependency
+// graph and for whatever reads it in a non-shell launcher.
 builder.AddViteApp("web-client", "../NetShield.Web.Client")
     .WithNpm()
     .WithReference(webHost)
+    .WithEnvironment("NETSHIELD_API_URL", webHost.GetEndpoint("http"))
     .WaitFor(webHost);
 
 // The push-ingest worker. Registered so that aspire run models every runtime process

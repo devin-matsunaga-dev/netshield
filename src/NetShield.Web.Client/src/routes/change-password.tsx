@@ -2,6 +2,7 @@ import { createFileRoute, redirect } from '@tanstack/react-router';
 
 import { ChangePasswordPage } from '@/features/auth/components/ChangePasswordPage';
 import { ApiError, currentUserQuery } from '@/features/session/api/currentUserQuery';
+import { SessionUnavailable } from '@/features/session/components/SessionUnavailable';
 
 /**
  * The forced password change. Outside `_app`, because `_app` is what sends people here — a
@@ -28,4 +29,5 @@ export const Route = createFileRoute('/change-password')({
     }
   },
   component: ChangePasswordPage,
+  errorComponent: SessionUnavailable,
 });

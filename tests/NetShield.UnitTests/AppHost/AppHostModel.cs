@@ -34,6 +34,28 @@ public sealed class AppHostModel : IAsyncLifetime
 #pragma warning restore CS0618
     }
 
+    /// <summary>
+    /// The names of every environment variable a resource would be started with, including the
+    /// ones Aspire contributes for a reference. The callbacks are run against a fresh context, so
+    /// only the names are trustworthy here — a value may still be an unresolved placeholder.
+    /// </summary>
+    public static async Task<IReadOnlyList<string>> EnvironmentNamesOf(IResource resource)
+    {
+        ArgumentNullException.ThrowIfNull(resource);
+
+        EnvironmentCallbackContext context = new(
+            new DistributedApplicationExecutionContext(DistributedApplicationOperation.Run),
+            resource);
+
+        foreach (EnvironmentCallbackAnnotation annotation in
+            resource.Annotations.OfType<EnvironmentCallbackAnnotation>())
+        {
+            await annotation.Callback(context);
+        }
+
+        return [.. context.EnvironmentVariables.Keys];
+    }
+
     public async ValueTask InitializeAsync() =>
         builder = await DistributedApplicationTestingBuilder.CreateAsync<Projects.NetShield_AppHost>(
             TestContext.Current.CancellationToken);

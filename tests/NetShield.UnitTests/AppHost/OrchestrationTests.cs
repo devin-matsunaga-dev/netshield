@@ -1,3 +1,5 @@
+using System.Text.RegularExpressions;
+
 using Aspire.Hosting.ApplicationModel;
 
 using FluentAssertions;
@@ -9,7 +11,7 @@ namespace NetShield.UnitTests.AppHost;
 /// the stores from ARCHITECTURE.md §3, their persistence, and the wiring that carries their
 /// connection strings into the API.
 /// </summary>
-public sealed class OrchestrationTests(AppHostModel model) : IClassFixture<AppHostModel>
+public sealed partial class OrchestrationTests(AppHostModel model) : IClassFixture<AppHostModel>
 {
     /// <summary>The container resources that hold state and therefore need a volume.</summary>
     public static TheoryData<string> StatefulResources => ["postgres", "cache", "mailpit"];
@@ -110,9 +112,37 @@ public sealed class OrchestrationTests(AppHostModel model) : IClassFixture<AppHo
     [Fact]
     public void WebClient_ReferencesTheApi_SoTheDevServerLearnsItsAddressRatherThanCarryingOne()
     {
-        RelationshipsOf("web-client", "Reference").Should().BeEquivalentTo(["web-host"],
-            "the Vite proxy target reaches the SPA as a service-discovery variable; SPEC.md §5 "
-            + "keeps the address out of the repository");
+        // Distinct: the SPA is told the address twice — once as Aspire's service-discovery
+        // variable and once under a name a shell will pass on — and each is a reference.
+        RelationshipsOf("web-client", "Reference").Distinct().Should().BeEquivalentTo(["web-host"],
+            "the Vite proxy target reaches the SPA from the model rather than from a literal; "
+            + "SPEC.md §5 keeps the address out of the repository");
+    }
+
+    [Fact]
+    public async Task WebClient_LearnsTheApiAddressUnderAShellSafeName_BecauseNpmRunsItsScriptThroughSh()
+    {
+        // `npm run dev` executes its script through `sh -c`, and a POSIX shell exports only the
+        // variables whose names are valid shell identifiers. So the dev server never sees
+        // Aspire's own `services__web-host__http__0` — the hyphens make it one a shell drops, in
+        // silence, and the only symptom is /api answering with index.html.
+        IReadOnlyList<string> names = await AppHostModel.EnvironmentNamesOf(model.Resource("web-client"));
+
+        names.Should().Contain("NETSHIELD_API_URL",
+            "vite.config.ts reads this name, and it is one a shell will pass on");
+
+        names.Should().Contain(name => !ShellIdentifier().IsMatch(name),
+            "this test is only worth running while a name that cannot survive `sh` is still "
+            + "being published; if none is, the explicit variable above can go");
+    }
+
+    [Fact]
+    public void TheServiceDiscoveryNameForTheApi_CannotSurviveAShell_WhichIsWhyTheSpaIsToldTwice()
+    {
+        // The reason the line above exists, held where a reader can see it. Rename `web-host` to
+        // something without a hyphen and this fails, which is the signal to delete both.
+        ShellIdentifier().IsMatch($"services__{model.Resource("web-host").Name}__http__0")
+            .Should().BeFalse();
     }
 
     [Fact]
@@ -131,6 +161,10 @@ public sealed class OrchestrationTests(AppHostModel model) : IClassFixture<AppHo
     {
         RelationshipsOf("mail", "Reference").Should().BeEquivalentTo(["mailpit"]);
     }
+
+    /// <summary>What a POSIX shell will export: a letter or underscore, then word characters.</summary>
+    [GeneratedRegex("^[A-Za-z_][A-Za-z0-9_]*$")]
+    private static partial Regex ShellIdentifier();
 
     private ContainerResource Container(string name) =>
         model.Resource(name).Should().BeAssignableTo<ContainerResource>().Subject;
