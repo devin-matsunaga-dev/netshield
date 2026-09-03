@@ -1,4 +1,4 @@
-import { ShieldCheck } from 'lucide-react';
+import { BrandMark } from '@/components/ui/BrandMark';
 
 interface BrandProps {
   readonly collapsed: boolean;
@@ -11,7 +11,7 @@ interface BrandProps {
 export function Brand({ collapsed }: BrandProps) {
   return (
     <div className="flex h-header shrink-0 items-center gap-3 border-b border-subtle px-4">
-      <ShieldCheck aria-hidden className="size-6 shrink-0 text-accent" />
+      <BrandMark className="size-6 shrink-0" />
       {!collapsed && (
         <span className="min-w-0">
           <span className="block truncate text-brand text-primary">NetShield</span>

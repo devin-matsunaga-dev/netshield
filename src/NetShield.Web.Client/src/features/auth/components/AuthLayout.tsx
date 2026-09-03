@@ -1,5 +1,6 @@
-import { ShieldCheck } from 'lucide-react';
 import type { ReactNode } from 'react';
+
+import { BrandMark } from '@/components/ui/BrandMark';
 
 interface AuthLayoutProps {
   readonly title: string;
@@ -20,7 +21,7 @@ export function AuthLayout({ title, subtitle, children }: AuthLayoutProps) {
     <main className="flex min-h-dvh items-center justify-center bg-base p-content">
       <div className="w-full max-w-sm">
         <div className="mb-gutter flex items-center gap-3">
-          <ShieldCheck aria-hidden className="size-8 shrink-0 text-accent" />
+          <BrandMark className="size-8 shrink-0" />
           <span>
             <span className="block text-brand text-primary">NetShield</span>
             <span className="block text-brand-caption text-muted">Network &amp; Security</span>
