@@ -96,12 +96,15 @@ public static class Extensions
             return app;
         }
 
+        // Anonymous explicitly. NetShield.Web.Host denies by default (ARCHITECTURE.md §8), and a
+        // liveness probe that has to sign in is a liveness probe that reports the process down
+        // the moment the database holding the accounts is.
         app.MapHealthChecks(LivenessEndpointPath, new HealthCheckOptions
         {
             Predicate = registration => registration.Tags.Contains(LivenessTag)
-        });
+        }).AllowAnonymous();
 
-        app.MapHealthChecks(ReadinessEndpointPath);
+        app.MapHealthChecks(ReadinessEndpointPath).AllowAnonymous();
 
         return app;
     }

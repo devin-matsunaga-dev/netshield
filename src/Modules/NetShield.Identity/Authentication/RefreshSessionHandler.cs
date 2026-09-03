@@ -2,6 +2,7 @@ using Microsoft.Extensions.Logging;
 
 using NetShield.Identity.Persistence;
 
+using NetShield.Platform.Auditing;
 using NetShield.Platform.Results;
 
 namespace NetShield.Identity.Authentication;
@@ -12,6 +13,7 @@ namespace NetShield.Identity.Authentication;
 internal sealed class RefreshSessionHandler(
     IdentityDbContext database,
     SessionService sessions,
+    IAuditContext audit,
     ILogger<RefreshSessionHandler> logger)
 {
     internal async Task<Result<SessionGrant>> HandleAsync(string? presentedToken, CancellationToken cancellationToken)
@@ -32,6 +34,9 @@ internal sealed class RefreshSessionHandler(
             logger.LogWarning("Refresh refused: the presented token is unknown, expired or already spent.");
             return AuthenticationErrors.InvalidCredentials;
         }
+
+        audit.Actor(grant.User.Id, grant.User.Username, grant.User.Role);
+        audit.Target("user", grant.User.Id.ToString());
 
         logger.LogInformation("Session refreshed for account {UserId}.", grant.User.Id);
 

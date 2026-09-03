@@ -15,9 +15,11 @@ using NetShield.Identity.Passwords;
 using NetShield.Identity.Persistence;
 using NetShield.Identity.Users;
 
+using NetShield.IntegrationTests.Authorization;
 using NetShield.IntegrationTests.Platform;
 
 using NetShield.Platform;
+using NetShield.Platform.Auditing;
 using NetShield.Platform.Persistence;
 using NetShield.Platform.Problems;
 
@@ -100,6 +102,8 @@ internal sealed class IdentityHost(
 
         builder.AddNetShieldPlatform();
         builder.Services.AddNetShieldProblemDetails();
+        builder.AddNetShieldAuthorization();
+        builder.AddNetShieldAudit();
         builder.AddNetShieldIdentity();
 
         WebApplication application = builder.Build();
@@ -113,12 +117,20 @@ internal sealed class IdentityHost(
 
             await scope.ServiceProvider.GetRequiredService<IdentityDbContext>()
                 .Database.MigrateAsync(cancellationToken);
+
+            // audit_log and its append-only trigger belong to the platform context. Both
+            // contexts migrate here for the same reason: NetShield.Web.Host does not migrate on
+            // startup, so the database belongs to whoever created it.
+            await scope.ServiceProvider.GetRequiredService<PlatformDbContext>()
+                .Database.MigrateAsync(cancellationToken);
         }
 
         application.UseNetShieldProblemDetails();
         application.UseAuthentication();
+        application.UseNetShieldAudit();
         application.UseAuthorization();
         application.MapIdentityEndpoints();
+        application.MapProbeEndpoints();
 
         await application.StartAsync(cancellationToken);
 
@@ -220,6 +232,33 @@ internal sealed class IdentityHost(
             $"{AuthenticationEndpoints.RoutePrefix}/login",
             new LoginRequest(username, password),
             cancellationToken);
+
+    /// <summary>Every audit row written so far, oldest first.</summary>
+    /// <remarks>
+    /// Read through <c>Set&lt;AuditEntry&gt;()</c> because <c>PlatformDbContext</c> deliberately
+    /// exposes no <c>DbSet</c> for the table — see the comment on the context.
+    /// </remarks>
+    public async Task<IReadOnlyList<AuditEntry>> ReadAuditEntriesAsync(CancellationToken cancellationToken)
+    {
+        await using AsyncServiceScope scope = application.Services.CreateAsyncScope();
+
+        return await scope.ServiceProvider.GetRequiredService<PlatformDbContext>()
+            .Set<AuditEntry>().AsNoTracking()
+            .OrderBy(entry => entry.CreatedAt).ThenBy(entry => entry.Id)
+            .ToListAsync(cancellationToken);
+    }
+
+    /// <summary>
+    /// Runs raw SQL against the test database, so a test can try what the database is supposed
+    /// to refuse.
+    /// </summary>
+    public async Task ExecuteSqlAsync(string sql, CancellationToken cancellationToken)
+    {
+        await using AsyncServiceScope scope = application.Services.CreateAsyncScope();
+
+        await scope.ServiceProvider.GetRequiredService<PlatformDbContext>()
+            .Database.ExecuteSqlRawAsync(sql, cancellationToken);
+    }
 
     public async ValueTask DisposeAsync()
     {

@@ -8,6 +8,7 @@ using NetShield.Identity.Passwords;
 using NetShield.Identity.Persistence;
 using NetShield.Identity.Users;
 
+using NetShield.Platform.Auditing;
 using NetShield.Platform.Results;
 using NetShield.Platform.Time;
 
@@ -21,12 +22,18 @@ namespace NetShield.Identity.Authentication;
 /// Every refusal returns <see cref="AuthenticationErrors.InvalidCredentials"/> and every path
 /// pays for one Argon2id verification, so neither the body nor the timing of a 401 distinguishes
 /// an unknown username from a wrong password, a disabled account or a locked one.
+///
+/// The audit row is enriched with the account only once one has been found. A sign-in attempt
+/// against a username nobody holds is recorded without a target on purpose: the username field
+/// is where a password gets typed by mistake, and an append-only table is the wrong place for
+/// one to land.
 /// </remarks>
 internal sealed class LoginHandler(
     IdentityDbContext database,
     IPasswordHasher hasher,
     DecoyPasswordHash decoy,
     SessionService sessions,
+    IAuditContext audit,
     IClock clock,
     IOptions<SessionOptions> options,
     ILogger<LoginHandler> logger)
@@ -48,6 +55,9 @@ internal sealed class LoginHandler(
             logger.LogInformation("Sign-in refused: no account matches the username presented.");
             return AuthenticationErrors.InvalidCredentials;
         }
+
+        audit.Actor(user.Id, user.Username, user.Role);
+        audit.Target("user", user.Id.ToString());
 
         PasswordVerification verification =
             await hasher.VerifyAsync(request.Password, user.PasswordHash, cancellationToken);
@@ -84,6 +94,12 @@ internal sealed class LoginHandler(
     {
         SessionOptions session = options.Value;
 
+        Dictionary<string, object?> before = new(StringComparer.Ordinal)
+        {
+            ["failedLoginAttempts"] = user.FailedLoginAttempts,
+            ["lockedOutUntil"] = user.LockedOutUntil
+        };
+
         user.FailedLoginAttempts++;
         user.UpdatedAt = now;
 
@@ -109,6 +125,12 @@ internal sealed class LoginHandler(
                 user.FailedLoginAttempts,
                 session.MaxFailedLoginAttempts);
         }
+
+        audit.Snapshot(before, new Dictionary<string, object?>(StringComparer.Ordinal)
+        {
+            ["failedLoginAttempts"] = user.FailedLoginAttempts,
+            ["lockedOutUntil"] = user.LockedOutUntil
+        });
 
         await database.SaveChangesAsync(cancellationToken);
     }
@@ -137,6 +159,15 @@ internal sealed class LoginHandler(
         }
 
         SessionGrant grant = sessions.Issue(user);
+
+        // "hashWasUpgraded" rather than anything with "password" in it: the redactor blanks a
+        // member by name, so a member named after the credential would be stored as [REDACTED]
+        // whatever its value.
+        audit.Snapshot(null, new Dictionary<string, object?>(StringComparer.Ordinal)
+        {
+            ["lastLoginAt"] = user.LastLoginAt,
+            ["hashWasUpgraded"] = verification.NeedsRehash
+        });
 
         await database.SaveChangesAsync(cancellationToken);
 

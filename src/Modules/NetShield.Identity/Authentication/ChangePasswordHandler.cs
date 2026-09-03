@@ -7,6 +7,7 @@ using NetShield.Identity.Passwords;
 using NetShield.Identity.Persistence;
 using NetShield.Identity.Users;
 
+using NetShield.Platform.Auditing;
 using NetShield.Platform.Results;
 using NetShield.Platform.Time;
 
@@ -25,6 +26,7 @@ internal sealed class ChangePasswordHandler(
     IPasswordHasher hasher,
     PasswordPolicy policy,
     SessionService sessions,
+    IAuditContext audit,
     IClock clock,
     ILogger<ChangePasswordHandler> logger)
 {
@@ -47,6 +49,9 @@ internal sealed class ChangePasswordHandler(
         {
             return AuthenticationErrors.NoSession;
         }
+
+        audit.Actor(user.Id, user.Username, user.Role);
+        audit.Target("user", user.Id.ToString());
 
         PasswordVerification current =
             await hasher.VerifyAsync(request.CurrentPassword, user.PasswordHash, cancellationToken);
@@ -77,6 +82,20 @@ internal sealed class ChangePasswordHandler(
 
         DateTimeOffset now = clock.UtcNow;
 
+        // Neither snapshot carries a hash, a password or a token — only the facts about the
+        // account that changed. SPEC.md §5 covers the database as well as the log, and this is a
+        // table nothing can ever go back and correct.
+        //
+        // The member names avoid the word the redactor treats as a secret: it redacts by
+        // property name and does not stop to consider that a boolean cannot be a password, so a
+        // member called "mustChangePassword" would be stored as [REDACTED] and say nothing. The
+        // row already knows it is about a password change; these say what changed.
+        Dictionary<string, object?> before = new(StringComparer.Ordinal)
+        {
+            ["changeRequired"] = user.MustChangePassword,
+            ["changedAt"] = user.PasswordChangedAt
+        };
+
         user.PasswordHash = await hasher.HashAsync(request.NewPassword, cancellationToken);
         user.MustChangePassword = false;
         user.PasswordChangedAt = now;
@@ -85,6 +104,12 @@ internal sealed class ChangePasswordHandler(
         await sessions.RevokeAllForUserAsync(user.Id, cancellationToken);
 
         SessionGrant grant = sessions.Issue(user);
+
+        audit.Snapshot(before, new Dictionary<string, object?>(StringComparer.Ordinal)
+        {
+            ["changeRequired"] = user.MustChangePassword,
+            ["changedAt"] = user.PasswordChangedAt
+        });
 
         await database.SaveChangesAsync(cancellationToken);
 

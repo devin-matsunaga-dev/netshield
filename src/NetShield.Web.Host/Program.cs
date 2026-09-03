@@ -6,6 +6,7 @@ using NetShield.Identity.Endpoints;
 using NetShield.Identity.Persistence;
 
 using NetShield.Platform;
+using NetShield.Platform.Auditing;
 using NetShield.Platform.Persistence;
 using NetShield.Platform.Problems;
 
@@ -34,6 +35,11 @@ builder.AddNetShieldPlatform();
 builder.AddOutboxDispatcher();
 builder.Services.AddNetShieldProblemDetails();
 
+// RBAC and the audit log. AddNetShieldAuthorization makes the API deny by default: an endpoint
+// that declares no policy is refused rather than published (ARCHITECTURE.md §8).
+builder.AddNetShieldAuthorization();
+builder.AddNetShieldAudit();
+
 builder.AddNetShieldIdentity();
 
 WebApplication app = builder.Build();
@@ -43,6 +49,11 @@ WebApplication app = builder.Build();
 app.UseNetShieldProblemDetails();
 
 app.UseAuthentication();
+
+// After authentication and before authorization, so that the row knows who the caller was and
+// still gets written when authorization refuses them.
+app.UseNetShieldAudit();
+
 app.UseAuthorization();
 
 app.MapDefaultEndpoints();

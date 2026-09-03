@@ -4,6 +4,8 @@ using NetShield.Contracts.Identity;
 
 using NetShield.Identity.Users;
 
+using NetShield.Platform.Authorization;
+
 namespace NetShield.Identity.Authentication;
 
 /// <summary>
@@ -11,9 +13,16 @@ namespace NetShield.Identity.Authentication;
 /// </summary>
 /// <remarks>
 /// The claim set is deliberately thin. Anything that can change while a session is open — the
-/// display name, whether a password change is still owed, whether the account was disabled — is
-/// read from the database when it is needed rather than trusted from a cookie minted earlier
-/// (ARCHITECTURE.md §8: never trust the client's claim of role).
+/// display name, whether the account was disabled — is read from the database when it is needed
+/// rather than trusted from a cookie minted earlier (ARCHITECTURE.md §8: never trust the
+/// client's claim of role).
+///
+/// The one exception is <see cref="AuthorizationClaims.PasswordChangeRequired"/>, which has to
+/// be a claim: the requirement that enforces it lives in <c>NetShield.Platform</c>, and a module
+/// may not be reached from there to ask the <c>users</c> table (ARCHITECTURE.md §4). It is
+/// re-minted on sign-in, on refresh and on the password change that clears it, so the only way
+/// to hold a stale one is to have had the flag set by an administrator mid-session — which
+/// nothing can do until user administration exists.
 /// </remarks>
 public static class SessionClaims
 {
@@ -25,16 +34,22 @@ public static class SessionClaims
     {
         ArgumentNullException.ThrowIfNull(user);
 
-        ClaimsIdentity identity = new(
-            [
-                new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
-                new Claim(ClaimTypes.Name, user.Username),
-                new Claim(ClaimTypes.Role, user.Role.ToString()),
-                new Claim(SessionId, sessionId.ToString())
-            ],
-            authenticationScheme,
-            ClaimTypes.Name,
-            ClaimTypes.Role);
+        List<Claim> claims =
+        [
+            new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
+            new Claim(ClaimTypes.Name, user.Username),
+            new Claim(ClaimTypes.Role, user.Role.ToString()),
+            new Claim(SessionId, sessionId.ToString())
+        ];
+
+        if (user.MustChangePassword)
+        {
+            claims.Add(new Claim(
+                AuthorizationClaims.PasswordChangeRequired,
+                AuthorizationClaims.PasswordChangeRequiredValue));
+        }
+
+        ClaimsIdentity identity = new(claims, authenticationScheme, ClaimTypes.Name, ClaimTypes.Role);
 
         return new ClaimsPrincipal(identity);
     }
@@ -47,7 +62,9 @@ public static class SessionClaims
     public static Guid? SessionIdOf(ClaimsPrincipal? principal) =>
         Guid.TryParse(principal?.FindFirstValue(SessionId), out Guid id) ? id : null;
 
-    /// <summary>The role the session was minted with. Nothing enforces it before WP-0.5.</summary>
-    public static UserRole? RoleOf(ClaimsPrincipal? principal) =>
-        Enum.TryParse(principal?.FindFirstValue(ClaimTypes.Role), out UserRole role) ? role : null;
+    /// <summary>
+    /// The role the session was minted with. <c>NetShield.Platform</c> resolves it to a
+    /// permission set on every request; nothing here decides what it may do.
+    /// </summary>
+    public static UserRole? RoleOf(ClaimsPrincipal? principal) => AuthorizationClaims.RoleOf(principal);
 }

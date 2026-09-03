@@ -29,7 +29,10 @@ namespace NetShield.Identity;
 /// </remarks>
 public static class IdentityServiceCollectionExtensions
 {
-    /// <summary>Adds everything the Identity module needs, and maps nothing.</summary>
+    /// <summary>
+    /// Adds everything the Identity module needs, and maps nothing. The host must also call
+    /// <c>AddNetShieldAuthorization()</c>; the endpoints here rely on its policies.
+    /// </summary>
     public static TBuilder AddNetShieldIdentity<TBuilder>(this TBuilder builder)
         where TBuilder : IHostApplicationBuilder
     {
@@ -116,9 +119,10 @@ public static class IdentityServiceCollectionExtensions
             .Configure<IOptions<SessionOptions>>((cookie, session) =>
                 cookie.ExpireTimeSpan = session.Value.SessionLifetime);
 
-        // The default policy — an authenticated user — is all RequireAuthorization() needs. Roles
-        // and permissions arrive in WP-0.5; nothing here maps one to anything.
-        services.AddAuthorization();
+        // Authorization itself is not registered here. The policies, the role-to-permission map
+        // and the two requirements every authenticated endpoint carries belong to
+        // NetShield.Platform, and the composition root adds them with AddNetShieldAuthorization()
+        // — one place, for every module, rather than whichever module happened to ask first.
     }
 
     private static Task WriteProblemAsync(HttpContext context, Error error) =>

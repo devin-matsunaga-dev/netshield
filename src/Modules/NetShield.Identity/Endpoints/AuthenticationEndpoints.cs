@@ -8,6 +8,8 @@ using NetShield.Contracts.Identity;
 
 using NetShield.Identity.Authentication;
 
+using NetShield.Platform.Auditing;
+using NetShield.Platform.Authorization;
 using NetShield.Platform.Results;
 
 namespace NetShield.Identity.Endpoints;
@@ -20,11 +22,18 @@ namespace NetShield.Identity.Endpoints;
 /// turns a handler's <see cref="Result{T}"/> into a status code. Every handler here returns a
 /// <c>SessionGrant</c> rather than a response body, so that the refresh token can only ever reach
 /// a cookie and never a payload.
+///
+/// Each route names the action its audit row carries. The row itself is written by the platform
+/// middleware whatever happens here — a refused sign-in is recorded as surely as a successful
+/// one, which is the half an operator reaches for first.
 /// </remarks>
 public static class AuthenticationEndpoints
 {
     /// <summary>The group every route below hangs from.</summary>
     public const string RoutePrefix = "/api/v1/auth";
+
+    /// <summary>What an audit row from these routes says it acted on.</summary>
+    private const string TargetType = "user";
 
     /// <summary>Maps the authentication endpoints. Called once, by the composition root.</summary>
     public static IEndpointRouteBuilder MapIdentityEndpoints(this IEndpointRouteBuilder endpoints)
@@ -36,23 +45,32 @@ public static class AuthenticationEndpoints
         group.MapPost("/login", LoginAsync)
             .AddEndpointFilter<ValidationFilter<LoginRequest>>()
             .AllowAnonymous()
+            .Audits("identity.login", TargetType)
             .WithName("Login");
 
         group.MapPost("/refresh", RefreshAsync)
             .AllowAnonymous()
+            .Audits("identity.session-refresh", TargetType)
             .WithName("RefreshSession");
 
         group.MapPost("/logout", LogoutAsync)
             .AllowAnonymous()
+            .Audits("identity.logout", TargetType)
             .WithName("Logout");
 
+        // A user who still owes a password change may reach exactly two authenticated routes:
+        // the one that changes it, and the one that tells the client who they are so it can send
+        // them there. Everything else is refused until the change is made.
         group.MapPost("/password", ChangePasswordAsync)
             .AddEndpointFilter<ValidationFilter<ChangePasswordRequest>>()
             .RequireAuthorization()
+            .AllowsPendingPasswordChange()
+            .Audits("identity.password-change", TargetType)
             .WithName("ChangePassword");
 
         group.MapGet("/me", CurrentUserAsync)
             .RequireAuthorization()
+            .AllowsPendingPasswordChange()
             .WithName("CurrentUser");
 
         return endpoints;
