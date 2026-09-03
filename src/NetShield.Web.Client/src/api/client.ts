@@ -1,6 +1,7 @@
 import createClient from 'openapi-fetch';
 
 import type { paths } from '@/api/schema';
+import { silentRefresh } from '@/features/session/api/silentRefresh';
 
 /**
  * The only way the SPA talks to the API (ARCHITECTURE.md §9). Every path, body and response
@@ -21,3 +22,9 @@ export const api = createClient<paths>({
   // against — would otherwise never be seen by it.
   fetch: (request) => globalThis.fetch(request),
 });
+
+// An expired session refreshes once behind the caller's back and the call is replayed; a refresh
+// that is refused ends the session and the guard sends the user to sign in (WP-0.7). Registered
+// here rather than per call, because every call is equally likely to be the one that finds the
+// fifteen-minute session cookie gone.
+api.use(silentRefresh());

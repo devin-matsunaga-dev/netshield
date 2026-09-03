@@ -4,12 +4,26 @@ import { api } from '@/api/client';
 import type { AuthenticatedUser } from '@/api/types';
 import { sessionKeys } from '@/features/session/api/sessionKeys';
 
+/** An API call that failed, carrying the status the guard reads to tell 401 from everything else. */
+export class ApiError extends Error {
+  public constructor(
+    message: string,
+    public readonly status: number,
+  ) {
+    super(message);
+    this.name = 'ApiError';
+  }
+}
+
 /**
  * Who the caller is, from `GET /api/v1/auth/me`.
  *
- * WP-0.6 wires the client and stops there — nothing renders this yet. The route guard, the
- * redirect a 401 causes and the forced password change all belong to WP-0.7, which is where the
- * answer starts changing what the user sees.
+ * Read rather than assembled from anything the client holds: the account may have been disabled,
+ * renamed or told to change its password since the cookie was minted, and the `_app` guard
+ * decides where to send the user on exactly those fields.
+ *
+ * A 401 here has already survived one silent refresh — the API middleware tries that before this
+ * ever sees the failure — so it means the session is genuinely over.
  */
 export function currentUserQuery() {
   return queryOptions({
@@ -18,14 +32,13 @@ export function currentUserQuery() {
       const { data, response } = await api.GET('/api/v1/auth/me', { signal });
 
       if (!response.ok || data === undefined) {
-        throw Object.assign(new Error('Could not read the current session.'), {
-          status: response.status,
-        });
+        throw new ApiError('Could not read the current session.', response.status);
       }
 
       return data;
     },
-    // Signing in and out are the only things that change the answer, and both invalidate it.
+    // Signing in, signing out and changing a password are the only things that change the
+    // answer, and all three invalidate it.
     staleTime: Infinity,
     retry: false,
   });

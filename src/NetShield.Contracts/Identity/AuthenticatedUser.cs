@@ -16,9 +16,18 @@ namespace NetShield.Contracts.Identity;
 /// Whether the client must send the user to a password change before anything else. Set for a
 /// seeded first-run administrator and for any password an administrator resets.
 /// </param>
+/// <param name="Permissions">
+/// What this session may do, resolved on the server from <paramref name="Role"/>. It is told to
+/// the client so the client can decide what to draw — which nav entries exist, which write
+/// controls appear — and for nothing else. It is not a claim, it is not carried in a cookie, and
+/// nothing the client sends back is read: every protected request re-resolves the permission set
+/// from the session's role and checks it again (ARCHITECTURE.md §8). A client that tampered with
+/// this list would have changed only what it draws for itself.
+/// </param>
 public sealed record AuthenticatedUser(
     Guid Id,
     string Username,
     string DisplayName,
     UserRole Role,
-    bool MustChangePassword);
+    bool MustChangePassword,
+    IReadOnlyList<Permission> Permissions);

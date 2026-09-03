@@ -95,6 +95,7 @@ export interface components {
             displayName: string;
             role: components["schemas"]["UserRole"];
             mustChangePassword: boolean;
+            permissions: components["schemas"]["Permission"][];
         };
         ChangePasswordRequest: {
             currentPassword: string;
@@ -115,6 +116,8 @@ export interface components {
             username: string;
             password: string;
         };
+        /** @enum {unknown} */
+        Permission: "InventoryRead" | "InventoryWrite" | "CredentialsManage" | "DiscoveryRun" | "TopologyRead" | "TelemetryRead" | "FlowsRead" | "LogsRead" | "AlertsRead" | "AlertsManage" | "AlertRulesWrite" | "ConfigsRead" | "ConfigsManage" | "ComplianceRead" | "ComplianceManage" | "VulnerabilitiesRead" | "VulnerabilitiesManage" | "ReportsRead" | "ReportsManage" | "PoliciesWrite" | "AuditRead" | "SystemAdminister";
         ProblemDetails: {
             type?: null | string;
             title?: null | string;

@@ -10,281 +10,319 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as AlertsRouteImport } from './routes/alerts'
-import { Route as ClientsRouteImport } from './routes/clients'
-import { Route as ComplianceRouteImport } from './routes/compliance'
-import { Route as DashboardRouteImport } from './routes/dashboard'
-import { Route as DevicesRouteImport } from './routes/devices'
-import { Route as LogsRouteImport } from './routes/logs'
-import { Route as NetworkRouteImport } from './routes/network'
-import { Route as OverviewRouteImport } from './routes/overview'
-import { Route as PoliciesRouteImport } from './routes/policies'
-import { Route as ThreatsRouteImport } from './routes/threats'
-import { Route as VulnerabilitiesRouteImport } from './routes/vulnerabilities'
-import { Route as AdministrationIndexRouteImport } from './routes/administration.index'
-import { Route as AdministrationAuditLogRouteImport } from './routes/administration.audit-log'
-import { Route as AdministrationBackupRestoreRouteImport } from './routes/administration.backup-restore'
-import { Route as AdministrationLicenseRouteImport } from './routes/administration.license'
-import { Route as AdministrationRolesRouteImport } from './routes/administration.roles'
-import { Route as AdministrationSystemHealthRouteImport } from './routes/administration.system-health'
-import { Route as AdministrationUsersRouteImport } from './routes/administration.users'
-import { Route as ReportsIndexRouteImport } from './routes/reports.index'
-import { Route as ReportsAlertActivityRouteImport } from './routes/reports.alert-activity'
-import { Route as ReportsAvailabilityRouteImport } from './routes/reports.availability'
-import { Route as ReportsBandwidthRouteImport } from './routes/reports.bandwidth'
-import { Route as ReportsComplianceRouteImport } from './routes/reports.compliance'
-import { Route as ReportsInventoryRouteImport } from './routes/reports.inventory'
-import { Route as ReportsVulnerabilityRouteImport } from './routes/reports.vulnerability'
-import { Route as SecurityIndexRouteImport } from './routes/security.index'
-import { Route as SecurityFindingsRouteImport } from './routes/security.findings'
-import { Route as SecurityPostureRouteImport } from './routes/security.posture'
+import { Route as AppRouteImport } from './routes/_app'
+import { Route as ChangePasswordRouteImport } from './routes/change-password'
+import { Route as LoginRouteImport } from './routes/login'
+import { Route as AppSplatRouteImport } from './routes/_app.$'
+import { Route as AppAlertsRouteImport } from './routes/_app.alerts'
+import { Route as AppClientsRouteImport } from './routes/_app.clients'
+import { Route as AppComplianceRouteImport } from './routes/_app.compliance'
+import { Route as AppDashboardRouteImport } from './routes/_app.dashboard'
+import { Route as AppDevicesRouteImport } from './routes/_app.devices'
+import { Route as AppLogsRouteImport } from './routes/_app.logs'
+import { Route as AppNetworkRouteImport } from './routes/_app.network'
+import { Route as AppOverviewRouteImport } from './routes/_app.overview'
+import { Route as AppPoliciesRouteImport } from './routes/_app.policies'
+import { Route as AppThreatsRouteImport } from './routes/_app.threats'
+import { Route as AppVulnerabilitiesRouteImport } from './routes/_app.vulnerabilities'
+import { Route as AppAdministrationIndexRouteImport } from './routes/_app.administration.index'
+import { Route as AppAdministrationAuditLogRouteImport } from './routes/_app.administration.audit-log'
+import { Route as AppAdministrationBackupRestoreRouteImport } from './routes/_app.administration.backup-restore'
+import { Route as AppAdministrationLicenseRouteImport } from './routes/_app.administration.license'
+import { Route as AppAdministrationRolesRouteImport } from './routes/_app.administration.roles'
+import { Route as AppAdministrationSystemHealthRouteImport } from './routes/_app.administration.system-health'
+import { Route as AppAdministrationUsersRouteImport } from './routes/_app.administration.users'
+import { Route as AppReportsIndexRouteImport } from './routes/_app.reports.index'
+import { Route as AppReportsAlertActivityRouteImport } from './routes/_app.reports.alert-activity'
+import { Route as AppReportsAvailabilityRouteImport } from './routes/_app.reports.availability'
+import { Route as AppReportsBandwidthRouteImport } from './routes/_app.reports.bandwidth'
+import { Route as AppReportsComplianceRouteImport } from './routes/_app.reports.compliance'
+import { Route as AppReportsInventoryRouteImport } from './routes/_app.reports.inventory'
+import { Route as AppReportsVulnerabilityRouteImport } from './routes/_app.reports.vulnerability'
+import { Route as AppSecurityIndexRouteImport } from './routes/_app.security.index'
+import { Route as AppSecurityFindingsRouteImport } from './routes/_app.security.findings'
+import { Route as AppSecurityPostureRouteImport } from './routes/_app.security.posture'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AlertsRoute = AlertsRouteImport.update({
+const AppRoute = AppRouteImport.update({
+  id: '/_app',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ChangePasswordRoute = ChangePasswordRouteImport.update({
+  id: '/change-password',
+  path: '/change-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AppSplatRoute = AppSplatRouteImport.update({
+  id: '/$',
+  path: '/$',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppAlertsRoute = AppAlertsRouteImport.update({
   id: '/alerts',
   path: '/alerts',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => AppRoute,
 } as any)
-const ClientsRoute = ClientsRouteImport.update({
+const AppClientsRoute = AppClientsRouteImport.update({
   id: '/clients',
   path: '/clients',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => AppRoute,
 } as any)
-const ComplianceRoute = ComplianceRouteImport.update({
+const AppComplianceRoute = AppComplianceRouteImport.update({
   id: '/compliance',
   path: '/compliance',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => AppRoute,
 } as any)
-const DashboardRoute = DashboardRouteImport.update({
+const AppDashboardRoute = AppDashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => AppRoute,
 } as any)
-const DevicesRoute = DevicesRouteImport.update({
+const AppDevicesRoute = AppDevicesRouteImport.update({
   id: '/devices',
   path: '/devices',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => AppRoute,
 } as any)
-const LogsRoute = LogsRouteImport.update({
+const AppLogsRoute = AppLogsRouteImport.update({
   id: '/logs',
   path: '/logs',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => AppRoute,
 } as any)
-const NetworkRoute = NetworkRouteImport.update({
+const AppNetworkRoute = AppNetworkRouteImport.update({
   id: '/network',
   path: '/network',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => AppRoute,
 } as any)
-const OverviewRoute = OverviewRouteImport.update({
+const AppOverviewRoute = AppOverviewRouteImport.update({
   id: '/overview',
   path: '/overview',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => AppRoute,
 } as any)
-const PoliciesRoute = PoliciesRouteImport.update({
+const AppPoliciesRoute = AppPoliciesRouteImport.update({
   id: '/policies',
   path: '/policies',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => AppRoute,
 } as any)
-const ThreatsRoute = ThreatsRouteImport.update({
+const AppThreatsRoute = AppThreatsRouteImport.update({
   id: '/threats',
   path: '/threats',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => AppRoute,
 } as any)
-const VulnerabilitiesRoute = VulnerabilitiesRouteImport.update({
+const AppVulnerabilitiesRoute = AppVulnerabilitiesRouteImport.update({
   id: '/vulnerabilities',
   path: '/vulnerabilities',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => AppRoute,
 } as any)
-const AdministrationIndexRoute = AdministrationIndexRouteImport.update({
+const AppAdministrationIndexRoute = AppAdministrationIndexRouteImport.update({
   id: '/administration/',
   path: '/administration/',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => AppRoute,
 } as any)
-const AdministrationAuditLogRoute = AdministrationAuditLogRouteImport.update({
-  id: '/administration/audit-log',
-  path: '/administration/audit-log',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AdministrationBackupRestoreRoute =
-  AdministrationBackupRestoreRouteImport.update({
+const AppAdministrationAuditLogRoute =
+  AppAdministrationAuditLogRouteImport.update({
+    id: '/administration/audit-log',
+    path: '/administration/audit-log',
+    getParentRoute: () => AppRoute,
+  } as any)
+const AppAdministrationBackupRestoreRoute =
+  AppAdministrationBackupRestoreRouteImport.update({
     id: '/administration/backup-restore',
     path: '/administration/backup-restore',
-    getParentRoute: () => rootRouteImport,
+    getParentRoute: () => AppRoute,
   } as any)
-const AdministrationLicenseRoute = AdministrationLicenseRouteImport.update({
-  id: '/administration/license',
-  path: '/administration/license',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AdministrationRolesRoute = AdministrationRolesRouteImport.update({
+const AppAdministrationLicenseRoute =
+  AppAdministrationLicenseRouteImport.update({
+    id: '/administration/license',
+    path: '/administration/license',
+    getParentRoute: () => AppRoute,
+  } as any)
+const AppAdministrationRolesRoute = AppAdministrationRolesRouteImport.update({
   id: '/administration/roles',
   path: '/administration/roles',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => AppRoute,
 } as any)
-const AdministrationSystemHealthRoute =
-  AdministrationSystemHealthRouteImport.update({
+const AppAdministrationSystemHealthRoute =
+  AppAdministrationSystemHealthRouteImport.update({
     id: '/administration/system-health',
     path: '/administration/system-health',
-    getParentRoute: () => rootRouteImport,
+    getParentRoute: () => AppRoute,
   } as any)
-const AdministrationUsersRoute = AdministrationUsersRouteImport.update({
+const AppAdministrationUsersRoute = AppAdministrationUsersRouteImport.update({
   id: '/administration/users',
   path: '/administration/users',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => AppRoute,
 } as any)
-const ReportsIndexRoute = ReportsIndexRouteImport.update({
+const AppReportsIndexRoute = AppReportsIndexRouteImport.update({
   id: '/reports/',
   path: '/reports/',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => AppRoute,
 } as any)
-const ReportsAlertActivityRoute = ReportsAlertActivityRouteImport.update({
+const AppReportsAlertActivityRoute = AppReportsAlertActivityRouteImport.update({
   id: '/reports/alert-activity',
   path: '/reports/alert-activity',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => AppRoute,
 } as any)
-const ReportsAvailabilityRoute = ReportsAvailabilityRouteImport.update({
+const AppReportsAvailabilityRoute = AppReportsAvailabilityRouteImport.update({
   id: '/reports/availability',
   path: '/reports/availability',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => AppRoute,
 } as any)
-const ReportsBandwidthRoute = ReportsBandwidthRouteImport.update({
+const AppReportsBandwidthRoute = AppReportsBandwidthRouteImport.update({
   id: '/reports/bandwidth',
   path: '/reports/bandwidth',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => AppRoute,
 } as any)
-const ReportsComplianceRoute = ReportsComplianceRouteImport.update({
+const AppReportsComplianceRoute = AppReportsComplianceRouteImport.update({
   id: '/reports/compliance',
   path: '/reports/compliance',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => AppRoute,
 } as any)
-const ReportsInventoryRoute = ReportsInventoryRouteImport.update({
+const AppReportsInventoryRoute = AppReportsInventoryRouteImport.update({
   id: '/reports/inventory',
   path: '/reports/inventory',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => AppRoute,
 } as any)
-const ReportsVulnerabilityRoute = ReportsVulnerabilityRouteImport.update({
+const AppReportsVulnerabilityRoute = AppReportsVulnerabilityRouteImport.update({
   id: '/reports/vulnerability',
   path: '/reports/vulnerability',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => AppRoute,
 } as any)
-const SecurityIndexRoute = SecurityIndexRouteImport.update({
+const AppSecurityIndexRoute = AppSecurityIndexRouteImport.update({
   id: '/security/',
   path: '/security/',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => AppRoute,
 } as any)
-const SecurityFindingsRoute = SecurityFindingsRouteImport.update({
+const AppSecurityFindingsRoute = AppSecurityFindingsRouteImport.update({
   id: '/security/findings',
   path: '/security/findings',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => AppRoute,
 } as any)
-const SecurityPostureRoute = SecurityPostureRouteImport.update({
+const AppSecurityPostureRoute = AppSecurityPostureRouteImport.update({
   id: '/security/posture',
   path: '/security/posture',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => AppRoute,
 } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/alerts': typeof AlertsRoute
-  '/clients': typeof ClientsRoute
-  '/compliance': typeof ComplianceRoute
-  '/dashboard': typeof DashboardRoute
-  '/devices': typeof DevicesRoute
-  '/logs': typeof LogsRoute
-  '/network': typeof NetworkRoute
-  '/overview': typeof OverviewRoute
-  '/policies': typeof PoliciesRoute
-  '/threats': typeof ThreatsRoute
-  '/vulnerabilities': typeof VulnerabilitiesRoute
-  '/administration/audit-log': typeof AdministrationAuditLogRoute
-  '/administration/backup-restore': typeof AdministrationBackupRestoreRoute
-  '/administration/license': typeof AdministrationLicenseRoute
-  '/administration/roles': typeof AdministrationRolesRoute
-  '/administration/system-health': typeof AdministrationSystemHealthRoute
-  '/administration/users': typeof AdministrationUsersRoute
-  '/reports/alert-activity': typeof ReportsAlertActivityRoute
-  '/reports/availability': typeof ReportsAvailabilityRoute
-  '/reports/bandwidth': typeof ReportsBandwidthRoute
-  '/reports/compliance': typeof ReportsComplianceRoute
-  '/reports/inventory': typeof ReportsInventoryRoute
-  '/reports/vulnerability': typeof ReportsVulnerabilityRoute
-  '/security/findings': typeof SecurityFindingsRoute
-  '/security/posture': typeof SecurityPostureRoute
-  '/administration/': typeof AdministrationIndexRoute
-  '/reports/': typeof ReportsIndexRoute
-  '/security/': typeof SecurityIndexRoute
+  '/change-password': typeof ChangePasswordRoute
+  '/login': typeof LoginRoute
+  '/$': typeof AppSplatRoute
+  '/alerts': typeof AppAlertsRoute
+  '/clients': typeof AppClientsRoute
+  '/compliance': typeof AppComplianceRoute
+  '/dashboard': typeof AppDashboardRoute
+  '/devices': typeof AppDevicesRoute
+  '/logs': typeof AppLogsRoute
+  '/network': typeof AppNetworkRoute
+  '/overview': typeof AppOverviewRoute
+  '/policies': typeof AppPoliciesRoute
+  '/threats': typeof AppThreatsRoute
+  '/vulnerabilities': typeof AppVulnerabilitiesRoute
+  '/administration/audit-log': typeof AppAdministrationAuditLogRoute
+  '/administration/backup-restore': typeof AppAdministrationBackupRestoreRoute
+  '/administration/license': typeof AppAdministrationLicenseRoute
+  '/administration/roles': typeof AppAdministrationRolesRoute
+  '/administration/system-health': typeof AppAdministrationSystemHealthRoute
+  '/administration/users': typeof AppAdministrationUsersRoute
+  '/reports/alert-activity': typeof AppReportsAlertActivityRoute
+  '/reports/availability': typeof AppReportsAvailabilityRoute
+  '/reports/bandwidth': typeof AppReportsBandwidthRoute
+  '/reports/compliance': typeof AppReportsComplianceRoute
+  '/reports/inventory': typeof AppReportsInventoryRoute
+  '/reports/vulnerability': typeof AppReportsVulnerabilityRoute
+  '/security/findings': typeof AppSecurityFindingsRoute
+  '/security/posture': typeof AppSecurityPostureRoute
+  '/administration/': typeof AppAdministrationIndexRoute
+  '/reports/': typeof AppReportsIndexRoute
+  '/security/': typeof AppSecurityIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/alerts': typeof AlertsRoute
-  '/clients': typeof ClientsRoute
-  '/compliance': typeof ComplianceRoute
-  '/dashboard': typeof DashboardRoute
-  '/devices': typeof DevicesRoute
-  '/logs': typeof LogsRoute
-  '/network': typeof NetworkRoute
-  '/overview': typeof OverviewRoute
-  '/policies': typeof PoliciesRoute
-  '/threats': typeof ThreatsRoute
-  '/vulnerabilities': typeof VulnerabilitiesRoute
-  '/administration/audit-log': typeof AdministrationAuditLogRoute
-  '/administration/backup-restore': typeof AdministrationBackupRestoreRoute
-  '/administration/license': typeof AdministrationLicenseRoute
-  '/administration/roles': typeof AdministrationRolesRoute
-  '/administration/system-health': typeof AdministrationSystemHealthRoute
-  '/administration/users': typeof AdministrationUsersRoute
-  '/reports/alert-activity': typeof ReportsAlertActivityRoute
-  '/reports/availability': typeof ReportsAvailabilityRoute
-  '/reports/bandwidth': typeof ReportsBandwidthRoute
-  '/reports/compliance': typeof ReportsComplianceRoute
-  '/reports/inventory': typeof ReportsInventoryRoute
-  '/reports/vulnerability': typeof ReportsVulnerabilityRoute
-  '/security/findings': typeof SecurityFindingsRoute
-  '/security/posture': typeof SecurityPostureRoute
-  '/administration': typeof AdministrationIndexRoute
-  '/reports': typeof ReportsIndexRoute
-  '/security': typeof SecurityIndexRoute
+  '/change-password': typeof ChangePasswordRoute
+  '/login': typeof LoginRoute
+  '/$': typeof AppSplatRoute
+  '/alerts': typeof AppAlertsRoute
+  '/clients': typeof AppClientsRoute
+  '/compliance': typeof AppComplianceRoute
+  '/dashboard': typeof AppDashboardRoute
+  '/devices': typeof AppDevicesRoute
+  '/logs': typeof AppLogsRoute
+  '/network': typeof AppNetworkRoute
+  '/overview': typeof AppOverviewRoute
+  '/policies': typeof AppPoliciesRoute
+  '/threats': typeof AppThreatsRoute
+  '/vulnerabilities': typeof AppVulnerabilitiesRoute
+  '/administration/audit-log': typeof AppAdministrationAuditLogRoute
+  '/administration/backup-restore': typeof AppAdministrationBackupRestoreRoute
+  '/administration/license': typeof AppAdministrationLicenseRoute
+  '/administration/roles': typeof AppAdministrationRolesRoute
+  '/administration/system-health': typeof AppAdministrationSystemHealthRoute
+  '/administration/users': typeof AppAdministrationUsersRoute
+  '/reports/alert-activity': typeof AppReportsAlertActivityRoute
+  '/reports/availability': typeof AppReportsAvailabilityRoute
+  '/reports/bandwidth': typeof AppReportsBandwidthRoute
+  '/reports/compliance': typeof AppReportsComplianceRoute
+  '/reports/inventory': typeof AppReportsInventoryRoute
+  '/reports/vulnerability': typeof AppReportsVulnerabilityRoute
+  '/security/findings': typeof AppSecurityFindingsRoute
+  '/security/posture': typeof AppSecurityPostureRoute
+  '/administration': typeof AppAdministrationIndexRoute
+  '/reports': typeof AppReportsIndexRoute
+  '/security': typeof AppSecurityIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/alerts': typeof AlertsRoute
-  '/clients': typeof ClientsRoute
-  '/compliance': typeof ComplianceRoute
-  '/dashboard': typeof DashboardRoute
-  '/devices': typeof DevicesRoute
-  '/logs': typeof LogsRoute
-  '/network': typeof NetworkRoute
-  '/overview': typeof OverviewRoute
-  '/policies': typeof PoliciesRoute
-  '/threats': typeof ThreatsRoute
-  '/vulnerabilities': typeof VulnerabilitiesRoute
-  '/administration/audit-log': typeof AdministrationAuditLogRoute
-  '/administration/backup-restore': typeof AdministrationBackupRestoreRoute
-  '/administration/license': typeof AdministrationLicenseRoute
-  '/administration/roles': typeof AdministrationRolesRoute
-  '/administration/system-health': typeof AdministrationSystemHealthRoute
-  '/administration/users': typeof AdministrationUsersRoute
-  '/reports/alert-activity': typeof ReportsAlertActivityRoute
-  '/reports/availability': typeof ReportsAvailabilityRoute
-  '/reports/bandwidth': typeof ReportsBandwidthRoute
-  '/reports/compliance': typeof ReportsComplianceRoute
-  '/reports/inventory': typeof ReportsInventoryRoute
-  '/reports/vulnerability': typeof ReportsVulnerabilityRoute
-  '/security/findings': typeof SecurityFindingsRoute
-  '/security/posture': typeof SecurityPostureRoute
-  '/administration/': typeof AdministrationIndexRoute
-  '/reports/': typeof ReportsIndexRoute
-  '/security/': typeof SecurityIndexRoute
+  '/_app': typeof AppRouteWithChildren
+  '/change-password': typeof ChangePasswordRoute
+  '/login': typeof LoginRoute
+  '/_app/$': typeof AppSplatRoute
+  '/_app/alerts': typeof AppAlertsRoute
+  '/_app/clients': typeof AppClientsRoute
+  '/_app/compliance': typeof AppComplianceRoute
+  '/_app/dashboard': typeof AppDashboardRoute
+  '/_app/devices': typeof AppDevicesRoute
+  '/_app/logs': typeof AppLogsRoute
+  '/_app/network': typeof AppNetworkRoute
+  '/_app/overview': typeof AppOverviewRoute
+  '/_app/policies': typeof AppPoliciesRoute
+  '/_app/threats': typeof AppThreatsRoute
+  '/_app/vulnerabilities': typeof AppVulnerabilitiesRoute
+  '/_app/administration/audit-log': typeof AppAdministrationAuditLogRoute
+  '/_app/administration/backup-restore': typeof AppAdministrationBackupRestoreRoute
+  '/_app/administration/license': typeof AppAdministrationLicenseRoute
+  '/_app/administration/roles': typeof AppAdministrationRolesRoute
+  '/_app/administration/system-health': typeof AppAdministrationSystemHealthRoute
+  '/_app/administration/users': typeof AppAdministrationUsersRoute
+  '/_app/reports/alert-activity': typeof AppReportsAlertActivityRoute
+  '/_app/reports/availability': typeof AppReportsAvailabilityRoute
+  '/_app/reports/bandwidth': typeof AppReportsBandwidthRoute
+  '/_app/reports/compliance': typeof AppReportsComplianceRoute
+  '/_app/reports/inventory': typeof AppReportsInventoryRoute
+  '/_app/reports/vulnerability': typeof AppReportsVulnerabilityRoute
+  '/_app/security/findings': typeof AppSecurityFindingsRoute
+  '/_app/security/posture': typeof AppSecurityPostureRoute
+  '/_app/administration/': typeof AppAdministrationIndexRoute
+  '/_app/reports/': typeof AppReportsIndexRoute
+  '/_app/security/': typeof AppSecurityIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/change-password'
+    | '/login'
+    | '/$'
     | '/alerts'
     | '/clients'
     | '/compliance'
@@ -316,6 +354,9 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/change-password'
+    | '/login'
+    | '/$'
     | '/alerts'
     | '/clients'
     | '/compliance'
@@ -347,66 +388,45 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
-    | '/alerts'
-    | '/clients'
-    | '/compliance'
-    | '/dashboard'
-    | '/devices'
-    | '/logs'
-    | '/network'
-    | '/overview'
-    | '/policies'
-    | '/threats'
-    | '/vulnerabilities'
-    | '/administration/audit-log'
-    | '/administration/backup-restore'
-    | '/administration/license'
-    | '/administration/roles'
-    | '/administration/system-health'
-    | '/administration/users'
-    | '/reports/alert-activity'
-    | '/reports/availability'
-    | '/reports/bandwidth'
-    | '/reports/compliance'
-    | '/reports/inventory'
-    | '/reports/vulnerability'
-    | '/security/findings'
-    | '/security/posture'
-    | '/administration/'
-    | '/reports/'
-    | '/security/'
+    | '/_app'
+    | '/change-password'
+    | '/login'
+    | '/_app/$'
+    | '/_app/alerts'
+    | '/_app/clients'
+    | '/_app/compliance'
+    | '/_app/dashboard'
+    | '/_app/devices'
+    | '/_app/logs'
+    | '/_app/network'
+    | '/_app/overview'
+    | '/_app/policies'
+    | '/_app/threats'
+    | '/_app/vulnerabilities'
+    | '/_app/administration/audit-log'
+    | '/_app/administration/backup-restore'
+    | '/_app/administration/license'
+    | '/_app/administration/roles'
+    | '/_app/administration/system-health'
+    | '/_app/administration/users'
+    | '/_app/reports/alert-activity'
+    | '/_app/reports/availability'
+    | '/_app/reports/bandwidth'
+    | '/_app/reports/compliance'
+    | '/_app/reports/inventory'
+    | '/_app/reports/vulnerability'
+    | '/_app/security/findings'
+    | '/_app/security/posture'
+    | '/_app/administration/'
+    | '/_app/reports/'
+    | '/_app/security/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  AlertsRoute: typeof AlertsRoute
-  ClientsRoute: typeof ClientsRoute
-  ComplianceRoute: typeof ComplianceRoute
-  DashboardRoute: typeof DashboardRoute
-  DevicesRoute: typeof DevicesRoute
-  LogsRoute: typeof LogsRoute
-  NetworkRoute: typeof NetworkRoute
-  OverviewRoute: typeof OverviewRoute
-  PoliciesRoute: typeof PoliciesRoute
-  ThreatsRoute: typeof ThreatsRoute
-  VulnerabilitiesRoute: typeof VulnerabilitiesRoute
-  AdministrationAuditLogRoute: typeof AdministrationAuditLogRoute
-  AdministrationBackupRestoreRoute: typeof AdministrationBackupRestoreRoute
-  AdministrationLicenseRoute: typeof AdministrationLicenseRoute
-  AdministrationRolesRoute: typeof AdministrationRolesRoute
-  AdministrationSystemHealthRoute: typeof AdministrationSystemHealthRoute
-  AdministrationUsersRoute: typeof AdministrationUsersRoute
-  ReportsAlertActivityRoute: typeof ReportsAlertActivityRoute
-  ReportsAvailabilityRoute: typeof ReportsAvailabilityRoute
-  ReportsBandwidthRoute: typeof ReportsBandwidthRoute
-  ReportsComplianceRoute: typeof ReportsComplianceRoute
-  ReportsInventoryRoute: typeof ReportsInventoryRoute
-  ReportsVulnerabilityRoute: typeof ReportsVulnerabilityRoute
-  SecurityFindingsRoute: typeof SecurityFindingsRoute
-  SecurityPostureRoute: typeof SecurityPostureRoute
-  AdministrationIndexRoute: typeof AdministrationIndexRoute
-  ReportsIndexRoute: typeof ReportsIndexRoute
-  SecurityIndexRoute: typeof SecurityIndexRoute
+  AppRoute: typeof AppRouteWithChildren
+  ChangePasswordRoute: typeof ChangePasswordRoute
+  LoginRoute: typeof LoginRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -418,235 +438,304 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/alerts': {
-      id: '/alerts'
+    '/_app': {
+      id: '/_app'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AppRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/change-password': {
+      id: '/change-password'
+      path: '/change-password'
+      fullPath: '/change-password'
+      preLoaderRoute: typeof ChangePasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_app/$': {
+      id: '/_app/$'
+      path: '/$'
+      fullPath: '/$'
+      preLoaderRoute: typeof AppSplatRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/alerts': {
+      id: '/_app/alerts'
       path: '/alerts'
       fullPath: '/alerts'
-      preLoaderRoute: typeof AlertsRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof AppAlertsRouteImport
+      parentRoute: typeof AppRoute
     }
-    '/clients': {
-      id: '/clients'
+    '/_app/clients': {
+      id: '/_app/clients'
       path: '/clients'
       fullPath: '/clients'
-      preLoaderRoute: typeof ClientsRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof AppClientsRouteImport
+      parentRoute: typeof AppRoute
     }
-    '/compliance': {
-      id: '/compliance'
+    '/_app/compliance': {
+      id: '/_app/compliance'
       path: '/compliance'
       fullPath: '/compliance'
-      preLoaderRoute: typeof ComplianceRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof AppComplianceRouteImport
+      parentRoute: typeof AppRoute
     }
-    '/dashboard': {
-      id: '/dashboard'
+    '/_app/dashboard': {
+      id: '/_app/dashboard'
       path: '/dashboard'
       fullPath: '/dashboard'
-      preLoaderRoute: typeof DashboardRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof AppDashboardRouteImport
+      parentRoute: typeof AppRoute
     }
-    '/devices': {
-      id: '/devices'
+    '/_app/devices': {
+      id: '/_app/devices'
       path: '/devices'
       fullPath: '/devices'
-      preLoaderRoute: typeof DevicesRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof AppDevicesRouteImport
+      parentRoute: typeof AppRoute
     }
-    '/logs': {
-      id: '/logs'
+    '/_app/logs': {
+      id: '/_app/logs'
       path: '/logs'
       fullPath: '/logs'
-      preLoaderRoute: typeof LogsRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof AppLogsRouteImport
+      parentRoute: typeof AppRoute
     }
-    '/network': {
-      id: '/network'
+    '/_app/network': {
+      id: '/_app/network'
       path: '/network'
       fullPath: '/network'
-      preLoaderRoute: typeof NetworkRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof AppNetworkRouteImport
+      parentRoute: typeof AppRoute
     }
-    '/overview': {
-      id: '/overview'
+    '/_app/overview': {
+      id: '/_app/overview'
       path: '/overview'
       fullPath: '/overview'
-      preLoaderRoute: typeof OverviewRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof AppOverviewRouteImport
+      parentRoute: typeof AppRoute
     }
-    '/policies': {
-      id: '/policies'
+    '/_app/policies': {
+      id: '/_app/policies'
       path: '/policies'
       fullPath: '/policies'
-      preLoaderRoute: typeof PoliciesRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof AppPoliciesRouteImport
+      parentRoute: typeof AppRoute
     }
-    '/threats': {
-      id: '/threats'
+    '/_app/threats': {
+      id: '/_app/threats'
       path: '/threats'
       fullPath: '/threats'
-      preLoaderRoute: typeof ThreatsRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof AppThreatsRouteImport
+      parentRoute: typeof AppRoute
     }
-    '/vulnerabilities': {
-      id: '/vulnerabilities'
+    '/_app/vulnerabilities': {
+      id: '/_app/vulnerabilities'
       path: '/vulnerabilities'
       fullPath: '/vulnerabilities'
-      preLoaderRoute: typeof VulnerabilitiesRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof AppVulnerabilitiesRouteImport
+      parentRoute: typeof AppRoute
     }
-    '/administration/': {
-      id: '/administration/'
+    '/_app/administration/': {
+      id: '/_app/administration/'
       path: '/administration'
       fullPath: '/administration/'
-      preLoaderRoute: typeof AdministrationIndexRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof AppAdministrationIndexRouteImport
+      parentRoute: typeof AppRoute
     }
-    '/administration/audit-log': {
-      id: '/administration/audit-log'
+    '/_app/administration/audit-log': {
+      id: '/_app/administration/audit-log'
       path: '/administration/audit-log'
       fullPath: '/administration/audit-log'
-      preLoaderRoute: typeof AdministrationAuditLogRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof AppAdministrationAuditLogRouteImport
+      parentRoute: typeof AppRoute
     }
-    '/administration/backup-restore': {
-      id: '/administration/backup-restore'
+    '/_app/administration/backup-restore': {
+      id: '/_app/administration/backup-restore'
       path: '/administration/backup-restore'
       fullPath: '/administration/backup-restore'
-      preLoaderRoute: typeof AdministrationBackupRestoreRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof AppAdministrationBackupRestoreRouteImport
+      parentRoute: typeof AppRoute
     }
-    '/administration/license': {
-      id: '/administration/license'
+    '/_app/administration/license': {
+      id: '/_app/administration/license'
       path: '/administration/license'
       fullPath: '/administration/license'
-      preLoaderRoute: typeof AdministrationLicenseRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof AppAdministrationLicenseRouteImport
+      parentRoute: typeof AppRoute
     }
-    '/administration/roles': {
-      id: '/administration/roles'
+    '/_app/administration/roles': {
+      id: '/_app/administration/roles'
       path: '/administration/roles'
       fullPath: '/administration/roles'
-      preLoaderRoute: typeof AdministrationRolesRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof AppAdministrationRolesRouteImport
+      parentRoute: typeof AppRoute
     }
-    '/administration/system-health': {
-      id: '/administration/system-health'
+    '/_app/administration/system-health': {
+      id: '/_app/administration/system-health'
       path: '/administration/system-health'
       fullPath: '/administration/system-health'
-      preLoaderRoute: typeof AdministrationSystemHealthRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof AppAdministrationSystemHealthRouteImport
+      parentRoute: typeof AppRoute
     }
-    '/administration/users': {
-      id: '/administration/users'
+    '/_app/administration/users': {
+      id: '/_app/administration/users'
       path: '/administration/users'
       fullPath: '/administration/users'
-      preLoaderRoute: typeof AdministrationUsersRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof AppAdministrationUsersRouteImport
+      parentRoute: typeof AppRoute
     }
-    '/reports/': {
-      id: '/reports/'
+    '/_app/reports/': {
+      id: '/_app/reports/'
       path: '/reports'
       fullPath: '/reports/'
-      preLoaderRoute: typeof ReportsIndexRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof AppReportsIndexRouteImport
+      parentRoute: typeof AppRoute
     }
-    '/reports/alert-activity': {
-      id: '/reports/alert-activity'
+    '/_app/reports/alert-activity': {
+      id: '/_app/reports/alert-activity'
       path: '/reports/alert-activity'
       fullPath: '/reports/alert-activity'
-      preLoaderRoute: typeof ReportsAlertActivityRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof AppReportsAlertActivityRouteImport
+      parentRoute: typeof AppRoute
     }
-    '/reports/availability': {
-      id: '/reports/availability'
+    '/_app/reports/availability': {
+      id: '/_app/reports/availability'
       path: '/reports/availability'
       fullPath: '/reports/availability'
-      preLoaderRoute: typeof ReportsAvailabilityRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof AppReportsAvailabilityRouteImport
+      parentRoute: typeof AppRoute
     }
-    '/reports/bandwidth': {
-      id: '/reports/bandwidth'
+    '/_app/reports/bandwidth': {
+      id: '/_app/reports/bandwidth'
       path: '/reports/bandwidth'
       fullPath: '/reports/bandwidth'
-      preLoaderRoute: typeof ReportsBandwidthRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof AppReportsBandwidthRouteImport
+      parentRoute: typeof AppRoute
     }
-    '/reports/compliance': {
-      id: '/reports/compliance'
+    '/_app/reports/compliance': {
+      id: '/_app/reports/compliance'
       path: '/reports/compliance'
       fullPath: '/reports/compliance'
-      preLoaderRoute: typeof ReportsComplianceRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof AppReportsComplianceRouteImport
+      parentRoute: typeof AppRoute
     }
-    '/reports/inventory': {
-      id: '/reports/inventory'
+    '/_app/reports/inventory': {
+      id: '/_app/reports/inventory'
       path: '/reports/inventory'
       fullPath: '/reports/inventory'
-      preLoaderRoute: typeof ReportsInventoryRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof AppReportsInventoryRouteImport
+      parentRoute: typeof AppRoute
     }
-    '/reports/vulnerability': {
-      id: '/reports/vulnerability'
+    '/_app/reports/vulnerability': {
+      id: '/_app/reports/vulnerability'
       path: '/reports/vulnerability'
       fullPath: '/reports/vulnerability'
-      preLoaderRoute: typeof ReportsVulnerabilityRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof AppReportsVulnerabilityRouteImport
+      parentRoute: typeof AppRoute
     }
-    '/security/': {
-      id: '/security/'
+    '/_app/security/': {
+      id: '/_app/security/'
       path: '/security'
       fullPath: '/security/'
-      preLoaderRoute: typeof SecurityIndexRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof AppSecurityIndexRouteImport
+      parentRoute: typeof AppRoute
     }
-    '/security/findings': {
-      id: '/security/findings'
+    '/_app/security/findings': {
+      id: '/_app/security/findings'
       path: '/security/findings'
       fullPath: '/security/findings'
-      preLoaderRoute: typeof SecurityFindingsRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof AppSecurityFindingsRouteImport
+      parentRoute: typeof AppRoute
     }
-    '/security/posture': {
-      id: '/security/posture'
+    '/_app/security/posture': {
+      id: '/_app/security/posture'
       path: '/security/posture'
       fullPath: '/security/posture'
-      preLoaderRoute: typeof SecurityPostureRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof AppSecurityPostureRouteImport
+      parentRoute: typeof AppRoute
     }
   }
 }
 
+interface AppRouteChildren {
+  AppSplatRoute: typeof AppSplatRoute
+  AppAlertsRoute: typeof AppAlertsRoute
+  AppClientsRoute: typeof AppClientsRoute
+  AppComplianceRoute: typeof AppComplianceRoute
+  AppDashboardRoute: typeof AppDashboardRoute
+  AppDevicesRoute: typeof AppDevicesRoute
+  AppLogsRoute: typeof AppLogsRoute
+  AppNetworkRoute: typeof AppNetworkRoute
+  AppOverviewRoute: typeof AppOverviewRoute
+  AppPoliciesRoute: typeof AppPoliciesRoute
+  AppThreatsRoute: typeof AppThreatsRoute
+  AppVulnerabilitiesRoute: typeof AppVulnerabilitiesRoute
+  AppAdministrationAuditLogRoute: typeof AppAdministrationAuditLogRoute
+  AppAdministrationBackupRestoreRoute: typeof AppAdministrationBackupRestoreRoute
+  AppAdministrationLicenseRoute: typeof AppAdministrationLicenseRoute
+  AppAdministrationRolesRoute: typeof AppAdministrationRolesRoute
+  AppAdministrationSystemHealthRoute: typeof AppAdministrationSystemHealthRoute
+  AppAdministrationUsersRoute: typeof AppAdministrationUsersRoute
+  AppReportsAlertActivityRoute: typeof AppReportsAlertActivityRoute
+  AppReportsAvailabilityRoute: typeof AppReportsAvailabilityRoute
+  AppReportsBandwidthRoute: typeof AppReportsBandwidthRoute
+  AppReportsComplianceRoute: typeof AppReportsComplianceRoute
+  AppReportsInventoryRoute: typeof AppReportsInventoryRoute
+  AppReportsVulnerabilityRoute: typeof AppReportsVulnerabilityRoute
+  AppSecurityFindingsRoute: typeof AppSecurityFindingsRoute
+  AppSecurityPostureRoute: typeof AppSecurityPostureRoute
+  AppAdministrationIndexRoute: typeof AppAdministrationIndexRoute
+  AppReportsIndexRoute: typeof AppReportsIndexRoute
+  AppSecurityIndexRoute: typeof AppSecurityIndexRoute
+}
+
+const AppRouteChildren: AppRouteChildren = {
+  AppSplatRoute: AppSplatRoute,
+  AppAlertsRoute: AppAlertsRoute,
+  AppClientsRoute: AppClientsRoute,
+  AppComplianceRoute: AppComplianceRoute,
+  AppDashboardRoute: AppDashboardRoute,
+  AppDevicesRoute: AppDevicesRoute,
+  AppLogsRoute: AppLogsRoute,
+  AppNetworkRoute: AppNetworkRoute,
+  AppOverviewRoute: AppOverviewRoute,
+  AppPoliciesRoute: AppPoliciesRoute,
+  AppThreatsRoute: AppThreatsRoute,
+  AppVulnerabilitiesRoute: AppVulnerabilitiesRoute,
+  AppAdministrationAuditLogRoute: AppAdministrationAuditLogRoute,
+  AppAdministrationBackupRestoreRoute: AppAdministrationBackupRestoreRoute,
+  AppAdministrationLicenseRoute: AppAdministrationLicenseRoute,
+  AppAdministrationRolesRoute: AppAdministrationRolesRoute,
+  AppAdministrationSystemHealthRoute: AppAdministrationSystemHealthRoute,
+  AppAdministrationUsersRoute: AppAdministrationUsersRoute,
+  AppReportsAlertActivityRoute: AppReportsAlertActivityRoute,
+  AppReportsAvailabilityRoute: AppReportsAvailabilityRoute,
+  AppReportsBandwidthRoute: AppReportsBandwidthRoute,
+  AppReportsComplianceRoute: AppReportsComplianceRoute,
+  AppReportsInventoryRoute: AppReportsInventoryRoute,
+  AppReportsVulnerabilityRoute: AppReportsVulnerabilityRoute,
+  AppSecurityFindingsRoute: AppSecurityFindingsRoute,
+  AppSecurityPostureRoute: AppSecurityPostureRoute,
+  AppAdministrationIndexRoute: AppAdministrationIndexRoute,
+  AppReportsIndexRoute: AppReportsIndexRoute,
+  AppSecurityIndexRoute: AppSecurityIndexRoute,
+}
+
+const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  AlertsRoute: AlertsRoute,
-  ClientsRoute: ClientsRoute,
-  ComplianceRoute: ComplianceRoute,
-  DashboardRoute: DashboardRoute,
-  DevicesRoute: DevicesRoute,
-  LogsRoute: LogsRoute,
-  NetworkRoute: NetworkRoute,
-  OverviewRoute: OverviewRoute,
-  PoliciesRoute: PoliciesRoute,
-  ThreatsRoute: ThreatsRoute,
-  VulnerabilitiesRoute: VulnerabilitiesRoute,
-  AdministrationAuditLogRoute: AdministrationAuditLogRoute,
-  AdministrationBackupRestoreRoute: AdministrationBackupRestoreRoute,
-  AdministrationLicenseRoute: AdministrationLicenseRoute,
-  AdministrationRolesRoute: AdministrationRolesRoute,
-  AdministrationSystemHealthRoute: AdministrationSystemHealthRoute,
-  AdministrationUsersRoute: AdministrationUsersRoute,
-  ReportsAlertActivityRoute: ReportsAlertActivityRoute,
-  ReportsAvailabilityRoute: ReportsAvailabilityRoute,
-  ReportsBandwidthRoute: ReportsBandwidthRoute,
-  ReportsComplianceRoute: ReportsComplianceRoute,
-  ReportsInventoryRoute: ReportsInventoryRoute,
-  ReportsVulnerabilityRoute: ReportsVulnerabilityRoute,
-  SecurityFindingsRoute: SecurityFindingsRoute,
-  SecurityPostureRoute: SecurityPostureRoute,
-  AdministrationIndexRoute: AdministrationIndexRoute,
-  ReportsIndexRoute: ReportsIndexRoute,
-  SecurityIndexRoute: SecurityIndexRoute,
+  AppRoute: AppRouteWithChildren,
+  ChangePasswordRoute: ChangePasswordRoute,
+  LoginRoute: LoginRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

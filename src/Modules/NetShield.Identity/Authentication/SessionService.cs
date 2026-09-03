@@ -7,6 +7,7 @@ using NetShield.Contracts.Identity;
 using NetShield.Identity.Persistence;
 using NetShield.Identity.Users;
 
+using NetShield.Platform.Authorization;
 using NetShield.Platform.Time;
 
 namespace NetShield.Identity.Authentication;
@@ -156,6 +157,23 @@ internal sealed class SessionService(IdentityDbContext database, IClock clock, I
             user.Username,
             user.DisplayName,
             user.Role,
-            user.MustChangePassword);
+            user.MustChangePassword,
+            PermissionsFor(user.Role));
+    }
+
+    /// <summary>
+    /// What <paramref name="role"/> may do, in a stable order, for the client to draw from.
+    /// </summary>
+    /// <remarks>
+    /// Read from <see cref="RolePermissions"/> rather than restated here, so that the table
+    /// authorization consults on every request is the same table the client is told about. The
+    /// order is the declaration order of <see cref="Permission"/> so that two responses for the
+    /// same role are byte-identical — a set's enumeration order is not a promise.
+    /// </remarks>
+    private static IReadOnlyList<Permission> PermissionsFor(UserRole role)
+    {
+        IReadOnlySet<Permission> granted = RolePermissions.For(role);
+
+        return [.. Enum.GetValues<Permission>().Where(granted.Contains)];
     }
 }

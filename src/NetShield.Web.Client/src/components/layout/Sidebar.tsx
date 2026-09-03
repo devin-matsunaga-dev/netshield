@@ -1,6 +1,6 @@
 import { PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 
-import { navigation } from '@/app/navigation';
+import { useVisibleNavigation } from '@/app/useVisibleNavigation';
 import { Brand } from '@/components/layout/Brand';
 import { SidebarNavLink } from '@/components/layout/SidebarNavLink';
 import { SidebarSection } from '@/components/layout/SidebarSection';
@@ -19,9 +19,13 @@ interface SidebarProps {
  * The sidebar (DESIGN.md §5): 200px expanded, 64px collapsed, full height, its own surface, a
  * hairline right border, and the collapse control pinned at the bottom above a top border.
  * Below 1024px it slides in over the content instead, where collapsing means nothing.
+ *
+ * It lists the destinations this session holds a permission for, and no others (WP-0.7).
  */
 export function Sidebar({ collapsed, docked, open, onToggleCollapsed, onNavigate }: SidebarProps) {
   const CollapseIcon = collapsed ? PanelLeftOpen : PanelLeftClose;
+  // Only what this session may reach. An entry it does not hold is absent rather than disabled.
+  const navigation = useVisibleNavigation();
 
   return (
     <aside

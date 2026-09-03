@@ -208,7 +208,8 @@
           "username",
           "displayName",
           "role",
-          "mustChangePassword"
+          "mustChangePassword",
+          "permissions"
         ],
         "type": "object",
         "properties": {
@@ -227,6 +228,12 @@
           },
           "mustChangePassword": {
             "type": "boolean"
+          },
+          "permissions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Permission"
+            }
           }
         }
       },
@@ -306,6 +313,32 @@
             "type": "string"
           }
         }
+      },
+      "Permission": {
+        "enum": [
+          "InventoryRead",
+          "InventoryWrite",
+          "CredentialsManage",
+          "DiscoveryRun",
+          "TopologyRead",
+          "TelemetryRead",
+          "FlowsRead",
+          "LogsRead",
+          "AlertsRead",
+          "AlertsManage",
+          "AlertRulesWrite",
+          "ConfigsRead",
+          "ConfigsManage",
+          "ComplianceRead",
+          "ComplianceManage",
+          "VulnerabilitiesRead",
+          "VulnerabilitiesManage",
+          "ReportsRead",
+          "ReportsManage",
+          "PoliciesWrite",
+          "AuditRead",
+          "SystemAdminister"
+        ]
       },
       "ProblemDetails": {
         "type": "object",
