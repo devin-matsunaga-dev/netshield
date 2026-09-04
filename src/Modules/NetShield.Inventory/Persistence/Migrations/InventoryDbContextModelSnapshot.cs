@@ -424,6 +424,196 @@ namespace NetShield.Inventory.Persistence.Migrations
                     b.ToTable("devices", (string)null);
                 });
 
+            modelBuilder.Entity("NetShield.Inventory.Discovery.DeviceFingerprint", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid>("DeviceId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("device_id");
+
+                    b.Property<int>("InterfaceCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("interface_count");
+
+                    b.Property<bool>("InterfacesTruncated")
+                        .HasColumnType("boolean")
+                        .HasColumnName("interfaces_truncated");
+
+                    b.Property<Guid?>("LastAppliedJobId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("last_applied_job_id");
+
+                    b.Property<string>("LastError")
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)")
+                        .HasColumnName("last_error");
+
+                    b.Property<DateTimeOffset?>("LastWalkAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_walk_at");
+
+                    b.Property<string>("Model")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
+                        .HasColumnName("model");
+
+                    b.Property<string>("OsVersion")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
+                        .HasColumnName("os_version");
+
+                    b.PrimitiveCollection<string[]>("OverriddenFields")
+                        .IsRequired()
+                        .HasColumnType("text[]")
+                        .HasColumnName("overridden_fields");
+
+                    b.Property<bool>("ReducedCapability")
+                        .HasColumnType("boolean")
+                        .HasColumnName("reduced_capability");
+
+                    b.Property<string>("SerialNumber")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
+                        .HasColumnName("serial_number");
+
+                    b.Property<string>("SysContact")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
+                        .HasColumnName("sys_contact");
+
+                    b.Property<string>("SysDescr")
+                        .HasMaxLength(1024)
+                        .HasColumnType("character varying(1024)")
+                        .HasColumnName("sys_descr");
+
+                    b.Property<string>("SysLocation")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
+                        .HasColumnName("sys_location");
+
+                    b.Property<string>("SysName")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
+                        .HasColumnName("sys_name");
+
+                    b.Property<string>("SysObjectId")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
+                        .HasColumnName("sys_object_id");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<double?>("UptimeSeconds")
+                        .HasColumnType("double precision")
+                        .HasColumnName("uptime_seconds");
+
+                    b.Property<string>("Vendor")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("vendor");
+
+                    b.HasKey("Id")
+                        .HasName("pk_device_fingerprints");
+
+                    b.HasIndex("DeviceId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_device_fingerprints_device_id");
+
+                    b.ToTable("device_fingerprints", (string)null);
+                });
+
+            modelBuilder.Entity("NetShield.Inventory.Discovery.DeviceInterface", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<int?>("AdminStatus")
+                        .HasColumnType("integer")
+                        .HasColumnName("admin_status");
+
+                    b.Property<string>("Alias")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
+                        .HasColumnName("alias");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
+                        .HasColumnName("description");
+
+                    b.Property<Guid>("DeviceId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("device_id");
+
+                    b.Property<DateTimeOffset>("FirstSeenAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("first_seen_at");
+
+                    b.Property<int>("IfIndex")
+                        .HasColumnType("integer")
+                        .HasColumnName("if_index");
+
+                    b.Property<int?>("InterfaceType")
+                        .HasColumnType("integer")
+                        .HasColumnName("interface_type");
+
+                    b.Property<DateTimeOffset>("LastSeenAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_seen_at");
+
+                    b.Property<int?>("Mtu")
+                        .HasColumnType("integer")
+                        .HasColumnName("mtu");
+
+                    b.Property<string>("Name")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
+                        .HasColumnName("name");
+
+                    b.Property<int?>("OperStatus")
+                        .HasColumnType("integer")
+                        .HasColumnName("oper_status");
+
+                    b.Property<string>("PhysicalAddress")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("physical_address");
+
+                    b.Property<long?>("SpeedBitsPerSecond")
+                        .HasColumnType("bigint")
+                        .HasColumnName("speed_bits_per_second");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id")
+                        .HasName("pk_device_interfaces");
+
+                    b.HasIndex("DeviceId", "IfIndex")
+                        .IsUnique()
+                        .HasDatabaseName("ix_device_interfaces_device_id_if_index");
+
+                    b.ToTable("device_interfaces", (string)null);
+                });
+
             modelBuilder.Entity("NetShield.Inventory.Reachability.DeviceReachability", b =>
                 {
                     b.Property<Guid>("Id")

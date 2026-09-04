@@ -36,6 +36,7 @@ namespace NetShield.Inventory.Endpoints;
 [JsonSerializable(typeof(UpdateDeviceRequest))]
 [JsonSerializable(typeof(DeviceDetail))]
 [JsonSerializable(typeof(DeviceSummary))]
+[JsonSerializable(typeof(DeviceWalkQueued))]
 [JsonSerializable(typeof(CursorPage<DeviceSummary>))]
 [JsonSerializable(typeof(CreateCredentialProfileRequest))]
 [JsonSerializable(typeof(UpdateCredentialProfileRequest))]

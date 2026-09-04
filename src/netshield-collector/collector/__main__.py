@@ -20,23 +20,29 @@ from collector.icmp import IcmpExecutor
 from collector.jobs import ExecutorRegistry
 from collector.logging import configure_logging
 from collector.runner import CollectorRunner
-from collector.vendors import VendorRegistry
+from collector.snmp import SnmpWalkExecutor
+from collector.vendors import VendorRegistry, snmp_adapters
 
 _LOG: Final = structlog.get_logger(__name__)
 
 
 def build_registries() -> tuple[ExecutorRegistry, VendorRegistry]:
-    """The two seams: one executor, and no vendor adapters yet.
+    """The two seams: the executors this build can run, and the vendors it recognises.
 
     ``IcmpExecutor`` answers for ``Poll`` jobs whose parameters name the ICMP probe, which is
-    every job the reachability schedule queues. WP-1.5 registers the SNMP executor and the vendor
-    adapters behind it; a job of a kind or a probe this build cannot run is still reported as a
-    failure naming the reason rather than dropped.
+    every job the reachability schedule queues. ``SnmpWalkExecutor`` answers for ``Discover``
+    jobs whose parameters name the SNMP walk, which is every job an on-demand fingerprint
+    queues; WP-1.6's range sweep will be a ``Discover`` too and will name a different walk, and
+    a job of a kind or a walk this build cannot run is still reported as a failure naming the
+    reason rather than dropped.
 
     ICMP needs no vendor adapter and asks the registry for none — an echo request is the same
-    question whoever made the box.
+    question whoever made the box. The SNMP executor is handed the registry, because which
+    private MIB is worth reading is the one thing that is not the same.
     """
-    return ExecutorRegistry([IcmpExecutor()]), VendorRegistry()
+    vendors = VendorRegistry(snmp_adapters())
+
+    return ExecutorRegistry([IcmpExecutor(), SnmpWalkExecutor(vendors)]), vendors
 
 
 async def main() -> int:

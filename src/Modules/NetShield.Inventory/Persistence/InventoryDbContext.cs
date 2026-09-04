@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using NetShield.Inventory.Collector;
 using NetShield.Inventory.Credentials;
 using NetShield.Inventory.Devices;
+using NetShield.Inventory.Discovery;
 using NetShield.Inventory.Reachability;
 
 using NetShield.Platform.Messaging;
@@ -44,6 +45,12 @@ public sealed class InventoryDbContext(DbContextOptions<InventoryDbContext> opti
     /// <summary>What is known about each device's reachability, one row per device.</summary>
     internal DbSet<DeviceReachability> DeviceReachabilities => Set<DeviceReachability>();
 
+    /// <summary>What the last SNMP walk established about each device, one row per device.</summary>
+    internal DbSet<DeviceFingerprint> DeviceFingerprints => Set<DeviceFingerprint>();
+
+    /// <summary>The interfaces the last walk found, one row per interface per device.</summary>
+    internal DbSet<DeviceInterface> DeviceInterfaces => Set<DeviceInterface>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         ArgumentNullException.ThrowIfNull(modelBuilder);
@@ -54,6 +61,8 @@ public sealed class InventoryDbContext(DbContextOptions<InventoryDbContext> opti
         modelBuilder.ApplyConfiguration(new CollectorJobConfiguration());
         modelBuilder.ApplyConfiguration(new CollectorNodeConfiguration());
         modelBuilder.ApplyConfiguration(new DeviceReachabilityConfiguration());
+        modelBuilder.ApplyConfiguration(new DeviceFingerprintConfiguration());
+        modelBuilder.ApplyConfiguration(new DeviceInterfaceConfiguration());
 
         // outbox_messages, mapped here so a device write and the event describing it are one
         // transaction on one connection. NetShield.Platform owns the table and the migration

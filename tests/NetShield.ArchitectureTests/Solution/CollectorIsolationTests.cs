@@ -57,13 +57,24 @@ public sealed partial class CollectorIsolationTests
     public void TheCollector_ContainsNoWritePrimitive()
     {
         // SPEC.md §3 and ARCHITECTURE.md §1: no SNMP set, no configuration mode, no config push.
-        // There are no protocol libraries here yet, which is exactly when this rule is cheapest
-        // to start enforcing — it fails on the day somebody adds the first one wrongly.
+        //
+        // The list gained "set_cmd" and "snmpset" in WP-1.5, which is the package that brought
+        // the first protocol library: pysnmp exports its write primitive as `set_cmd` from the
+        // very module the collector imports `get_cmd` and `bulk_cmd` from, and the guess this
+        // rule was written with — the camelCase spelling of an older release — would not have
+        // caught it. A rule that names the wrong symbol is worse than no rule, because it reads
+        // as cover.
+        //
+        // It is a text scan, so it cannot tell code from prose: a comment in the collector that
+        // named one of these would fail it too. That is deliberate and the collector's own
+        // comments are written around it.
         IReadOnlyList<string> offenders =
         [
             .. from file in PythonFiles
                let source = File.ReadAllText(file)
-               from forbidden in (string[])["setCmd", "snmp_set", "config_set", "send_config", "write_memory"]
+               from forbidden in (string[])[
+                   "set_cmd", "setCmd", "snmpset", "snmp_set",
+                   "config_set", "send_config", "write_memory"]
                where source.Contains(forbidden, StringComparison.Ordinal)
                select $"{Repository.RelativeToRoot(file)} mentions {forbidden}"
         ];

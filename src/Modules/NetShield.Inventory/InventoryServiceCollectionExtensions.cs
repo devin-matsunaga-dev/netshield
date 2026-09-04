@@ -14,6 +14,8 @@ using NetShield.Inventory.Collector.Handlers;
 using NetShield.Inventory.Credentials;
 using NetShield.Inventory.Credentials.Handlers;
 using NetShield.Inventory.Devices.Handlers;
+using NetShield.Inventory.Discovery;
+using NetShield.Inventory.Discovery.Handlers;
 using NetShield.Inventory.Endpoints;
 using NetShield.Inventory.Reachability;
 using NetShield.Inventory.Reachability.Handlers;
@@ -66,6 +68,11 @@ public static class InventoryServiceCollectionExtensions
             .ValidateDataAnnotations()
             .ValidateOnStart();
 
+        builder.Services.AddOptions<DiscoveryOptions>()
+            .Bind(builder.Configuration.GetSection(DiscoveryOptions.SectionName))
+            .ValidateDataAnnotations()
+            .ValidateOnStart();
+
         builder.Services.TryAddScoped<GetDeviceListHandler>();
         builder.Services.TryAddScoped<GetDeviceHandler>();
         builder.Services.TryAddScoped<CreateDeviceHandler>();
@@ -99,6 +106,13 @@ public static class InventoryServiceCollectionExtensions
         builder.Services.AddScoped<IIntegrationEventHandler<CollectorJobCompleted>,
             RecordReachabilityResultHandler>();
 
+        // The on-demand fingerprint walk, and the second subscriber to CollectorJobCompleted.
+        // The two subscribers each read only the jobs their own package queued: one filters on a
+        // Poll naming the ICMP probe, the other on a Discover naming the SNMP walk.
+        builder.Services.TryAddScoped<QueueDeviceWalkHandler>();
+        builder.Services.AddScoped<IIntegrationEventHandler<CollectorJobCompleted>,
+            RecordSnmpWalkResultHandler>();
+
         builder.Services.TryAddScoped<IValidator<CreateDeviceRequest>, CreateDeviceRequestValidator>();
         builder.Services.TryAddScoped<IValidator<UpdateDeviceRequest>, UpdateDeviceRequestValidator>();
 
@@ -128,6 +142,7 @@ public static class InventoryServiceCollectionExtensions
         builder.Services.AddIntegrationEvent<DeviceCredentialProfilesChanged>();
         builder.Services.AddIntegrationEvent<CollectorJobCompleted>();
         builder.Services.AddIntegrationEvent<DeviceStateChanged>();
+        builder.Services.AddIntegrationEvent<DeviceFingerprinted>();
 
         builder.Services.ConfigureHttpJsonOptions(json =>
         {

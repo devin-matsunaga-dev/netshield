@@ -13,6 +13,7 @@ dependencies = [
     "httpx>=0.28,<0.29",
     "pydantic>=2.10,<3",
     "pydantic-settings>=2.7,<3",
+    "pysnmp>=7.1,<8",
     "structlog>=24.4,<26",
 ]
 
@@ -50,9 +51,25 @@ select = ["E", "F", "W", "I", "N", "UP", "B", "A", "C4", "SIM", "RUF", "ASYNC", 
 python_version = "3.13"
 strict = true
 warn_unreachable = true
-# Every module this project ships is annotated; a dependency without stubs is a dependency whose
-# surface we are not checking, and there are none of those today.
+# Every module this project ships is annotated, and a dependency without stubs is a dependency
+# whose surface we are not checking. pysnmp is the one that ships neither stubs nor a py.typed
+# marker; the two overrides below are scoped to the single module that imports it, which is why
+# it is the single module that imports it.
 disallow_any_unimported = true
+
+[[tool.mypy.overrides]]
+# pysnmp 7.1 has no py.typed marker. There is no stub package for it, and vendoring one for a
+# surface this narrow would be a second thing to keep true.
+module = "pysnmp.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+# The consequence: inside this module a pysnmp type is Any, and `disallow_any_unimported` would
+# reject every signature naming one. It is relaxed here alone. Nothing leaks — `SnmpSession`,
+# `SnmpError` and the decoded `dict[str, str]` are the only things this module exposes upward,
+# all of them NetShield's own types, and every module above it is checked at full strength.
+module = "collector.snmp.session"
+disallow_any_unimported = false
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

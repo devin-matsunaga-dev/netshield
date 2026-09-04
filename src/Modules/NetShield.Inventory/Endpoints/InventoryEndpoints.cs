@@ -6,12 +6,13 @@ namespace NetShield.Inventory.Endpoints;
 /// The Inventory module's single registration point (CONVENTIONS.md §2).
 /// </summary>
 /// <remarks>
-/// The module now serves four resources — devices, credential profiles, the assignment between
-/// them, and the internal collector contract — and CONVENTIONS.md §2 asks for one file per
-/// resource behind one <c>Map{Module}Endpoints</c> extension. This is that extension. The
-/// composition root calls it and nothing else, which is also what keeps
-/// <c>ApiDocumentParityTests</c> comparing one name per module rather than a list that grows with
-/// every resource.
+/// The module now serves devices, the on-demand fingerprint walk of one, credential profiles,
+/// the assignment between profiles and devices, and the internal collector contract — and
+/// CONVENTIONS.md §2 asks for one file per resource behind one <c>Map{Module}Endpoints</c>
+/// extension. This is that extension. The composition root calls it and nothing else, which is
+/// also what keeps
+/// <c>ApiDocumentParityTests</c> comparing one name per module rather than a list that grows
+/// with every resource.
 ///
 /// The collector routes are mapped from here despite not being under <c>/api</c>: they are this
 /// module's endpoints, they need this module's services, and giving them a registration call of
@@ -26,6 +27,7 @@ public static class InventoryEndpoints
         ArgumentNullException.ThrowIfNull(endpoints);
 
         endpoints.MapDeviceEndpoints();
+        endpoints.MapDeviceDiscoveryEndpoints();
         endpoints.MapCredentialProfileEndpoints();
         endpoints.MapDeviceCredentialProfileEndpoints();
         endpoints.MapCollectorEndpoints();

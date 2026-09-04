@@ -419,7 +419,8 @@ internal sealed class InventoryHost(
                 job.LeaseToken,
                 job.LeasedBy,
                 job.Detail,
-                job.Result))
+                job.Result,
+                job.CredentialProfileId))
             .SingleAsync(cancellationToken);
     }
 
@@ -574,6 +575,77 @@ internal sealed class InventoryHost(
             .SingleAsync(cancellationToken);
     }
 
+    /// <summary>What the last SNMP walk established, or nothing if none has ever run.</summary>
+    public async Task<FingerprintRow?> FingerprintAsync(Guid deviceId, CancellationToken cancellationToken)
+    {
+        await using AsyncServiceScope scope = application.Services.CreateAsyncScope();
+
+        return await scope.ServiceProvider.GetRequiredService<InventoryDbContext>()
+            .DeviceFingerprints.AsNoTracking()
+            .Where(row => row.DeviceId == deviceId)
+            .Select(row => new FingerprintRow(
+                row.Vendor,
+                row.ReducedCapability,
+                row.SysObjectId,
+                row.SysDescr,
+                row.SysName,
+                row.UptimeSeconds,
+                row.Model,
+                row.OsVersion,
+                row.SerialNumber,
+                row.InterfaceCount,
+                row.InterfacesTruncated,
+                row.OverriddenFields,
+                row.LastWalkAt,
+                row.LastAppliedJobId,
+                row.LastError))
+            .SingleOrDefaultAsync(cancellationToken);
+    }
+
+    /// <summary>A device's interface inventory, in ifIndex order.</summary>
+    public async Task<IReadOnlyList<InterfaceRow>> InterfacesAsync(
+        Guid deviceId,
+        CancellationToken cancellationToken)
+    {
+        await using AsyncServiceScope scope = application.Services.CreateAsyncScope();
+
+        return await scope.ServiceProvider.GetRequiredService<InventoryDbContext>()
+            .DeviceInterfaces.AsNoTracking()
+            .Where(row => row.DeviceId == deviceId)
+            .OrderBy(row => row.IfIndex)
+            .Select(row => new InterfaceRow(
+                row.IfIndex,
+                row.Name,
+                row.Description,
+                row.Alias,
+                row.InterfaceType,
+                row.Mtu,
+                row.SpeedBitsPerSecond,
+                row.PhysicalAddress,
+                row.AdminStatus,
+                row.OperStatus,
+                row.FirstSeenAt,
+                row.LastSeenAt))
+            .ToListAsync(cancellationToken);
+    }
+
+    /// <summary>The four identity facts as they stand on the device row itself.</summary>
+    public async Task<DeviceFacts> DeviceFactsAsync(Guid deviceId, CancellationToken cancellationToken)
+    {
+        await using AsyncServiceScope scope = application.Services.CreateAsyncScope();
+
+        return await scope.ServiceProvider.GetRequiredService<InventoryDbContext>()
+            .Devices.AsNoTracking()
+            .Where(device => device.Id == deviceId)
+            .Select(device => new DeviceFacts(
+                device.Vendor,
+                device.Model,
+                device.OsVersion,
+                device.SerialNumber,
+                device.UpdatedAt))
+            .SingleAsync(cancellationToken);
+    }
+
     /// <summary>Brings a device's next probe forward, which is what waiting an interval does.</summary>
     public async Task MakeDueAsync(Guid deviceId, CancellationToken cancellationToken)
     {
@@ -610,7 +682,8 @@ internal sealed record CollectorJobRow(
     string? LeaseToken,
     string? LeasedBy,
     string? Detail,
-    string? Result);
+    string? Result,
+    Guid? CredentialProfileId);
 
 /// <summary>What a test wants the reachability schedule configured as.</summary>
 /// <remarks>
@@ -645,3 +718,44 @@ internal sealed record CollectorNodeRow(string Name, string? Version, int Capaci
 /// <param name="WrappedDataKey">The data key, sealed.</param>
 /// <param name="MaterialCiphertext">The material, sealed.</param>
 internal sealed record StoredCiphertext(string KeyId, byte[] WrappedDataKey, byte[] MaterialCiphertext);
+
+/// <summary>What the last SNMP walk recorded about a device.</summary>
+internal sealed record FingerprintRow(
+    DeviceVendor Vendor,
+    bool ReducedCapability,
+    string? SysObjectId,
+    string? SysDescr,
+    string? SysName,
+    double? UptimeSeconds,
+    string? Model,
+    string? OsVersion,
+    string? SerialNumber,
+    int InterfaceCount,
+    bool InterfacesTruncated,
+    IReadOnlyList<string> OverriddenFields,
+    DateTimeOffset? LastWalkAt,
+    Guid? LastAppliedJobId,
+    string? LastError);
+
+/// <summary>One row of a device's interface inventory.</summary>
+internal sealed record InterfaceRow(
+    int IfIndex,
+    string? Name,
+    string? Description,
+    string? Alias,
+    int? InterfaceType,
+    int? Mtu,
+    long? SpeedBitsPerSecond,
+    string? PhysicalAddress,
+    int? AdminStatus,
+    int? OperStatus,
+    DateTimeOffset FirstSeenAt,
+    DateTimeOffset LastSeenAt);
+
+/// <summary>The identity facts on the device row, and when that row last changed.</summary>
+internal sealed record DeviceFacts(
+    DeviceVendor Vendor,
+    string? Model,
+    string? OsVersion,
+    string? SerialNumber,
+    DateTimeOffset UpdatedAt);
