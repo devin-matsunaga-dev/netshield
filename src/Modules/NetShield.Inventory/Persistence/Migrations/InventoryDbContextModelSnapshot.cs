@@ -23,6 +23,142 @@ namespace NetShield.Inventory.Persistence.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("NetShield.Inventory.Credentials.CredentialProfile", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("AuthAlgorithm")
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("auth_algorithm");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<DateTimeOffset?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("description");
+
+                    b.Property<string>("KeyId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("key_id");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("kind");
+
+                    b.Property<byte[]>("MaterialCiphertext")
+                        .IsRequired()
+                        .HasColumnType("bytea")
+                        .HasColumnName("material_ciphertext");
+
+                    b.Property<DateTimeOffset>("MaterialUpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("material_updated_at");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)")
+                        .HasColumnName("name");
+
+                    b.Property<string>("NormalizedName")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)")
+                        .HasColumnName("normalized_name");
+
+                    b.Property<string>("PrivacyAlgorithm")
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("privacy_algorithm");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<string>("Username")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)")
+                        .HasColumnName("username");
+
+                    b.Property<byte[]>("WrappedDataKey")
+                        .IsRequired()
+                        .HasColumnType("bytea")
+                        .HasColumnName("wrapped_data_key");
+
+                    b.HasKey("Id")
+                        .HasName("pk_credential_profiles");
+
+                    b.HasIndex("DeletedAt")
+                        .HasDatabaseName("ix_credential_profiles_deleted_at");
+
+                    b.HasIndex("KeyId")
+                        .HasDatabaseName("ix_credential_profiles_key_id");
+
+                    b.HasIndex("NormalizedName")
+                        .IsUnique()
+                        .HasDatabaseName("ix_credential_profiles_normalized_name_live")
+                        .HasFilter("deleted_at IS NULL");
+
+                    b.HasIndex("CreatedAt", "Id")
+                        .HasDatabaseName("ix_credential_profiles_created_at_id");
+
+                    b.ToTable("credential_profiles", (string)null);
+                });
+
+            modelBuilder.Entity("NetShield.Inventory.Credentials.DeviceCredentialProfile", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid>("CredentialProfileId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("credential_profile_id");
+
+                    b.Property<Guid>("DeviceId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("device_id");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id")
+                        .HasName("pk_device_credential_profiles");
+
+                    b.HasIndex("CredentialProfileId")
+                        .HasDatabaseName("ix_device_credential_profiles_credential_profile_id");
+
+                    b.HasIndex("DeviceId")
+                        .HasDatabaseName("ix_device_credential_profiles_device_id");
+
+                    b.HasIndex("DeviceId", "CredentialProfileId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_device_credential_profiles_device_id_credential_profile_id");
+
+                    b.ToTable("device_credential_profiles", (string)null);
+                });
+
             modelBuilder.Entity("NetShield.Inventory.Devices.Device", b =>
                 {
                     b.Property<Guid>("Id")
@@ -183,6 +319,23 @@ namespace NetShield.Inventory.Persistence.Migrations
                         {
                             t.ExcludeFromMigrations();
                         });
+                });
+
+            modelBuilder.Entity("NetShield.Inventory.Credentials.DeviceCredentialProfile", b =>
+                {
+                    b.HasOne("NetShield.Inventory.Credentials.CredentialProfile", null)
+                        .WithMany()
+                        .HasForeignKey("CredentialProfileId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_device_credential_profiles_credential_profiles_credential_p");
+
+                    b.HasOne("NetShield.Inventory.Devices.Device", null)
+                        .WithMany()
+                        .HasForeignKey("DeviceId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_device_credential_profiles_devices_device_id");
                 });
 #pragma warning restore 612, 618
         }

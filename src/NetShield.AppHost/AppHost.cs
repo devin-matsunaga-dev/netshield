@@ -6,6 +6,8 @@
 // configuration (SPEC.md §5, CONVENTIONS.md §8).
 using Aspire.Hosting.ApplicationModel;
 
+using NetShield.AppHost;
+
 IDistributedApplicationBuilder builder = DistributedApplication.CreateBuilder(args);
 
 // PostgreSQL 17 with TimescaleDB — the single store for relational and time-series
@@ -65,6 +67,22 @@ IResourceBuilder<ParameterResource> administratorPassword = builder.AddParameter
     secret: true,
     persist: true);
 
+// The key-encryption key that wraps every stored device credential (ARCHITECTURE.md §8).
+// Generated once as 32 random bytes, base64-encoded, and persisted to the AppHost's user-secrets
+// store — a KEK that changed between runs would leave every credential in the development
+// database permanently unreadable. It is never written into this repository and never logged
+// (SPEC.md §5).
+//
+// This reaches development and nothing reaches a deployment. A deployment must supply the same
+// configuration key from a secret store, a mounted file, or a KMS, held somewhere other than
+// beside the database whose rows it opens. That gap is recorded in STATUS.md, not papered over
+// here.
+IResourceBuilder<ParameterResource> credentialKey = builder.AddParameter(
+    "credential-kek",
+    new Base64KeyParameterDefault(32),
+    secret: true,
+    persist: true);
+
 // The schema step. It is the same project as the API, run with --migrate: it applies every
 // context's migrations, seeds the first-run administrator, and exits without binding a socket.
 // A sixth project would be a change to the five-process model in ARCHITECTURE.md §2; a startup
@@ -82,6 +100,12 @@ IResourceBuilder<ProjectResource> webHost = builder.AddProject<Projects.NetShiel
     .WithReference(cache).WaitFor(cache)
     .WithReference(mailConnection).WaitFor(mail)
     .WithEnvironment("Identity__Seed__Password", administratorPassword)
+    // The key ring. Only the API gets it: db-migrator applies schema and encrypts nothing, and a
+    // process is not handed the highest-value secret in the system for a job that has no use for
+    // it. The key id is "dev" and stays "dev" — a rotation adds a second key and moves
+    // ActiveKeyId to it, which is what NetShield.Web.Host --rewrap then walks the table for.
+    .WithEnvironment("Security__CredentialEncryption__ActiveKeyId", "dev")
+    .WithEnvironment("Security__CredentialEncryption__Keys__dev", credentialKey)
     .WithHttpHealthCheck("/health/ready")
     // Not merely started: finished. The API must never come up against a half-migrated schema,
     // and on a fresh volume the administrator it seeds is created by the step above.

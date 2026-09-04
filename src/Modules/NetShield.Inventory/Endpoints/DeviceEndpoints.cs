@@ -41,8 +41,11 @@ public static class DeviceEndpoints
     /// <summary>What an audit row from these routes says it acted on.</summary>
     private const string TargetType = "device";
 
-    /// <summary>Maps the inventory endpoints. Called once, by the composition root.</summary>
-    public static IEndpointRouteBuilder MapInventoryEndpoints(this IEndpointRouteBuilder endpoints)
+    /// <summary>
+    /// Maps the device endpoints. Called by <see cref="InventoryEndpoints.MapInventoryEndpoints"/>,
+    /// which is the module's single registration point (CONVENTIONS.md §2).
+    /// </summary>
+    public static IEndpointRouteBuilder MapDeviceEndpoints(this IEndpointRouteBuilder endpoints)
     {
         ArgumentNullException.ThrowIfNull(endpoints);
 

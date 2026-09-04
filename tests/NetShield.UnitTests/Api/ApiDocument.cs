@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.OpenApi;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
 using Microsoft.OpenApi;
@@ -44,6 +45,9 @@ internal static class ApiDocument
     /// <summary>Set this to rewrite <see cref="CommittedPath"/> instead of asserting on it.</summary>
     public const string UpdateVariable = "NETSHIELD_UPDATE_OPENAPI";
 
+    /// <summary>A fixture key-encryption key: base64 of the bytes 0x00 to 0x1f, in order.</summary>
+    public const string TestKeyEncryptionKey = "AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8=";
+
     /// <summary>The document as JSON, exactly as it is committed.</summary>
     public static async Task<string> GenerateAsync(CancellationToken cancellationToken)
     {
@@ -59,6 +63,16 @@ internal static class ApiDocument
         // document is built from the endpoint data sources, and those are registered as the
         // pipeline is built, not as each route is mapped. Nothing is ever requested over it.
         builder.WebHost.UseUrls("http://127.0.0.1:0");
+
+        // The Inventory module validates its key ring at startup, so the host needs one to start.
+        // The bytes are 0x00..0x1f in order — recognisably not a key anybody generated, sealing
+        // nothing, and reading no row. CONVENTIONS.md §9 forbids committing a secret; this is a
+        // fixture that lets a document be produced.
+        builder.Configuration.AddInMemoryCollection(new Dictionary<string, string?>
+        {
+            ["Security:CredentialEncryption:ActiveKeyId"] = "test",
+            ["Security:CredentialEncryption:Keys:test"] = TestKeyEncryptionKey
+        });
 
         builder.AddNetShieldPlatform();
         builder.Services.AddNetShieldProblemDetails();

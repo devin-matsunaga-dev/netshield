@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 
+using NetShield.Inventory.Credentials;
 using NetShield.Inventory.Devices;
 
 using NetShield.Platform.Messaging;
@@ -26,11 +27,19 @@ public sealed class InventoryDbContext(DbContextOptions<InventoryDbContext> opti
     /// <summary>Monitored devices, live and soft-deleted alike.</summary>
     internal DbSet<Device> Devices => Set<Device>();
 
+    /// <summary>Credential profiles, live and soft-deleted alike.</summary>
+    internal DbSet<CredentialProfile> CredentialProfiles => Set<CredentialProfile>();
+
+    /// <summary>Which devices may be reached with which credential profile.</summary>
+    internal DbSet<DeviceCredentialProfile> DeviceCredentialProfiles => Set<DeviceCredentialProfile>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         ArgumentNullException.ThrowIfNull(modelBuilder);
 
         modelBuilder.ApplyConfiguration(new DeviceConfiguration());
+        modelBuilder.ApplyConfiguration(new CredentialProfileConfiguration());
+        modelBuilder.ApplyConfiguration(new DeviceCredentialProfileConfiguration());
 
         // outbox_messages, mapped here so a device write and the event describing it are one
         // transaction on one connection. NetShield.Platform owns the table and the migration

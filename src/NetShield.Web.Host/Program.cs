@@ -25,6 +25,14 @@ if (MigrationMode.IsRequested(args))
     return await MigrationMode.RunAsync(args, CancellationToken.None);
 }
 
+// Key rotation is the same shape and for the same reasons: a privileged operation an operator
+// runs deliberately, not a route that sits on the web surface waiting to be reached. It writes
+// its own audit row (SPEC.md §5).
+if (RewrapMode.IsRequested(args))
+{
+    return await RewrapMode.RunAsync(args, CancellationToken.None);
+}
+
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
 builder.AddServiceDefaults();

@@ -4,11 +4,13 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Options;
 
 using NetShield.Contracts.Messaging;
 
 using NetShield.Platform.Auditing;
 using NetShield.Platform.Authorization;
+using NetShield.Platform.Cryptography;
 using NetShield.Platform.Logging;
 using NetShield.Platform.Messaging;
 using NetShield.Platform.Time;
@@ -45,6 +47,42 @@ public static class PlatformServiceCollectionExtensions
         builder.Services.TryAddSingleton<OutboxEnlistment>();
         builder.Services.TryAddScoped<IEventBus, OutboxEventBus>();
         builder.Services.TryAddScoped<OutboxProcessor>();
+
+        return builder;
+    }
+
+    /// <summary>
+    /// Adds envelope encryption for data at rest: the key ring from configuration and the
+    /// encryptor that wraps a per-value data key with it (ARCHITECTURE.md §8).
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Separate from <see cref="AddNetShieldPlatform{TBuilder}"/> because a key-encryption key is
+    /// the highest-value secret NetShield holds and no process should be given one it has no use
+    /// for. The schema step does not call this: applying a migration encrypts nothing, and a
+    /// migrator that demanded the key would be one more place the key has to be delivered to.
+    /// </para>
+    /// <para>
+    /// A module that stores a secret calls this itself, so that registering the module and being
+    /// able to seal what it stores are the same act.
+    /// </para>
+    /// </remarks>
+    public static TBuilder AddNetShieldEnvelopeEncryption<TBuilder>(this TBuilder builder)
+        where TBuilder : IHostApplicationBuilder
+    {
+        ArgumentNullException.ThrowIfNull(builder);
+
+        builder.Services.AddOptions<EnvelopeEncryptionOptions>()
+            .Bind(builder.Configuration.GetSection(EnvelopeEncryptionOptions.SectionName))
+            .ValidateOnStart();
+
+        builder.Services.TryAddEnumerable(
+            ServiceDescriptor.Singleton<IValidateOptions<EnvelopeEncryptionOptions>,
+                EnvelopeEncryptionOptionsValidator>());
+
+        // Singletons: the ring decodes its keys once, and the encryptor holds nothing per call.
+        builder.Services.TryAddSingleton<KeyEncryptionKeyRing>();
+        builder.Services.TryAddSingleton<IEnvelopeEncryptor, AesGcmEnvelopeEncryptor>();
 
         return builder;
     }

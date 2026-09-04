@@ -17,4 +17,10 @@
     <ProjectReference Include="..\NetShield.Ingest\NetShield.Ingest.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- OrchestrationTests asserts the shape of the declared model, including the generated
+         key-encryption key's format. -->
+    <InternalsVisibleTo Include="NetShield.UnitTests" />
+  </ItemGroup>
+
 </Project>

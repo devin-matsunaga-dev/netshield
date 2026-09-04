@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 using NetShield.Contracts.Identity;
 
@@ -17,6 +18,7 @@ using NetShield.IntegrationTests.Identity;
 using NetShield.IntegrationTests.Platform;
 
 using NetShield.Inventory;
+using NetShield.Inventory.Credentials;
 using NetShield.Inventory.Endpoints;
 using NetShield.Inventory.Persistence;
 
@@ -38,7 +40,11 @@ namespace NetShield.IntegrationTests.Inventory;
 /// filter, a keyset comparison under the database's collation, and a transaction that carries a
 /// device row and an outbox row together or neither.
 /// </remarks>
-internal sealed class InventoryHost(WebApplication application, SessionClient client) : IAsyncDisposable
+internal sealed class InventoryHost(
+    WebApplication application,
+    SessionClient client,
+    string connectionString,
+    RecordingLoggerProvider logs) : IAsyncDisposable
 {
     /// <summary>The password every account this harness creates signs in with.</summary>
     internal const string Password = "Correct-Horse-Battery-9";
@@ -46,19 +52,55 @@ internal sealed class InventoryHost(WebApplication application, SessionClient cl
     /// <summary>The work factor the suite hashes at. The floor the options allow, for speed.</summary>
     private const string TestMemoryKib = "8192";
 
+    /// <summary>The key id every profile in this suite is sealed under.</summary>
+    internal const string ActiveKeyId = "test";
+
+    /// <summary>
+    /// A fixture key-encryption key: base64 of the bytes 0x00 to 0x1f, in order. Recognisably not
+    /// a key anybody generated, and it opens nothing outside this suite's own throwaway database
+    /// (CONVENTIONS.md §9).
+    /// </summary>
+    internal const string KeyEncryptionKey = "AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8=";
+
+    /// <summary>A second fixture key, for the rotation tests. Bytes 0x20 to 0x3f.</summary>
+    internal const string RotatedKeyEncryptionKey = "ICEiIyQlJicoKSorLC0uLzAxMjM0NTY3ODk6Ozw9Pj8=";
+
     /// <summary>The client, holding whatever cookies the API has set on it.</summary>
     public SessionClient Client => client;
 
     /// <summary>Where the host is listening, for a test that needs a client with no session.</summary>
     public Uri BaseAddress => new(application.Urls.First());
 
+    /// <summary>
+    /// The database this host was built against, so a second host can be started over the same
+    /// rows with a different key ring — which is what a key rotation actually is.
+    /// </summary>
+    public string ConnectionString => connectionString;
+
     /// <summary>Starts the host and signs in as <paramref name="role"/>.</summary>
+    /// <param name="postgres">The container the database is created on.</param>
+    /// <param name="cancellationToken">Cancellation.</param>
+    /// <param name="role">The role the client signs in as.</param>
+    /// <param name="database">
+    /// An existing database to start against, rather than a fresh one. A rotation test needs two
+    /// hosts over one set of rows.
+    /// </param>
+    /// <param name="keyRing">
+    /// The key-encryption keys this host holds, defaulting to <see cref="KeyEncryptionKey"/>
+    /// under <see cref="ActiveKeyId"/>.
+    /// </param>
+    /// <param name="activeKeyId">Which of them new material is sealed under.</param>
     public static async Task<InventoryHost> StartAsync(
         PostgresFixture postgres,
         CancellationToken cancellationToken,
-        UserRole role = UserRole.Administrator)
+        UserRole role = UserRole.Administrator,
+        string? database = null,
+        IReadOnlyList<(string Id, string Key)>? keyRing = null,
+        string? activeKeyId = null)
     {
-        string connectionString = await postgres.CreateDatabaseAsync(cancellationToken);
+        string connectionString = database ?? await postgres.CreateDatabaseAsync(cancellationToken);
+
+        IReadOnlyList<(string Id, string Key)> keys = keyRing ?? [(ActiveKeyId, KeyEncryptionKey)];
 
         WebApplicationBuilder builder = WebApplication.CreateSlimBuilder(new WebApplicationOptions
         {
@@ -68,11 +110,25 @@ internal sealed class InventoryHost(WebApplication application, SessionClient cl
 
         builder.WebHost.UseUrls("http://127.0.0.1:0");
 
-        builder.Configuration.AddInMemoryCollection(new Dictionary<string, string?>
+        Dictionary<string, string?> settings = new(StringComparer.Ordinal)
         {
             ["Identity:PasswordHashing:MemoryKib"] = TestMemoryKib,
-            ["Identity:PasswordHashing:Iterations"] = "1"
-        });
+            ["Identity:PasswordHashing:Iterations"] = "1",
+            ["Security:CredentialEncryption:ActiveKeyId"] = activeKeyId ?? keys[0].Id
+        };
+
+        foreach ((string id, string key) in keys)
+        {
+            settings[$"Security:CredentialEncryption:Keys:{id}"] = key;
+        }
+
+        builder.Configuration.AddInMemoryCollection(settings);
+
+        // Everything is recorded, at every level, so that "no credential in any log line" is a
+        // claim a test can check rather than one the default filters made true by accident.
+        RecordingLoggerProvider logs = new();
+        builder.Logging.SetMinimumLevel(LogLevel.Trace);
+        builder.Services.AddSingleton<ILoggerProvider>(logs);
 
         builder.Services.AddDbContext<PlatformDbContext>(options =>
             options.UseNpgsql(connectionString).UseNetShieldConventions());
@@ -87,6 +143,11 @@ internal sealed class InventoryHost(WebApplication application, SessionClient cl
         builder.AddNetShieldAudit();
         builder.AddNetShieldIdentity();
         builder.AddNetShieldInventory();
+
+        // What RewrapMode registers in NetShield.Web.Host. The rewrapper is not part of the API's
+        // own registration — the API never rotates a key — so a test that exercises it has to
+        // register it the same way the command does.
+        builder.Services.AddScoped<CredentialKeyRewrapper>();
 
         WebApplication application = builder.Build();
 
@@ -114,7 +175,7 @@ internal sealed class InventoryHost(WebApplication application, SessionClient cl
 
         SessionClient client = new(new HttpClient { BaseAddress = new Uri(application.Urls.First()) });
 
-        InventoryHost host = new(application, client);
+        InventoryHost host = new(application, client, connectionString, logs);
 
         await host.SignInAsync(role, cancellationToken);
 
@@ -197,6 +258,42 @@ internal sealed class InventoryHost(WebApplication application, SessionClient cl
             .ToListAsync(cancellationToken);
     }
 
+    /// <summary>
+    /// The bytes actually written for a profile, straight off the row. What a test needs to show
+    /// that the column holds no plaintext and that a rotation moved the key.
+    /// </summary>
+    public async Task<StoredCiphertext> CiphertextAsync(Guid profileId, CancellationToken cancellationToken)
+    {
+        await using AsyncServiceScope scope = application.Services.CreateAsyncScope();
+
+        InventoryDbContext context = scope.ServiceProvider.GetRequiredService<InventoryDbContext>();
+
+        return await context.CredentialProfiles.AsNoTracking()
+            .Where(profile => profile.Id == profileId)
+            .Select(profile => new StoredCiphertext(
+                profile.KeyId,
+                profile.WrappedDataKey,
+                profile.MaterialCiphertext))
+            .SingleAsync(cancellationToken);
+    }
+
+    /// <summary>
+    /// Every log line this host has written, message and structured values alike, as they reached
+    /// the sink — which is to say after the platform's redaction.
+    /// </summary>
+    public IReadOnlyList<string> RecordedLogs() =>
+        [.. logs.Records.SelectMany(record => (string[])[record.Message, .. record.Values])];
+
+    /// <summary>Runs something inside a request scope — the decrypt path, or the rewrapper.</summary>
+    public async Task<T> InScopeAsync<T>(Func<IServiceProvider, Task<T>> work)
+    {
+        ArgumentNullException.ThrowIfNull(work);
+
+        await using AsyncServiceScope scope = application.Services.CreateAsyncScope();
+
+        return await work(scope.ServiceProvider);
+    }
+
     /// <summary>Reads a device's <c>deleted_at</c> directly, which no endpoint exposes.</summary>
     public async Task<DateTimeOffset?> DeletedAtAsync(Guid id, CancellationToken cancellationToken)
     {
@@ -221,3 +318,9 @@ internal sealed class InventoryHost(WebApplication application, SessionClient cl
 
 /// <summary>One audit row, reduced to what these tests assert on.</summary>
 internal sealed record AuditRow(string Action, string? TargetType, string? TargetId, AuditOutcome Outcome);
+
+/// <summary>The three columns a sealed credential occupies.</summary>
+/// <param name="KeyId">Which key-encryption key the wrapped data key is under.</param>
+/// <param name="WrappedDataKey">The data key, sealed.</param>
+/// <param name="MaterialCiphertext">The material, sealed.</param>
+internal sealed record StoredCiphertext(string KeyId, byte[] WrappedDataKey, byte[] MaterialCiphertext);

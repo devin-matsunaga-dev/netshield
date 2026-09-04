@@ -4,6 +4,10 @@ using Aspire.Hosting.ApplicationModel;
 
 using FluentAssertions;
 
+using NetShield.AppHost;
+
+using NetShield.Platform.Cryptography;
+
 namespace NetShield.UnitTests.AppHost;
 
 /// <summary>
@@ -56,9 +60,58 @@ public sealed partial class OrchestrationTests(AppHostModel model) : IClassFixtu
     {
         IReadOnlyList<string> references = RelationshipsOf("web-host", "Reference");
 
-        references.Should().BeEquivalentTo(["netshield", "cache", "mail", "identity-admin-password"],
-            "the API reads PostgreSQL, Redis and the SMTP sink, Aspire supplies all three, and the "
-            + "first-run administrator's password reaches it the same way rather than from a file");
+        references.Should().BeEquivalentTo(
+            ["netshield", "cache", "mail", "identity-admin-password", "credential-kek"],
+            "the API reads PostgreSQL, Redis and the SMTP sink, Aspire supplies all three, and both "
+            + "the first-run administrator's password and the credential key-encryption key reach it "
+            + "the same way rather than from a file");
+    }
+
+    /// <summary>
+    /// The key-encryption key goes to the API and to nothing else. The schema step applies
+    /// migrations and encrypts nothing, and a process is not handed the highest-value secret in
+    /// the system for a job that has no use for it (ARCHITECTURE.md §8).
+    /// </summary>
+    [Fact]
+    public void TheMigrator_DoesNotReceiveTheCredentialKey_BecauseItEncryptsNothing() =>
+        RelationshipsOf("db-migrator", "Reference").Should().NotContain("credential-kek");
+
+    [Fact]
+    public void TheCredentialKey_IsASecretParameter_SoItIsNeverWrittenIntoTheRepository()
+    {
+        ParameterResource parameter = model.Resource("credential-kek")
+            .Should().BeAssignableTo<ParameterResource>().Subject;
+
+        parameter.Secret.Should().BeTrue(
+            "it wraps every stored device credential; the dashboard must mask it and it must not "
+            + "be written to the manifest in plaintext (SPEC.md §5)");
+    }
+
+    /// <summary>
+    /// The configuration contract is "this value is a 256-bit key", not "this string becomes
+    /// one" — so what the AppHost generates has to decode to exactly the length the key ring
+    /// demands, or development would come up with a ring the host refuses to start on.
+    /// </summary>
+    [Fact]
+    public void TheGeneratedCredentialKey_IsBase64OfExactlyThirtyTwoBytes()
+    {
+        string generated = new Base64KeyParameterDefault(KeyEncryptionKeyRing.KeyLengthBytes)
+            .GetDefaultValue();
+
+        Convert.FromBase64String(generated).Should().HaveCount(KeyEncryptionKeyRing.KeyLengthBytes);
+    }
+
+    /// <summary>
+    /// Two runs must not produce the same key, and a fresh one every run is not the answer
+    /// either — the parameter is persisted, so what this guards is that the generator is random
+    /// rather than that the value changes between runs.
+    /// </summary>
+    [Fact]
+    public void TheGeneratedCredentialKey_IsDifferentEveryTimeItIsGenerated()
+    {
+        Base64KeyParameterDefault generator = new(KeyEncryptionKeyRing.KeyLengthBytes);
+
+        generator.GetDefaultValue().Should().NotBe(generator.GetDefaultValue());
     }
 
     [Fact]
