@@ -132,6 +132,166 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/discovery/seeds": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ListDiscoverySeeds"];
+        put?: never;
+        post: operations["CreateDiscoverySeed"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/discovery/seeds/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetDiscoverySeed"];
+        put: operations["UpdateDiscoverySeed"];
+        post?: never;
+        delete: operations["DeleteDiscoverySeed"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/discovery/runs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ListDiscoveryRuns"];
+        put?: never;
+        post: operations["StartDiscoveryRun"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/discovery/runs/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetDiscoveryRun"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/discovery/runs/{id}/hosts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ListDiscoveryRunHosts"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/discovery/candidates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ListDiscoveryCandidates"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/discovery/candidates/{id}/promote": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["PromoteDiscoveryCandidate"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/discovery/candidates/{id}/ignore": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["IgnoreDiscoveryCandidate"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/discovery/ignores": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ListDiscoveryIgnores"];
+        put?: never;
+        post: operations["CreateDiscoveryIgnore"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/discovery/ignores/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["DeleteDiscoveryIgnore"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/credential-profiles": {
         parameters: {
             query?: never;
@@ -237,6 +397,19 @@ export interface components {
             tags?: null | string[];
             notes?: null | string;
         };
+        CreateDiscoveryIgnoreRequest: {
+            cidr: string;
+            reason: null | string;
+        };
+        CreateDiscoverySeedRequest: {
+            name: string;
+            description: null | string;
+            enabled: boolean;
+            ranges: string[];
+            exclusions: null | string[];
+            /** Format: int32 */
+            intervalMinutes: number | string;
+        };
         /** @enum {unknown} */
         CredentialKind: "SnmpV2c" | "SnmpV3" | "SshPassword" | "SshKey";
         CredentialMaterial: {
@@ -291,6 +464,36 @@ export interface components {
             /** Format: int64 */
             totalCount?: null | number | string;
         };
+        CursorPageOfDiscoveryCandidateSummary: {
+            items: components["schemas"]["DiscoveryCandidateSummary"][];
+            nextCursor: null | string;
+            /** Format: int64 */
+            totalCount?: null | number | string;
+        };
+        CursorPageOfDiscoveryIgnoreEntry: {
+            items: components["schemas"]["DiscoveryIgnoreEntry"][];
+            nextCursor: null | string;
+            /** Format: int64 */
+            totalCount?: null | number | string;
+        };
+        CursorPageOfDiscoveryRunHostResult: {
+            items: components["schemas"]["DiscoveryRunHostResult"][];
+            nextCursor: null | string;
+            /** Format: int64 */
+            totalCount?: null | number | string;
+        };
+        CursorPageOfDiscoveryRunSummary: {
+            items: components["schemas"]["DiscoveryRunSummary"][];
+            nextCursor: null | string;
+            /** Format: int64 */
+            totalCount?: null | number | string;
+        };
+        CursorPageOfDiscoverySeedSummary: {
+            items: components["schemas"]["DiscoverySeedSummary"][];
+            nextCursor: null | string;
+            /** Format: int64 */
+            totalCount?: null | number | string;
+        };
         DeviceDetail: {
             /** Format: uuid */
             id: string;
@@ -341,6 +544,161 @@ export interface components {
             /** Format: date-time */
             queuedAt: string;
         };
+        /** @enum {unknown} */
+        DiscoveryCandidateStatus: "New" | "Promoted" | "Ignored";
+        DiscoveryCandidateSummary: {
+            /** Format: uuid */
+            id: string;
+            address: string;
+            status: components["schemas"]["DiscoveryCandidateStatus"];
+            /** Format: int32 */
+            timesSeen: number | string;
+            /** Format: double */
+            lastRttMilliseconds: null | number | string;
+            /** Format: date-time */
+            firstSeenAt: string;
+            /** Format: date-time */
+            lastSeenAt: string;
+            /** Format: uuid */
+            firstSeenRunId: string;
+            /** Format: uuid */
+            lastSeenRunId: string;
+            /** Format: uuid */
+            promotedDeviceId: null | string;
+        };
+        /** @enum {unknown} */
+        DiscoveryHostOutcome: "NewCandidate" | "KnownCandidate" | "ExistingDevice" | "Ignored";
+        DiscoveryIgnoreEntry: {
+            /** Format: uuid */
+            id: string;
+            cidr: string;
+            reason: null | string;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        DiscoveryRunDetail: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            seedId: string;
+            seedName: string;
+            trigger: components["schemas"]["DiscoveryRunTrigger"];
+            status: components["schemas"]["DiscoveryRunStatus"];
+            ranges: string[];
+            exclusions: string[];
+            /** Format: int64 */
+            addressCount: number | string;
+            /** Format: int32 */
+            jobCount: number | string;
+            /** Format: int32 */
+            jobsCompleted: number | string;
+            /** Format: int32 */
+            jobsFailed: number | string;
+            /** Format: int32 */
+            respondedCount: number | string;
+            /** Format: int32 */
+            newCandidateCount: number | string;
+            /** Format: int32 */
+            knownCandidateCount: number | string;
+            /** Format: int32 */
+            existingDeviceCount: number | string;
+            /** Format: int32 */
+            ignoredCount: number | string;
+            /** Format: date-time */
+            startedAt: string;
+            /** Format: date-time */
+            completedAt: null | string;
+        };
+        DiscoveryRunHostResult: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            runId: string;
+            address: string;
+            /** Format: double */
+            rttMilliseconds: null | number | string;
+            outcome: components["schemas"]["DiscoveryHostOutcome"];
+            /** Format: uuid */
+            candidateId: null | string;
+            /** Format: uuid */
+            deviceId: null | string;
+            /** Format: date-time */
+            observedAt: string;
+        };
+        DiscoveryRunQueued: {
+            /** Format: uuid */
+            runId: string;
+            /** Format: uuid */
+            seedId: string;
+            /** Format: int32 */
+            jobCount: number | string;
+            /** Format: int64 */
+            addressCount: number | string;
+            /** Format: date-time */
+            queuedAt: string;
+        };
+        /** @enum {unknown} */
+        DiscoveryRunStatus: "Pending" | "Running" | "Completed" | "PartiallyFailed" | "Failed";
+        DiscoveryRunSummary: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            seedId: string;
+            seedName: string;
+            trigger: components["schemas"]["DiscoveryRunTrigger"];
+            status: components["schemas"]["DiscoveryRunStatus"];
+            /** Format: int64 */
+            addressCount: number | string;
+            /** Format: int32 */
+            respondedCount: number | string;
+            /** Format: int32 */
+            newCandidateCount: number | string;
+            /** Format: date-time */
+            startedAt: string;
+            /** Format: date-time */
+            completedAt: null | string;
+        };
+        /** @enum {unknown} */
+        DiscoveryRunTrigger: "Scheduled" | "OnDemand";
+        DiscoverySeedDetail: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            description: null | string;
+            enabled: boolean;
+            ranges: string[];
+            exclusions: string[];
+            /** Format: int64 */
+            addressCount: number | string;
+            /** Format: int32 */
+            intervalMinutes: number | string;
+            /** Format: date-time */
+            nextRunAt: null | string;
+            /** Format: date-time */
+            lastRunAt: null | string;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        DiscoverySeedSummary: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            enabled: boolean;
+            /** Format: int32 */
+            rangeCount: number | string;
+            /** Format: int64 */
+            addressCount: number | string;
+            /** Format: int32 */
+            intervalMinutes: number | string;
+            /** Format: date-time */
+            nextRunAt: null | string;
+            /** Format: date-time */
+            lastRunAt: null | string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
         HttpValidationProblemDetails: {
             type?: null | string;
             title?: null | string;
@@ -365,6 +723,16 @@ export interface components {
             status?: null | number | string;
             detail?: null | string;
             instance?: null | string;
+        };
+        PromoteDiscoveryCandidateRequest: {
+            hostname: string;
+            site: null | string;
+            role: components["schemas"]["DeviceRole"];
+            criticality: components["schemas"]["CriticalityTier"];
+            environment: components["schemas"]["DeviceEnvironment"];
+            owner: null | string;
+            tags: null | string[];
+            notes: null | string;
         };
         ReplaceCredentialMaterialRequest: {
             material: components["schemas"]["CredentialMaterial"];
@@ -397,6 +765,15 @@ export interface components {
             owner?: null | string;
             tags?: null | string[];
             notes?: null | string;
+        };
+        UpdateDiscoverySeedRequest: {
+            name: string;
+            description: null | string;
+            enabled: boolean;
+            ranges: string[];
+            exclusions: null | string[];
+            /** Format: int32 */
+            intervalMinutes: number | string;
         };
         /** @enum {unknown} */
         UserRole: "Administrator" | "Operator" | "Analyst" | "ReadOnly";
@@ -869,6 +1246,725 @@ export interface operations {
             };
             /** @description Conflict */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    ListDiscoverySeeds: {
+        parameters: {
+            query?: {
+                cursor?: string;
+                limit?: number | string;
+                enabled?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CursorPageOfDiscoverySeedSummary"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    CreateDiscoverySeed: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateDiscoverySeedRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DiscoverySeedDetail"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    GetDiscoverySeed: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DiscoverySeedDetail"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    UpdateDiscoverySeed: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateDiscoverySeedRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DiscoverySeedDetail"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    DeleteDiscoverySeed: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    ListDiscoveryRuns: {
+        parameters: {
+            query?: {
+                cursor?: string;
+                limit?: number | string;
+                seedId?: string;
+                status?: components["schemas"]["DiscoveryRunStatus"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CursorPageOfDiscoveryRunSummary"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    StartDiscoveryRun: {
+        parameters: {
+            query: {
+                seedId: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Accepted */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DiscoveryRunQueued"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    GetDiscoveryRun: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DiscoveryRunDetail"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    ListDiscoveryRunHosts: {
+        parameters: {
+            query?: {
+                cursor?: string;
+                limit?: number | string;
+                outcome?: components["schemas"]["DiscoveryHostOutcome"];
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CursorPageOfDiscoveryRunHostResult"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    ListDiscoveryCandidates: {
+        parameters: {
+            query?: {
+                cursor?: string;
+                limit?: number | string;
+                status?: components["schemas"]["DiscoveryCandidateStatus"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CursorPageOfDiscoveryCandidateSummary"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    PromoteDiscoveryCandidate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PromoteDiscoveryCandidateRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeviceDetail"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    IgnoreDiscoveryCandidate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DiscoveryIgnoreEntry"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    ListDiscoveryIgnores: {
+        parameters: {
+            query?: {
+                cursor?: string;
+                limit?: number | string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CursorPageOfDiscoveryIgnoreEntry"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    CreateDiscoveryIgnore: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateDiscoveryIgnoreRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DiscoveryIgnoreEntry"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    DeleteDiscoveryIgnore: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

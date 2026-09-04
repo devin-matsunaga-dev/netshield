@@ -3,8 +3,8 @@ using System.Text.Json.Serialization;
 namespace NetShield.Inventory.Discovery;
 
 /// <summary>
-/// Serialises the two fingerprint payloads: the parameters going into a job row, and the result
-/// coming back out of one.
+/// Serialises the discovery payloads: the parameters going into a job row, and the result
+/// coming back out of one, for both walks a <c>Discover</c> job can carry.
 /// </summary>
 /// <remarks>
 /// Internal, and never added to <c>ConfigureHttpJsonOptions</c>, for the reason
@@ -17,4 +17,6 @@ namespace NetShield.Inventory.Discovery;
 [JsonSourceGenerationOptions(DefaultIgnoreCondition = JsonIgnoreCondition.Never)]
 [JsonSerializable(typeof(SnmpWalkParameters))]
 [JsonSerializable(typeof(SnmpWalkResult))]
+[JsonSerializable(typeof(RangeSweepParameters))]
+[JsonSerializable(typeof(RangeSweepResult))]
 internal sealed partial class DiscoverySerializerContext : JsonSerializerContext;

@@ -76,6 +76,11 @@ builder.AddNetShieldInventory();
 // and this is the process. The schema step registers the same module and never reaches here.
 builder.AddNetShieldReachabilityScheduler();
 
+// And the discovery schedule: the loop that sweeps the seeded ranges looking for hosts nobody
+// has entered. Opt-in for the same reason, and it is the more conspicuous of the two — this is
+// the process that decides to send packets at addresses no device claims.
+builder.AddNetShieldDiscoveryScheduler();
+
 // The OpenAPI description of every /api endpoint. CONVENTIONS.md §4 generates it from the
 // endpoints and generates the TypeScript client from it; src/NetShield.Web.Host/openapi/v1.json
 // is the committed copy the client is built from.

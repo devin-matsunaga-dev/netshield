@@ -107,11 +107,37 @@ public static class InventoryServiceCollectionExtensions
             RecordReachabilityResultHandler>();
 
         // The on-demand fingerprint walk, and the second subscriber to CollectorJobCompleted.
-        // The two subscribers each read only the jobs their own package queued: one filters on a
-        // Poll naming the ICMP probe, the other on a Discover naming the SNMP walk.
+        // The three subscribers each read only the jobs their own package queued: one filters on
+        // a Poll naming the ICMP probe, one on a Discover naming the SNMP walk, and one on a
+        // Discover that discovery_run_jobs says belongs to a run.
+        builder.Services.TryAddScoped<SnmpCredentialSelector>();
         builder.Services.TryAddScoped<QueueDeviceWalkHandler>();
         builder.Services.AddScoped<IIntegrationEventHandler<CollectorJobCompleted>,
             RecordSnmpWalkResultHandler>();
+
+        // Discovery: the seeds an operator maintains, the runs they produce, the candidates a run
+        // leaves for review, the permanent ignore list, and the third subscriber. The loop that
+        // drives the schedule is the separate opt-in below, for the reason the reachability one
+        // is separate.
+        builder.Services.TryAddScoped<DiscoveryRunLauncher>();
+        builder.Services.TryAddScoped<DiscoverySchedulePass>();
+        builder.Services.TryAddScoped<GetDiscoverySeedListHandler>();
+        builder.Services.TryAddScoped<GetDiscoverySeedHandler>();
+        builder.Services.TryAddScoped<CreateDiscoverySeedHandler>();
+        builder.Services.TryAddScoped<UpdateDiscoverySeedHandler>();
+        builder.Services.TryAddScoped<DeleteDiscoverySeedHandler>();
+        builder.Services.TryAddScoped<StartDiscoveryRunHandler>();
+        builder.Services.TryAddScoped<GetDiscoveryRunListHandler>();
+        builder.Services.TryAddScoped<GetDiscoveryRunHandler>();
+        builder.Services.TryAddScoped<GetDiscoveryRunHostListHandler>();
+        builder.Services.TryAddScoped<GetDiscoveryCandidateListHandler>();
+        builder.Services.TryAddScoped<PromoteDiscoveryCandidateHandler>();
+        builder.Services.TryAddScoped<IgnoreDiscoveryCandidateHandler>();
+        builder.Services.TryAddScoped<GetDiscoveryIgnoreListHandler>();
+        builder.Services.TryAddScoped<CreateDiscoveryIgnoreHandler>();
+        builder.Services.TryAddScoped<DeleteDiscoveryIgnoreHandler>();
+        builder.Services.AddScoped<IIntegrationEventHandler<CollectorJobCompleted>,
+            RecordRangeSweepResultHandler>();
 
         builder.Services.TryAddScoped<IValidator<CreateDeviceRequest>, CreateDeviceRequestValidator>();
         builder.Services.TryAddScoped<IValidator<UpdateDeviceRequest>, UpdateDeviceRequestValidator>();
@@ -124,6 +150,15 @@ public static class InventoryServiceCollectionExtensions
             ReplaceCredentialMaterialRequestValidator>();
         builder.Services.TryAddScoped<IValidator<SetDeviceCredentialProfilesRequest>,
             SetDeviceCredentialProfilesRequestValidator>();
+
+        builder.Services.TryAddScoped<IValidator<CreateDiscoverySeedRequest>,
+            CreateDiscoverySeedRequestValidator>();
+        builder.Services.TryAddScoped<IValidator<UpdateDiscoverySeedRequest>,
+            UpdateDiscoverySeedRequestValidator>();
+        builder.Services.TryAddScoped<IValidator<CreateDiscoveryIgnoreRequest>,
+            CreateDiscoveryIgnoreRequestValidator>();
+        builder.Services.TryAddScoped<IValidator<PromoteDiscoveryCandidateRequest>,
+            PromoteDiscoveryCandidateRequestValidator>();
 
         builder.Services.TryAddScoped<IValidator<CollectorResultsRequest>,
             CollectorResultsRequestValidator>();
@@ -143,6 +178,9 @@ public static class InventoryServiceCollectionExtensions
         builder.Services.AddIntegrationEvent<CollectorJobCompleted>();
         builder.Services.AddIntegrationEvent<DeviceStateChanged>();
         builder.Services.AddIntegrationEvent<DeviceFingerprinted>();
+        builder.Services.AddIntegrationEvent<DeviceDiscovered>();
+        builder.Services.AddIntegrationEvent<DiscoveryRunStarted>();
+        builder.Services.AddIntegrationEvent<DiscoveryRunCompleted>();
 
         builder.Services.ConfigureHttpJsonOptions(json =>
         {
@@ -175,6 +213,27 @@ public static class InventoryServiceCollectionExtensions
         ArgumentNullException.ThrowIfNull(builder);
 
         builder.Services.AddHostedService<ReachabilityScheduler>();
+
+        return builder;
+    }
+
+    /// <summary>
+    /// Starts the discovery schedule: the loop that begins a run for every seed whose next one
+    /// has fallen due.
+    /// </summary>
+    /// <remarks>
+    /// Separate from <see cref="AddNetShieldInventory{TBuilder}"/> for the reason
+    /// <see cref="AddNetShieldReachabilityScheduler{TBuilder}"/> is separate: exactly one process
+    /// should decide what the estate is asked to do, and sweeping the address space is the most
+    /// conspicuous thing NetShield does without being asked. The schema step registers the module
+    /// on its way past and must not start sweeping.
+    /// </remarks>
+    public static TBuilder AddNetShieldDiscoveryScheduler<TBuilder>(this TBuilder builder)
+        where TBuilder : IHostApplicationBuilder
+    {
+        ArgumentNullException.ThrowIfNull(builder);
+
+        builder.Services.AddHostedService<DiscoveryScheduler>();
 
         return builder;
     }

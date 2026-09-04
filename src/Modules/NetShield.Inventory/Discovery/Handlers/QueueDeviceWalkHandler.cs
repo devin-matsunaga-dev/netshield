@@ -32,24 +32,23 @@ namespace NetShield.Inventory.Discovery.Handlers;
 /// </para>
 /// <para>
 /// <strong>Choosing the credential.</strong> The job names exactly one profile and the lease
-/// opens exactly that one, so something has to choose. SNMPv3 comes before SNMPv2c because v3 is
-/// the one that authenticates and encrypts, and among equals the earliest assignment wins so the
-/// answer does not depend on the order rows came back in. Configurable ordering is WP-1.6's, and
-/// this is deliberately the smallest deterministic rule that does not pre-empt it.
+/// opens exactly that one, so something has to choose. WP-1.5 made that choice here with the
+/// order written into this file; WP-1.6 moved it into <see cref="SnmpCredentialSelector"/>,
+/// where it is read from <c>DiscoveryOptions.CredentialKindOrder</c> — the "credential profile
+/// order" that package's entry names — so that the sweep and the walk cannot come to disagree
+/// about which credential a device is reached with.
 /// </para>
 /// </remarks>
 internal sealed class QueueDeviceWalkHandler(
     InventoryDbContext context,
     ICollectorJobQueue queue,
+    SnmpCredentialSelector credentials,
     IOptions<DiscoveryOptions> options,
     IResourceGuard guard,
     IAuditContext audit,
     IClock clock,
     ILogger<QueueDeviceWalkHandler> logger)
 {
-    /// <summary>The kinds of credential an SNMP walk can be run with, best first.</summary>
-    private static readonly CredentialKind[] SnmpKinds = [CredentialKind.SnmpV3, CredentialKind.SnmpV2c];
-
     public async Task<Result<DeviceWalkQueued>> HandleAsync(
         Guid deviceId,
         CancellationToken cancellationToken)
@@ -76,7 +75,7 @@ internal sealed class QueueDeviceWalkHandler(
             return DiscoveryErrors.WalkOutstanding(deviceId);
         }
 
-        Guid? profileId = await ChooseCredentialAsync(deviceId, cancellationToken);
+        Guid? profileId = await credentials.ChooseAsync(deviceId, cancellationToken);
 
         if (profileId is not { } chosen)
         {
@@ -114,9 +113,10 @@ internal sealed class QueueDeviceWalkHandler(
 
     /// <summary>Whether a walk for this device is already queued or leased.</summary>
     /// <remarks>
-    /// Every unfinished <c>Discover</c> counts, not only one this package queued. WP-1.6's sweep
-    /// will queue <c>Discover</c> rows too, and two collectors walking one device at once would
-    /// have their results applied in whichever order they came back.
+    /// Every unfinished <c>Discover</c> that names this device counts. WP-1.6's range sweep is a
+    /// <c>Discover</c> too but names no device, so it cannot collide here — what this rule is
+    /// for is two collectors walking one device at once and having their results applied in
+    /// whichever order they came back.
     /// </remarks>
     private Task<bool> HasOutstandingWalkAsync(Guid deviceId, CancellationToken cancellationToken) =>
         context.CollectorJobs.AnyAsync(
@@ -124,33 +124,6 @@ internal sealed class QueueDeviceWalkHandler(
                 && job.Kind == CollectorJobKind.Discover
                 && (job.Status == CollectorJobStatus.Pending || job.Status == CollectorJobStatus.Leased),
             cancellationToken);
-
-    /// <summary>
-    /// The device's SNMP credential profile: v3 before v2c, then the earliest assignment.
-    /// </summary>
-    /// <remarks>
-    /// Soft-deleted profiles are excluded. A profile an operator revoked must not keep reaching a
-    /// collector, which is the same rule the lease applies one step later (WP-1.3).
-    /// </remarks>
-    private async Task<Guid?> ChooseCredentialAsync(Guid deviceId, CancellationToken cancellationToken)
-    {
-        var candidates = await (
-            from assignment in context.DeviceCredentialProfiles
-            join profile in context.CredentialProfiles
-                on assignment.CredentialProfileId equals profile.Id
-            where assignment.DeviceId == deviceId
-                && profile.DeletedAt == null
-                && SnmpKinds.Contains(profile.Kind)
-            select new { profile.Id, profile.Kind, assignment.CreatedAt })
-            .ToListAsync(cancellationToken);
-
-        return candidates
-            .OrderBy(candidate => Array.IndexOf(SnmpKinds, candidate.Kind))
-            .ThenBy(candidate => candidate.CreatedAt)
-            .ThenBy(candidate => candidate.Id)
-            .Select(candidate => (Guid?)candidate.Id)
-            .FirstOrDefault();
-    }
 
     private static JsonElement Parameters(DiscoveryOptions settings)
     {

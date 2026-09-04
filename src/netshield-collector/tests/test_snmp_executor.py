@@ -17,6 +17,7 @@ import respx
 
 from collector.api import CollectorApi
 from collector.config import CollectorSettings
+from collector.discovery import DiscoverExecutor
 from collector.jobs import ExecutorRegistry
 from collector.models import CredentialKind, JobCredential
 from collector.runner import CollectorRunner
@@ -215,7 +216,7 @@ async def test_a_device_that_never_answers_does_not_stall_the_rest_of_the_batch(
     async with CollectorApi(settings) as api:
         runner = CollectorRunner(
             api,
-            ExecutorRegistry([_HangingWalk({"192.0.2.12"})]),
+            ExecutorRegistry([DiscoverExecutor([_HangingWalk({"192.0.2.12"})])]),
             settings,
         )
 

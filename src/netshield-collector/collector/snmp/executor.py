@@ -5,10 +5,11 @@ WP-1.3 delivered them over the lease, WP-1.4's ICMP probe needed none, and this 
 whole path is exercised. The credential is read out of the leased job, used to build one session,
 and never written anywhere (ARCHITECTURE.md §7).
 
-It answers for ``Discover`` jobs whose parameters name the SNMP walk. A ``Discover`` naming
-anything else is reported as a failure with the reason, exactly as the ICMP executor refuses a
-``Poll`` for another probe — WP-1.6's range sweep will be a ``Discover`` too, and each side has
-to recognise its own rather than answer the other's wrongly.
+It answers for ``Discover`` jobs whose parameters name the SNMP walk. Since WP-1.6 it is one of
+two walks under ``DiscoverExecutor``, which reads ``parameters.walk`` and hands the job to
+whichever walk recognises it — the same member the API's result handlers filter on. The check
+below stays anyway: a walk that trusted its dispatcher would answer the wrong question the first
+time somebody registered it under the wrong name.
 """
 
 from __future__ import annotations
@@ -18,7 +19,7 @@ from typing import Any, Final
 import structlog
 from pydantic import Field, ValidationError
 
-from collector.models import JobKind, LeasedJob, WireModel
+from collector.models import LeasedJob, WireModel
 from collector.snmp.fingerprint import WalkOutcome, walk_device
 from collector.snmp.interfaces import InterfaceRecord
 from collector.snmp.session import PySnmpSession, SnmpSessionFactory
@@ -48,7 +49,15 @@ class SnmpWalkJobParameters(WireModel):
 class SnmpWalkExecutor:
     """Runs one fingerprint walk."""
 
-    kind = JobKind.DISCOVER
+    walk = WALK_NAME
+    """Which ``Discover`` walk this answers for. ``DiscoverExecutor`` dispatches on it.
+
+    WP-1.5 declared ``kind = JobKind.DISCOVER`` here and was the only thing answering for that
+    kind. WP-1.6's range sweep is a ``Discover`` too, and ``ExecutorRegistry`` refuses two
+    executors for one kind — rightly, since two things claiming a kind is a mistake. So this
+    became one of two walks under a single ``Discover`` executor, discriminated on exactly the
+    member the API's result handlers already filter on. Nothing else about it changed.
+    """
 
     def __init__(
         self,

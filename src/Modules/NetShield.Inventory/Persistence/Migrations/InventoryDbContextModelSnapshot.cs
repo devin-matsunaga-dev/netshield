@@ -614,6 +614,399 @@ namespace NetShield.Inventory.Persistence.Migrations
                     b.ToTable("device_interfaces", (string)null);
                 });
 
+            modelBuilder.Entity("NetShield.Inventory.Discovery.DiscoveryCandidate", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<IPAddress>("Address")
+                        .IsRequired()
+                        .HasColumnType("inet")
+                        .HasColumnName("address");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<DateTimeOffset>("FirstSeenAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("first_seen_at");
+
+                    b.Property<Guid>("FirstSeenRunId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("first_seen_run_id");
+
+                    b.Property<double?>("LastRttMilliseconds")
+                        .HasColumnType("double precision")
+                        .HasColumnName("last_rtt_milliseconds");
+
+                    b.Property<DateTimeOffset>("LastSeenAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_seen_at");
+
+                    b.Property<Guid>("LastSeenRunId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("last_seen_run_id");
+
+                    b.Property<Guid?>("PromotedDeviceId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("promoted_device_id");
+
+                    b.Property<DateTimeOffset?>("SettledAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("settled_at");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("status");
+
+                    b.Property<int>("TimesSeen")
+                        .HasColumnType("integer")
+                        .HasColumnName("times_seen");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id")
+                        .HasName("pk_discovery_candidates");
+
+                    b.HasIndex("Status", "LastSeenAt", "Id")
+                        .HasDatabaseName("ix_discovery_candidates_status_last_seen_at_id");
+
+                    b.ToTable("discovery_candidates", (string)null);
+                });
+
+            modelBuilder.Entity("NetShield.Inventory.Discovery.DiscoveryIgnore", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Cidr")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("cidr");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Reason")
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)")
+                        .HasColumnName("reason");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id")
+                        .HasName("pk_discovery_ignores");
+
+                    b.HasIndex("Cidr")
+                        .IsUnique()
+                        .HasDatabaseName("ix_discovery_ignores_cidr");
+
+                    b.ToTable("discovery_ignores", (string)null);
+                });
+
+            modelBuilder.Entity("NetShield.Inventory.Discovery.DiscoveryRun", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<long>("AddressCount")
+                        .HasColumnType("bigint")
+                        .HasColumnName("address_count");
+
+                    b.Property<DateTimeOffset?>("CompletedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("completed_at");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.PrimitiveCollection<string[]>("Exclusions")
+                        .IsRequired()
+                        .HasColumnType("text[]")
+                        .HasColumnName("exclusions");
+
+                    b.Property<int>("ExistingDeviceCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("existing_device_count");
+
+                    b.Property<int>("IgnoredCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("ignored_count");
+
+                    b.Property<int>("JobCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("job_count");
+
+                    b.Property<int>("JobsCompleted")
+                        .HasColumnType("integer")
+                        .HasColumnName("jobs_completed");
+
+                    b.Property<int>("JobsFailed")
+                        .HasColumnType("integer")
+                        .HasColumnName("jobs_failed");
+
+                    b.Property<int>("KnownCandidateCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("known_candidate_count");
+
+                    b.Property<int>("NewCandidateCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("new_candidate_count");
+
+                    b.PrimitiveCollection<string[]>("Ranges")
+                        .IsRequired()
+                        .HasColumnType("text[]")
+                        .HasColumnName("ranges");
+
+                    b.Property<int>("RespondedCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("responded_count");
+
+                    b.Property<Guid>("SeedId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("seed_id");
+
+                    b.Property<string>("SeedName")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)")
+                        .HasColumnName("seed_name");
+
+                    b.Property<DateTimeOffset>("StartedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("started_at");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("status");
+
+                    b.Property<string>("Trigger")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("trigger");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id")
+                        .HasName("pk_discovery_runs");
+
+                    b.HasIndex("SeedId", "Status")
+                        .HasDatabaseName("ix_discovery_runs_seed_id_status");
+
+                    b.HasIndex("StartedAt", "Id")
+                        .HasDatabaseName("ix_discovery_runs_started_at_id");
+
+                    b.ToTable("discovery_runs", (string)null);
+                });
+
+            modelBuilder.Entity("NetShield.Inventory.Discovery.DiscoveryRunHost", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<IPAddress>("Address")
+                        .IsRequired()
+                        .HasColumnType("inet")
+                        .HasColumnName("address");
+
+                    b.Property<Guid?>("CandidateId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("candidate_id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid?>("DeviceId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("device_id");
+
+                    b.Property<DateTimeOffset>("ObservedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("observed_at");
+
+                    b.Property<string>("Outcome")
+                        .IsRequired()
+                        .HasMaxLength(24)
+                        .HasColumnType("character varying(24)")
+                        .HasColumnName("outcome");
+
+                    b.Property<double?>("RttMilliseconds")
+                        .HasColumnType("double precision")
+                        .HasColumnName("rtt_milliseconds");
+
+                    b.Property<Guid>("RunId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("run_id");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id")
+                        .HasName("pk_discovery_run_hosts");
+
+                    b.HasIndex("RunId", "Id")
+                        .HasDatabaseName("ix_discovery_run_hosts_run_id_id");
+
+                    b.ToTable("discovery_run_hosts", (string)null);
+                });
+
+            modelBuilder.Entity("NetShield.Inventory.Discovery.DiscoveryRunJob", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<int>("AddressCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("address_count");
+
+                    b.Property<DateTimeOffset?>("AppliedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("applied_at");
+
+                    b.Property<Guid>("CollectorJobId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("collector_job_id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("FirstAddress")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("first_address");
+
+                    b.Property<string>("LastAddress")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("last_address");
+
+                    b.Property<Guid>("RunId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("run_id");
+
+                    b.Property<int>("Sequence")
+                        .HasColumnType("integer")
+                        .HasColumnName("sequence");
+
+                    b.Property<bool?>("Succeeded")
+                        .HasColumnType("boolean")
+                        .HasColumnName("succeeded");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id")
+                        .HasName("pk_discovery_run_jobs");
+
+                    b.HasIndex("CollectorJobId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_discovery_run_jobs_collector_job_id");
+
+                    b.HasIndex("RunId", "AppliedAt")
+                        .HasDatabaseName("ix_discovery_run_jobs_run_id_applied_at");
+
+                    b.ToTable("discovery_run_jobs", (string)null);
+                });
+
+            modelBuilder.Entity("NetShield.Inventory.Discovery.DiscoverySeed", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<DateTimeOffset?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)")
+                        .HasColumnName("description");
+
+                    b.Property<bool>("Enabled")
+                        .HasColumnType("boolean")
+                        .HasColumnName("enabled");
+
+                    b.PrimitiveCollection<string[]>("Exclusions")
+                        .IsRequired()
+                        .HasColumnType("text[]")
+                        .HasColumnName("exclusions");
+
+                    b.Property<int>("IntervalMinutes")
+                        .HasColumnType("integer")
+                        .HasColumnName("interval_minutes");
+
+                    b.Property<DateTimeOffset?>("LastRunAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_run_at");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)")
+                        .HasColumnName("name");
+
+                    b.Property<DateTimeOffset?>("NextRunAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("next_run_at");
+
+                    b.PrimitiveCollection<string[]>("Ranges")
+                        .IsRequired()
+                        .HasColumnType("text[]")
+                        .HasColumnName("ranges");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id")
+                        .HasName("pk_discovery_seeds");
+
+                    b.HasIndex("DeletedAt")
+                        .HasDatabaseName("ix_discovery_seeds_deleted_at");
+
+                    b.HasIndex("Enabled", "NextRunAt")
+                        .HasDatabaseName("ix_discovery_seeds_enabled_next_run_at");
+
+                    b.ToTable("discovery_seeds", (string)null);
+                });
+
             modelBuilder.Entity("NetShield.Inventory.Reachability.DeviceReachability", b =>
                 {
                     b.Property<Guid>("Id")

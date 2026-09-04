@@ -51,6 +51,24 @@ public sealed class InventoryDbContext(DbContextOptions<InventoryDbContext> opti
     /// <summary>The interfaces the last walk found, one row per interface per device.</summary>
     internal DbSet<DeviceInterface> DeviceInterfaces => Set<DeviceInterface>();
 
+    /// <summary>What the discovery schedule sweeps, live and soft-deleted alike.</summary>
+    internal DbSet<DiscoverySeed> DiscoverySeeds => Set<DiscoverySeed>();
+
+    /// <summary>Every discovery run, in flight and finished alike.</summary>
+    internal DbSet<DiscoveryRun> DiscoveryRuns => Set<DiscoveryRun>();
+
+    /// <summary>The sweep jobs each run fanned out into.</summary>
+    internal DbSet<DiscoveryRunJob> DiscoveryRunJobs => Set<DiscoveryRunJob>();
+
+    /// <summary>The addresses that answered each run, one row per responder.</summary>
+    internal DbSet<DiscoveryRunHost> DiscoveryRunHosts => Set<DiscoveryRunHost>();
+
+    /// <summary>Addresses a sweep found that are not devices, one row per address.</summary>
+    internal DbSet<DiscoveryCandidate> DiscoveryCandidates => Set<DiscoveryCandidate>();
+
+    /// <summary>Blocks discovery will never offer as candidates.</summary>
+    internal DbSet<DiscoveryIgnore> DiscoveryIgnores => Set<DiscoveryIgnore>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         ArgumentNullException.ThrowIfNull(modelBuilder);
@@ -63,6 +81,12 @@ public sealed class InventoryDbContext(DbContextOptions<InventoryDbContext> opti
         modelBuilder.ApplyConfiguration(new DeviceReachabilityConfiguration());
         modelBuilder.ApplyConfiguration(new DeviceFingerprintConfiguration());
         modelBuilder.ApplyConfiguration(new DeviceInterfaceConfiguration());
+        modelBuilder.ApplyConfiguration(new DiscoverySeedConfiguration());
+        modelBuilder.ApplyConfiguration(new DiscoveryRunConfiguration());
+        modelBuilder.ApplyConfiguration(new DiscoveryRunJobConfiguration());
+        modelBuilder.ApplyConfiguration(new DiscoveryRunHostConfiguration());
+        modelBuilder.ApplyConfiguration(new DiscoveryCandidateConfiguration());
+        modelBuilder.ApplyConfiguration(new DiscoveryIgnoreConfiguration());
 
         // outbox_messages, mapped here so a device write and the event describing it are one
         // transaction on one connection. NetShield.Platform owns the table and the migration

@@ -16,6 +16,7 @@ from pydantic import ValidationError
 
 from collector.api import CollectorApi
 from collector.config import CollectorSettings
+from collector.discovery import DiscoverExecutor, RangeSweepExecutor
 from collector.icmp import IcmpExecutor
 from collector.jobs import ExecutorRegistry
 from collector.logging import configure_logging
@@ -30,19 +31,22 @@ def build_registries() -> tuple[ExecutorRegistry, VendorRegistry]:
     """The two seams: the executors this build can run, and the vendors it recognises.
 
     ``IcmpExecutor`` answers for ``Poll`` jobs whose parameters name the ICMP probe, which is
-    every job the reachability schedule queues. ``SnmpWalkExecutor`` answers for ``Discover``
-    jobs whose parameters name the SNMP walk, which is every job an on-demand fingerprint
-    queues; WP-1.6's range sweep will be a ``Discover`` too and will name a different walk, and
-    a job of a kind or a walk this build cannot run is still reported as a failure naming the
+    every job the reachability schedule queues. ``DiscoverExecutor`` answers for ``Discover``
+    jobs and dispatches on ``parameters.walk`` to one of the two walks a ``Discover`` can be: the
+    SNMP fingerprint of a device an on-demand walk asked for, or the range sweep a discovery run
+    queued. A job of a kind or a walk this build cannot run is reported as a failure naming the
     reason rather than dropped.
 
     ICMP needs no vendor adapter and asks the registry for none — an echo request is the same
-    question whoever made the box. The SNMP executor is handed the registry, because which
-    private MIB is worth reading is the one thing that is not the same.
+    question whoever made the box, which is also why the sweep needs none. The SNMP walk is
+    handed the registry, because which private MIB is worth reading is the one thing that is not
+    the same.
     """
     vendors = VendorRegistry(snmp_adapters())
 
-    return ExecutorRegistry([IcmpExecutor(), SnmpWalkExecutor(vendors)]), vendors
+    discover = DiscoverExecutor([SnmpWalkExecutor(vendors), RangeSweepExecutor()])
+
+    return ExecutorRegistry([IcmpExecutor(), discover]), vendors
 
 
 async def main() -> int:

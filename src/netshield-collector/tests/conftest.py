@@ -155,3 +155,37 @@ def walk_job(
         },
         credential=credential if credential is not None else snmp_credential(),
     )
+
+
+def sweep_job(
+    *,
+    first: str = "192.0.2.0",
+    last: str = "192.0.2.15",
+    exclusions: list[str] | None = None,
+    parameters: dict[str, object] | None = None,
+) -> LeasedJob:
+    """A leased Discover job carrying a range sweep's parameters.
+
+    It names no device and carries no credential, which is the shape the API queues: a sweep is
+    looking for hosts that are not devices yet, and an echo request authenticates to nothing.
+    """
+    return LeasedJob(
+        job_id=uuid4(),
+        kind=JobKind.DISCOVER,
+        lease_token="lease-token",
+        lease_expires_at=datetime.now(UTC),
+        attempt=1,
+        parameters=parameters
+        if parameters is not None
+        else {
+            "walk": "sweep",
+            "firstAddress": first,
+            "lastAddress": last,
+            "exclusions": exclusions or [],
+            "count": 1,
+            "timeoutSeconds": 1.0,
+            "intervalSeconds": 0.0,
+            "concurrency": 8,
+            "maxResponders": 1024,
+        },
+    )

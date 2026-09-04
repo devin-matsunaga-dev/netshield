@@ -26,6 +26,7 @@ using NetShield.IntegrationTests.Platform;
 using NetShield.Inventory;
 using NetShield.Inventory.Collector;
 using NetShield.Inventory.Credentials;
+using NetShield.Inventory.Discovery;
 using NetShield.Inventory.Endpoints;
 using NetShield.Inventory.Persistence;
 using NetShield.Inventory.Reachability;
@@ -135,9 +136,11 @@ internal sealed class InventoryHost(
         int leaseSeconds = 300,
         int maxAttempts = 3,
         string collectorSecret = CollectorSharedSecret,
-        ReachabilitySettings? reachability = null)
+        ReachabilitySettings? reachability = null,
+        DiscoverySettings? discovery = null)
     {
         ReachabilitySettings probes = reachability ?? new ReachabilitySettings();
+        DiscoverySettings sweeps = discovery ?? new DiscoverySettings();
 
         string connectionString = database ?? await postgres.CreateDatabaseAsync(cancellationToken);
 
@@ -168,8 +171,22 @@ internal sealed class InventoryHost(
             ["Inventory:Reachability:FailureThreshold"] =
                 probes.FailureThreshold.ToString(CultureInfo.InvariantCulture),
             ["Inventory:Reachability:SuccessThreshold"] =
-                probes.SuccessThreshold.ToString(CultureInfo.InvariantCulture)
+                probes.SuccessThreshold.ToString(CultureInfo.InvariantCulture),
+            ["Inventory:Discovery:MaxAddressesPerJob"] =
+                sweeps.MaxAddressesPerJob.ToString(CultureInfo.InvariantCulture),
+            ["Inventory:Discovery:MaxAddressesPerRun"] =
+                sweeps.MaxAddressesPerRun.ToString(CultureInfo.InvariantCulture),
+            ["Inventory:Discovery:MaxJobsPerRun"] =
+                sweeps.MaxJobsPerRun.ToString(CultureInfo.InvariantCulture),
+            ["Inventory:Discovery:MaxRunsPerScan"] =
+                sweeps.MaxRunsPerScan.ToString(CultureInfo.InvariantCulture)
         };
+
+        for (int index = 0; index < sweeps.CredentialKindOrder.Count; index++)
+        {
+            settings[$"Inventory:Discovery:CredentialKindOrder:{index}"] =
+                sweeps.CredentialKindOrder[index].ToString();
+        }
 
         foreach ((string id, string key) in keys)
         {
@@ -462,6 +479,15 @@ internal sealed class InventoryHost(
             .ScheduleDueAsync(cancellationToken));
 
     /// <summary>
+    /// Runs one pass of the discovery schedule, which is what the background loop does on a
+    /// timer in the API. The loop itself is not registered here, for the same reason.
+    /// </summary>
+    /// <returns>How many runs were started.</returns>
+    public Task<int> ScheduleDiscoveryAsync(CancellationToken cancellationToken) =>
+        InScopeAsync(services => services.GetRequiredService<DiscoverySchedulePass>()
+            .ScheduleDueAsync(cancellationToken));
+
+    /// <summary>
     /// Delivers every pending outbox row, which is what makes a subscriber run.
     /// </summary>
     /// <remarks>
@@ -573,6 +599,54 @@ internal sealed class InventoryHost(
             .Where(job => job.Id == jobId)
             .Select(job => job.Parameters)
             .SingleAsync(cancellationToken);
+    }
+
+    /// <summary>The sweep jobs one discovery run fanned out into, oldest first.</summary>
+    public async Task<IReadOnlyList<DiscoveryRunJobRow>> RunJobsAsync(
+        Guid runId,
+        CancellationToken cancellationToken)
+    {
+        await using AsyncServiceScope scope = application.Services.CreateAsyncScope();
+
+        return await scope.ServiceProvider.GetRequiredService<InventoryDbContext>()
+            .DiscoveryRunJobs.AsNoTracking()
+            .Where(job => job.RunId == runId)
+            .OrderBy(job => job.Sequence)
+            .Select(job => new DiscoveryRunJobRow(
+                job.CollectorJobId,
+                job.FirstAddress,
+                job.LastAddress,
+                job.AddressCount,
+                job.AppliedAt,
+                job.Succeeded))
+            .ToListAsync(cancellationToken);
+    }
+
+    /// <summary>When a seed is next due, which no endpoint exposes for a disabled seed.</summary>
+    public async Task<DateTimeOffset?> SeedNextRunAtAsync(Guid seedId, CancellationToken cancellationToken)
+    {
+        await using AsyncServiceScope scope = application.Services.CreateAsyncScope();
+
+        return await scope.ServiceProvider.GetRequiredService<InventoryDbContext>()
+            .DiscoverySeeds.AsNoTracking()
+            .Where(seed => seed.Id == seedId)
+            .Select(seed => seed.NextRunAt)
+            .SingleAsync(cancellationToken);
+    }
+
+    /// <summary>Moves a seed's next run into the past, which is what waiting for one to fall due does.</summary>
+    public async Task MakeSeedDueAsync(Guid seedId, CancellationToken cancellationToken)
+    {
+        await using AsyncServiceScope scope = application.Services.CreateAsyncScope();
+
+        InventoryDbContext context = scope.ServiceProvider.GetRequiredService<InventoryDbContext>();
+
+        DiscoverySeed seed = await context.DiscoverySeeds
+            .SingleAsync(candidate => candidate.Id == seedId, cancellationToken);
+
+        seed.NextRunAt = DateTimeOffset.UtcNow.AddMinutes(-1);
+
+        await context.SaveChangesAsync(cancellationToken);
     }
 
     /// <summary>What the last SNMP walk established, or nothing if none has ever run.</summary>
@@ -691,6 +765,21 @@ internal sealed record CollectorJobRow(
 /// interval, and the thresholds are the smallest numbers that still distinguish "once" from
 /// "enough times".
 /// </remarks>
+/// <summary>
+/// How the discovery schedule is configured for a test, so that a span is a handful of addresses
+/// rather than a /24 and a ceiling can be crossed on purpose.
+/// </summary>
+internal sealed record DiscoverySettings(
+    int MaxAddressesPerJob = 64,
+    long MaxAddressesPerRun = 1024,
+    int MaxJobsPerRun = 512,
+    int MaxRunsPerScan = 2)
+{
+    /// <summary>The credential kind order this host resolves an SNMP walk's credential by.</summary>
+    public IReadOnlyList<CredentialKind> CredentialKindOrder { get; init; } =
+        [CredentialKind.SnmpV3, CredentialKind.SnmpV2c];
+}
+
 internal sealed record ReachabilitySettings(
     int PollIntervalSeconds = 10,
     int ScanIntervalSeconds = 1,
@@ -699,6 +788,15 @@ internal sealed record ReachabilitySettings(
     int SuccessThreshold = 2);
 
 /// <summary>One reachability row, reduced to what these tests assert on.</summary>
+/// <summary>One sweep job of a run, reduced to what these tests assert on.</summary>
+internal sealed record DiscoveryRunJobRow(
+    Guid CollectorJobId,
+    string FirstAddress,
+    string LastAddress,
+    int AddressCount,
+    DateTimeOffset? AppliedAt,
+    bool? Succeeded);
+
 internal sealed record ReachabilityRow(
     DeviceState PendingState,
     int PendingObservations,

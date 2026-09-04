@@ -8,9 +8,11 @@ Read only. This package sends ``get`` and ``getbulk`` and nothing else; the SNMP
 appears nowhere in NetShield and is forbidden by ARCHITECTURE.md §1 rather than merely
 unimplemented.
 
-``SnmpWalkExecutor`` is deliberately not re-exported from the modules beneath it, for the reason
-``probe`` is not re-exported from ``collector.icmp``: a package attribute shadowing one of its
-own submodules makes the dotted name mean two different things depending on how it was imported.
+``SnmpWalkExecutor`` is one of two walks a ``Discover`` job can name — the other is
+``collector.discovery``'s range sweep — and it is reached through ``DiscoverExecutor`` rather
+than being registered for the kind itself. It does not import anything from that package: the
+dispatcher's contract is structural, so the two protocols stay independent and ``__main__`` is
+the only place that knows both exist.
 """
 
 from collector.snmp.executor import WALK_NAME, SnmpJobError, SnmpWalkExecutor
