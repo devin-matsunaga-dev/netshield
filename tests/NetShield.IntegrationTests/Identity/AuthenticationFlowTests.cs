@@ -7,6 +7,8 @@ using NetShield.Identity.Endpoints;
 
 using NetShield.IntegrationTests.Platform;
 
+using NetShield.Platform.Validation;
+
 namespace NetShield.IntegrationTests.Identity;
 
 /// <summary>

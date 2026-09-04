@@ -37,6 +37,25 @@ internal sealed class SessionClient(HttpClient client) : IDisposable
     public Task<ApiResponse> GetAsync(string path, CancellationToken cancellationToken) =>
         SendAsync(new HttpRequestMessage(HttpMethod.Get, path), cancellationToken);
 
+    public Task<ApiResponse> PutAsync<TBody>(string path, TBody body, CancellationToken cancellationToken) =>
+        SendAsync(new HttpRequestMessage(HttpMethod.Put, path)
+        {
+            Content = JsonContent.Create(body, options: Json)
+        }, cancellationToken);
+
+    public Task<ApiResponse> DeleteAsync(string path, CancellationToken cancellationToken) =>
+        SendAsync(new HttpRequestMessage(HttpMethod.Delete, path), cancellationToken);
+
+    /// <summary>
+    /// Sends a body the request shape could not express — a member of the wrong type, a member
+    /// the record does not have — so a test can ask what the API does with it.
+    /// </summary>
+    public Task<ApiResponse> PostRawAsync(string path, string json, CancellationToken cancellationToken) =>
+        SendAsync(new HttpRequestMessage(HttpMethod.Post, path)
+        {
+            Content = new StringContent(json, System.Text.Encoding.UTF8, "application/json")
+        }, cancellationToken);
+
     public void Dispose() => client.Dispose();
 
     private async Task<ApiResponse> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)

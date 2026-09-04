@@ -30,7 +30,10 @@ public static class SessionClaims
     public const string SessionId = "netshield:sid";
 
     /// <summary>Builds the principal the session cookie is written from.</summary>
-    public static ClaimsPrincipal CreatePrincipal(User user, Guid sessionId, string authenticationScheme)
+    // Internal, not public: it takes the User entity, and ARCHITECTURE.md §4 lets DTOs cross a
+    // module boundary and not entities. Only SessionService calls it, from inside this module.
+    // ModuleBoundaryTests fails if it is made public again.
+    internal static ClaimsPrincipal CreatePrincipal(User user, Guid sessionId, string authenticationScheme)
     {
         ArgumentNullException.ThrowIfNull(user);
 

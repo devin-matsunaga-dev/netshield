@@ -20,6 +20,7 @@
     <ProjectReference Include="..\..\src\NetShield.Contracts\NetShield.Contracts.csproj" />
     <ProjectReference Include="..\..\src\NetShield.Platform\NetShield.Platform.csproj" />
     <ProjectReference Include="..\..\src\Modules\NetShield.Identity\NetShield.Identity.csproj" />
+    <ProjectReference Include="..\..\src\Modules\NetShield.Inventory\NetShield.Inventory.csproj" />
   </ItemGroup>
 
   <ItemGroup>

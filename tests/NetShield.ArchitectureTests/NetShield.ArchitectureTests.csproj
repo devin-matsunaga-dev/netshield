@@ -18,4 +18,14 @@
     <Using Include="Xunit" />
   </ItemGroup>
 
+  <!-- WP-1.1: the module rules that are about types rather than project references are checked
+       by reflection, which needs the assemblies. A test project may reference a module; the
+       reference rules in ModuleReferenceTests exempt anything under tests/. -->
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\NetShield.Contracts\NetShield.Contracts.csproj" />
+    <ProjectReference Include="..\..\src\NetShield.Platform\NetShield.Platform.csproj" />
+    <ProjectReference Include="..\..\src\Modules\NetShield.Identity\NetShield.Identity.csproj" />
+    <ProjectReference Include="..\..\src\Modules\NetShield.Inventory\NetShield.Inventory.csproj" />
+  </ItemGroup>
+
 </Project>

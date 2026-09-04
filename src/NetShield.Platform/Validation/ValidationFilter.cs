@@ -5,12 +5,17 @@ using Microsoft.AspNetCore.Http;
 
 using NetShield.Platform.Results;
 
-namespace NetShield.Identity.Endpoints;
+namespace NetShield.Platform.Validation;
 
 /// <summary>
 /// Runs the registered <see cref="IValidator{T}"/> over the request body before the handler sees
 /// it, so a handler may assume valid input (CONVENTIONS.md §4).
 /// </summary>
+/// <remarks>
+/// It lives in the platform rather than in a module because more than one module needs it, and a
+/// module may not reference another module (ARCHITECTURE.md §4). The rejection code is shared
+/// too, so a client branches on one value whatever endpoint refused it.
+/// </remarks>
 /// <typeparam name="TRequest">The body shape to validate.</typeparam>
 public sealed class ValidationFilter<TRequest>(IValidator<TRequest> validator) : IEndpointFilter
     where TRequest : class

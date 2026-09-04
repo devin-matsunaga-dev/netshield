@@ -8,6 +8,9 @@ using Microsoft.OpenApi;
 using NetShield.Identity;
 using NetShield.Identity.Endpoints;
 
+using NetShield.Inventory;
+using NetShield.Inventory.Endpoints;
+
 using NetShield.Platform;
 using NetShield.Platform.Api;
 using NetShield.Platform.Auditing;
@@ -62,12 +65,14 @@ internal static class ApiDocument
         builder.AddNetShieldAuthorization();
         builder.AddNetShieldAudit();
         builder.AddNetShieldIdentity();
+        builder.AddNetShieldInventory();
         builder.AddNetShieldApiDocument();
 
         WebApplication application = builder.Build();
 
         // Kept in step with NetShield.Web.Host/Program.cs — see ApiDocumentParityTests.
         application.MapIdentityEndpoints();
+        application.MapInventoryEndpoints();
 
         await application.StartAsync(cancellationToken);
 

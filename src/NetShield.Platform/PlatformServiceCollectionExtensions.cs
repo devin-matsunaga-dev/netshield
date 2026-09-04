@@ -42,6 +42,7 @@ public static class PlatformServiceCollectionExtensions
             .ValidateOnStart();
 
         builder.Services.TryAddSingleton<IntegrationEventRegistry>();
+        builder.Services.TryAddSingleton<OutboxEnlistment>();
         builder.Services.TryAddScoped<IEventBus, OutboxEventBus>();
         builder.Services.TryAddScoped<OutboxProcessor>();
 

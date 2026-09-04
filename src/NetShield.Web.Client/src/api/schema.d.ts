@@ -84,6 +84,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/devices": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ListDevices"];
+        put?: never;
+        post: operations["CreateDevice"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/devices/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetDevice"];
+        put: operations["UpdateDevice"];
+        post?: never;
+        delete: operations["DeleteDevice"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -101,6 +133,70 @@ export interface components {
             currentPassword: string;
             newPassword: string;
         };
+        CreateDeviceRequest: {
+            hostname: string;
+            primaryIpAddress: string;
+            vendor?: components["schemas"]["DeviceVendor"];
+            model?: null | string;
+            osVersion?: null | string;
+            serialNumber?: null | string;
+            site?: null | string;
+            role?: components["schemas"]["DeviceRole"];
+            criticality?: components["schemas"]["CriticalityTier"];
+            environment?: components["schemas"]["DeviceEnvironment"];
+            owner?: null | string;
+            tags?: null | string[];
+            notes?: null | string;
+        };
+        CriticalityTier: number;
+        CursorPageOfDeviceSummary: {
+            items: components["schemas"]["DeviceSummary"][];
+            nextCursor: null | string;
+            /** Format: int64 */
+            totalCount?: null | number | string;
+        };
+        DeviceDetail: {
+            /** Format: uuid */
+            id: string;
+            hostname: string;
+            primaryIpAddress: string;
+            vendor: components["schemas"]["DeviceVendor"];
+            model: null | string;
+            osVersion: null | string;
+            serialNumber: null | string;
+            site: null | string;
+            role: components["schemas"]["DeviceRole"];
+            criticality: components["schemas"]["CriticalityTier"];
+            environment: components["schemas"]["DeviceEnvironment"];
+            owner: null | string;
+            tags: string[];
+            notes: null | string;
+            state: components["schemas"]["DeviceState"];
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        DeviceEnvironment: number;
+        DeviceRole: number;
+        DeviceState: number;
+        DeviceSummary: {
+            /** Format: uuid */
+            id: string;
+            hostname: string;
+            primaryIpAddress: string;
+            vendor: components["schemas"]["DeviceVendor"];
+            model: null | string;
+            role: components["schemas"]["DeviceRole"];
+            site: null | string;
+            criticality: components["schemas"]["CriticalityTier"];
+            environment: components["schemas"]["DeviceEnvironment"];
+            state: components["schemas"]["DeviceState"];
+            tags: string[];
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        DeviceVendor: number;
         HttpValidationProblemDetails: {
             type?: null | string;
             title?: null | string;
@@ -125,6 +221,21 @@ export interface components {
             status?: null | number | string;
             detail?: null | string;
             instance?: null | string;
+        };
+        UpdateDeviceRequest: {
+            hostname: string;
+            primaryIpAddress: string;
+            vendor?: components["schemas"]["DeviceVendor"];
+            model?: null | string;
+            osVersion?: null | string;
+            serialNumber?: null | string;
+            site?: null | string;
+            role?: components["schemas"]["DeviceRole"];
+            criticality?: components["schemas"]["CriticalityTier"];
+            environment?: components["schemas"]["DeviceEnvironment"];
+            owner?: null | string;
+            tags?: null | string[];
+            notes?: null | string;
         };
         /** @enum {unknown} */
         UserRole: "Administrator" | "Operator" | "Analyst" | "ReadOnly";
@@ -297,6 +408,248 @@ export interface operations {
             };
             /** @description Unauthorized */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    ListDevices: {
+        parameters: {
+            query?: {
+                cursor?: string;
+                limit?: number | string;
+                sort?: string;
+                descending?: boolean;
+                state?: components["schemas"]["DeviceState"];
+                vendor?: components["schemas"]["DeviceVendor"];
+                role?: components["schemas"]["DeviceRole"];
+                criticality?: components["schemas"]["CriticalityTier"];
+                environment?: components["schemas"]["DeviceEnvironment"];
+                site?: string;
+                tag?: string;
+                search?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CursorPageOfDeviceSummary"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    CreateDevice: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateDeviceRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeviceDetail"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    GetDevice: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeviceDetail"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    UpdateDevice: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateDeviceRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeviceDetail"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    DeleteDevice: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Forbidden */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };

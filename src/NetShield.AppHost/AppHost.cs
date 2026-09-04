@@ -65,6 +65,16 @@ IResourceBuilder<ParameterResource> administratorPassword = builder.AddParameter
     secret: true,
     persist: true);
 
+// The schema step. It is the same project as the API, run with --migrate: it applies every
+// context's migrations, seeds the first-run administrator, and exits without binding a socket.
+// A sixth project would be a change to the five-process model in ARCHITECTURE.md §2; a startup
+// hook would have every replica racing to migrate and would leave the API's account holding DDL
+// rights for its whole life. Deployment runs the same image with the same argument.
+IResourceBuilder<ProjectResource> migrator = builder.AddProject<Projects.NetShield_Web_Host>("db-migrator")
+    .WithArgs("--migrate")
+    .WithReference(database).WaitFor(database)
+    .WithEnvironment("Identity__Seed__Password", administratorPassword);
+
 // The API. /health/ready covers PostgreSQL and Redis, so the dashboard reports this
 // resource healthy only once the stores it depends on are actually reachable.
 IResourceBuilder<ProjectResource> webHost = builder.AddProject<Projects.NetShield_Web_Host>("web-host")
@@ -72,7 +82,10 @@ IResourceBuilder<ProjectResource> webHost = builder.AddProject<Projects.NetShiel
     .WithReference(cache).WaitFor(cache)
     .WithReference(mailConnection).WaitFor(mail)
     .WithEnvironment("Identity__Seed__Password", administratorPassword)
-    .WithHttpHealthCheck("/health/ready");
+    .WithHttpHealthCheck("/health/ready")
+    // Not merely started: finished. The API must never come up against a half-migrated schema,
+    // and on a fresh volume the administrator it seeds is created by the step above.
+    .WaitForCompletion(migrator);
 
 // The SPA, under the Vite dev server. In deployment Web.Host serves the built bundle out of its
 // own wwwroot and this resource does not exist; in development the dev server owns the page and

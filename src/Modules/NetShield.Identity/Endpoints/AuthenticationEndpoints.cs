@@ -11,6 +11,7 @@ using NetShield.Identity.Authentication;
 using NetShield.Platform.Auditing;
 using NetShield.Platform.Authorization;
 using NetShield.Platform.Results;
+using NetShield.Platform.Validation;
 
 namespace NetShield.Identity.Endpoints;
 

@@ -79,7 +79,53 @@ public sealed partial class OrchestrationTests(AppHostModel model) : IClassFixtu
             .Select(wait => wait.Resource.Name)
             .ToList();
 
-        waits.Should().BeEquivalentTo(["postgres", "netshield", "cache", "mailpit"]);
+        waits.Should().BeEquivalentTo(["postgres", "netshield", "cache", "mailpit", "db-migrator"]);
+    }
+
+    /// <summary>
+    /// The schema step is the same project as the API, run with <c>--migrate</c> — not a sixth
+    /// project, which would change the five-process model in ARCHITECTURE.md §2.
+    /// </summary>
+    [Fact]
+    public void TheMigrator_IsTheApiProject_RunWithTheMigrateArgument()
+    {
+        IResource migrator = model.Resource("db-migrator");
+
+        migrator.Should().BeAssignableTo<ProjectResource>();
+
+        IReadOnlyList<object> arguments = migrator.Annotations.OfType<CommandLineArgsCallbackAnnotation>()
+            .Select(annotation => annotation)
+            .Cast<object>()
+            .ToList();
+
+        arguments.Should().NotBeEmpty("the resource has to be told to migrate rather than to serve");
+    }
+
+    /// <summary>
+    /// Waiting for the migrator to <em>finish</em> rather than to start is the whole point: the
+    /// API must never come up against a half-applied schema, and on a fresh volume the
+    /// administrator it needs is created by that step.
+    /// </summary>
+    [Fact]
+    public void WebHost_WaitsForTheMigrator_ToComplete()
+    {
+        WaitAnnotation wait = model.Resource("web-host")
+            .Annotations.OfType<WaitAnnotation>()
+            .Should().ContainSingle(annotation => annotation.Resource.Name == "db-migrator").Subject;
+
+        wait.WaitType.Should().Be(WaitType.WaitForCompletion);
+    }
+
+    /// <summary>
+    /// The migrator binds no socket, so it has no readiness to report and must not be given a
+    /// health check that would keep the dashboard waiting for a process that has already exited.
+    /// </summary>
+    [Fact]
+    public void TheMigrator_HasNoHealthCheck()
+    {
+        model.Resource("db-migrator")
+            .Annotations.OfType<HealthCheckAnnotation>()
+            .Should().BeEmpty();
     }
 
     [Fact]
