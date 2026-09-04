@@ -15,9 +15,12 @@ using NetShield.Inventory.Credentials;
 using NetShield.Inventory.Credentials.Handlers;
 using NetShield.Inventory.Devices.Handlers;
 using NetShield.Inventory.Endpoints;
+using NetShield.Inventory.Reachability;
+using NetShield.Inventory.Reachability.Handlers;
 
 using NetShield.Platform;
 using NetShield.Platform.Authentication;
+using NetShield.Platform.Messaging;
 
 namespace NetShield.Inventory;
 
@@ -58,6 +61,11 @@ public static class InventoryServiceCollectionExtensions
             .ValidateDataAnnotations()
             .ValidateOnStart();
 
+        builder.Services.AddOptions<ReachabilityOptions>()
+            .Bind(builder.Configuration.GetSection(ReachabilityOptions.SectionName))
+            .ValidateDataAnnotations()
+            .ValidateOnStart();
+
         builder.Services.TryAddScoped<GetDeviceListHandler>();
         builder.Services.TryAddScoped<GetDeviceHandler>();
         builder.Services.TryAddScoped<CreateDeviceHandler>();
@@ -83,6 +91,13 @@ public static class InventoryServiceCollectionExtensions
         builder.Services.TryAddScoped<LeaseCollectorJobsHandler>();
         builder.Services.TryAddScoped<SubmitCollectorResultsHandler>();
         builder.Services.TryAddScoped<RecordHeartbeatHandler>();
+
+        // The reachability schedule and the subscriber that reads what it produced. The pass is
+        // registered here; the loop that drives it is the separate opt-in below, because exactly
+        // one process may schedule work for the estate.
+        builder.Services.TryAddScoped<ReachabilitySchedulePass>();
+        builder.Services.AddScoped<IIntegrationEventHandler<CollectorJobCompleted>,
+            RecordReachabilityResultHandler>();
 
         builder.Services.TryAddScoped<IValidator<CreateDeviceRequest>, CreateDeviceRequestValidator>();
         builder.Services.TryAddScoped<IValidator<UpdateDeviceRequest>, UpdateDeviceRequestValidator>();
@@ -112,6 +127,7 @@ public static class InventoryServiceCollectionExtensions
         builder.Services.AddIntegrationEvent<CredentialProfileRemoved>();
         builder.Services.AddIntegrationEvent<DeviceCredentialProfilesChanged>();
         builder.Services.AddIntegrationEvent<CollectorJobCompleted>();
+        builder.Services.AddIntegrationEvent<DeviceStateChanged>();
 
         builder.Services.ConfigureHttpJsonOptions(json =>
         {
@@ -122,6 +138,28 @@ public static class InventoryServiceCollectionExtensions
             // from.
             json.SerializerOptions.TypeInfoResolverChain.Insert(1, CollectorSerializerContext.Default);
         });
+
+        return builder;
+    }
+
+    /// <summary>
+    /// Starts the reachability schedule: the loop that queues an ICMP probe for every device
+    /// whose next one has fallen due.
+    /// </summary>
+    /// <remarks>
+    /// Separate from <see cref="AddNetShieldInventory{TBuilder}"/> for the reason
+    /// <c>AddOutboxDispatcher</c> is separate from <c>AddNetShieldPlatform</c>: registering a
+    /// module says what it can do, and deciding that <em>this</em> process is the one that tells
+    /// five hundred devices what to expect is a choice that belongs in the diff at the
+    /// composition root. The schema step registers the module and must not start scheduling on
+    /// its way past.
+    /// </remarks>
+    public static TBuilder AddNetShieldReachabilityScheduler<TBuilder>(this TBuilder builder)
+        where TBuilder : IHostApplicationBuilder
+    {
+        ArgumentNullException.ThrowIfNull(builder);
+
+        builder.Services.AddHostedService<ReachabilityScheduler>();
 
         return builder;
     }

@@ -16,6 +16,7 @@ from pydantic import ValidationError
 
 from collector.api import CollectorApi
 from collector.config import CollectorSettings
+from collector.icmp import IcmpExecutor
 from collector.jobs import ExecutorRegistry
 from collector.logging import configure_logging
 from collector.runner import CollectorRunner
@@ -25,13 +26,17 @@ _LOG: Final = structlog.get_logger(__name__)
 
 
 def build_registries() -> tuple[ExecutorRegistry, VendorRegistry]:
-    """The two seams, both empty.
+    """The two seams: one executor, and no vendor adapters yet.
 
-    WP-1.3 ships the contract and the loop and no protocol implementations, so this build leases
-    a job, finds no executor for its kind, and reports it as a failure naming the reason. WP-1.4
-    registers the ICMP executor here, WP-1.5 the SNMP one and the vendor adapters behind it.
+    ``IcmpExecutor`` answers for ``Poll`` jobs whose parameters name the ICMP probe, which is
+    every job the reachability schedule queues. WP-1.5 registers the SNMP executor and the vendor
+    adapters behind it; a job of a kind or a probe this build cannot run is still reported as a
+    failure naming the reason rather than dropped.
+
+    ICMP needs no vendor adapter and asks the registry for none — an echo request is the same
+    question whoever made the box.
     """
-    return ExecutorRegistry(), VendorRegistry()
+    return ExecutorRegistry([IcmpExecutor()]), VendorRegistry()
 
 
 async def main() -> int:

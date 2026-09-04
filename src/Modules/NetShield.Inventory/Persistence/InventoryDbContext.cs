@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using NetShield.Inventory.Collector;
 using NetShield.Inventory.Credentials;
 using NetShield.Inventory.Devices;
+using NetShield.Inventory.Reachability;
 
 using NetShield.Platform.Messaging;
 
@@ -40,6 +41,9 @@ public sealed class InventoryDbContext(DbContextOptions<InventoryDbContext> opti
     /// <summary>The collectors that have reported in, one row each.</summary>
     internal DbSet<CollectorNode> CollectorNodes => Set<CollectorNode>();
 
+    /// <summary>What is known about each device's reachability, one row per device.</summary>
+    internal DbSet<DeviceReachability> DeviceReachabilities => Set<DeviceReachability>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         ArgumentNullException.ThrowIfNull(modelBuilder);
@@ -49,6 +53,7 @@ public sealed class InventoryDbContext(DbContextOptions<InventoryDbContext> opti
         modelBuilder.ApplyConfiguration(new DeviceCredentialProfileConfiguration());
         modelBuilder.ApplyConfiguration(new CollectorJobConfiguration());
         modelBuilder.ApplyConfiguration(new CollectorNodeConfiguration());
+        modelBuilder.ApplyConfiguration(new DeviceReachabilityConfiguration());
 
         // outbox_messages, mapped here so a device write and the event describing it are one
         // transaction on one connection. NetShield.Platform owns the table and the migration

@@ -2,6 +2,8 @@ using System.Text.Json;
 
 using NetShield.Contracts.Collector;
 
+using NetShield.Inventory.Persistence;
+
 using NetShield.Platform.Results;
 
 namespace NetShield.Inventory.Collector;
@@ -18,21 +20,39 @@ namespace NetShield.Inventory.Collector;
 /// reads it.
 /// </para>
 /// <para>
-/// It saves. A caller that needs a job queued in the same transaction as a domain change will
-/// need an enlisting form of this, the way <c>OutboxEnlistment</c> is the enlisting form of
-/// <c>IEventBus</c> — the first package that actually needs it is the one that should add it,
-/// because it will know which context it is enlisting on.
+/// Two forms. <see cref="EnqueueAsync"/> saves, which is what a caller with nothing else to
+/// write wants. <see cref="EnlistAsync"/> stages the row on a context the caller is already
+/// changing and leaves the save to them, the way <c>OutboxEnlistment</c> does for an event —
+/// WP-1.3 left this to the first package that needed it, "because it will know which context it
+/// is enlisting on", and WP-1.4's scheduler is that package: queueing a probe and stamping when
+/// the next one is due have to commit together or the device is either probed twice or never
+/// again.
 /// </para>
 /// </remarks>
 internal interface ICollectorJobQueue
 {
-    /// <summary>Queues one job.</summary>
+    /// <summary>Queues one job and saves it.</summary>
     /// <returns>
     /// The job's id, or a refusal when it names a device or a credential profile that is not
     /// live — a job pointing at something that has been removed can only ever fail, and failing
     /// at the enqueue names the caller that made the mistake.
     /// </returns>
     Task<Result<Guid>> EnqueueAsync(NewCollectorJob job, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Stages one job on <paramref name="context"/> without saving, so it commits with whatever
+    /// else the caller is writing.
+    /// </summary>
+    /// <remarks>
+    /// The context is a parameter rather than the one this service was resolved with, so that
+    /// "these are one transaction" is visible at the call site instead of being a property of how
+    /// two services happened to be scoped.
+    /// </remarks>
+    /// <returns>The id the job will have, or the same refusals <see cref="EnqueueAsync"/> makes.</returns>
+    Task<Result<Guid>> EnlistAsync(
+        InventoryDbContext context,
+        NewCollectorJob job,
+        CancellationToken cancellationToken);
 }
 
 /// <summary>A job to queue.</summary>

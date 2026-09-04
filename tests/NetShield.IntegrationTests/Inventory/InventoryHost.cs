@@ -10,6 +10,8 @@ using Microsoft.Extensions.Logging;
 
 using NetShield.Contracts.Collector;
 using NetShield.Contracts.Identity;
+using NetShield.Contracts.Inventory;
+using NetShield.Contracts.Messaging;
 
 using NetShield.Identity;
 using NetShield.Identity.Endpoints;
@@ -26,6 +28,7 @@ using NetShield.Inventory.Collector;
 using NetShield.Inventory.Credentials;
 using NetShield.Inventory.Endpoints;
 using NetShield.Inventory.Persistence;
+using NetShield.Inventory.Reachability;
 
 using NetShield.Platform;
 using NetShield.Platform.Auditing;
@@ -118,6 +121,10 @@ internal sealed class InventoryHost(
     /// The shared secret this host will accept, so a test can start one whose secret is not the
     /// one its client presents.
     /// </param>
+    /// <param name="reachability">
+    /// How the reachability schedule is configured, defaulting to intervals short enough that a
+    /// test does not wait a minute for a device to fall due.
+    /// </param>
     public static async Task<InventoryHost> StartAsync(
         PostgresFixture postgres,
         CancellationToken cancellationToken,
@@ -127,8 +134,11 @@ internal sealed class InventoryHost(
         string? activeKeyId = null,
         int leaseSeconds = 300,
         int maxAttempts = 3,
-        string collectorSecret = CollectorSharedSecret)
+        string collectorSecret = CollectorSharedSecret,
+        ReachabilitySettings? reachability = null)
     {
+        ReachabilitySettings probes = reachability ?? new ReachabilitySettings();
+
         string connectionString = database ?? await postgres.CreateDatabaseAsync(cancellationToken);
 
         IReadOnlyList<(string Id, string Key)> keys = keyRing ?? [(ActiveKeyId, KeyEncryptionKey)];
@@ -148,7 +158,17 @@ internal sealed class InventoryHost(
             ["Security:CredentialEncryption:ActiveKeyId"] = activeKeyId ?? keys[0].Id,
             ["Collector:SharedSecret"] = collectorSecret,
             ["Collector:Jobs:LeaseSeconds"] = leaseSeconds.ToString(CultureInfo.InvariantCulture),
-            ["Collector:Jobs:MaxAttempts"] = maxAttempts.ToString(CultureInfo.InvariantCulture)
+            ["Collector:Jobs:MaxAttempts"] = maxAttempts.ToString(CultureInfo.InvariantCulture),
+            ["Inventory:Reachability:PollIntervalSeconds"] =
+                probes.PollIntervalSeconds.ToString(CultureInfo.InvariantCulture),
+            ["Inventory:Reachability:ScanIntervalSeconds"] =
+                probes.ScanIntervalSeconds.ToString(CultureInfo.InvariantCulture),
+            ["Inventory:Reachability:MaxJobsPerScan"] =
+                probes.MaxJobsPerScan.ToString(CultureInfo.InvariantCulture),
+            ["Inventory:Reachability:FailureThreshold"] =
+                probes.FailureThreshold.ToString(CultureInfo.InvariantCulture),
+            ["Inventory:Reachability:SuccessThreshold"] =
+                probes.SuccessThreshold.ToString(CultureInfo.InvariantCulture)
         };
 
         foreach ((string id, string key) in keys)
@@ -431,6 +451,144 @@ internal sealed class InventoryHost(
             .SingleOrDefaultAsync(cancellationToken);
     }
 
+    /// <summary>
+    /// Runs one pass of the reachability schedule, which is what the background loop does on a
+    /// timer in the API. The loop itself is not registered here — a test drives passes.
+    /// </summary>
+    /// <returns>How many probes were queued.</returns>
+    public Task<int> ScheduleReachabilityAsync(CancellationToken cancellationToken) =>
+        InScopeAsync(services => services.GetRequiredService<ReachabilitySchedulePass>()
+            .ScheduleDueAsync(cancellationToken));
+
+    /// <summary>
+    /// Delivers every pending outbox row, which is what makes a subscriber run.
+    /// </summary>
+    /// <remarks>
+    /// The dispatcher is a hosted service this harness does not register, for the reason it does
+    /// not register the reachability loop: a test that has to wait for a timer is a test that is
+    /// sometimes flaky. This is the same processor the dispatcher drives, driven a pass at a time.
+    /// </remarks>
+    public async Task DispatchOutboxAsync(CancellationToken cancellationToken)
+    {
+        while (await InScopeAsync(services =>
+            services.GetRequiredService<OutboxProcessor>().DispatchPendingAsync(cancellationToken)) > 0)
+        {
+            // Keep going while rows are still being delivered: one handler can enlist another row.
+        }
+    }
+
+    /// <summary>
+    /// Marks every delivered outbox row pending again and dispatches, which is what an
+    /// at-least-once bus does when a delivery is not recorded before the process dies.
+    /// </summary>
+    public async Task RedeliverOutboxAsync(CancellationToken cancellationToken)
+    {
+        await using (AsyncServiceScope scope = application.Services.CreateAsyncScope())
+        {
+            PlatformDbContext platform = scope.ServiceProvider.GetRequiredService<PlatformDbContext>();
+
+            await platform.OutboxMessages
+                .Where(message => message.ProcessedAt != null)
+                .ExecuteUpdateAsync(
+                    message => message.SetProperty(row => row.ProcessedAt, (DateTimeOffset?)null),
+                    cancellationToken);
+        }
+
+        await DispatchOutboxAsync(cancellationToken);
+    }
+
+    /// <summary>Every outbox row of one event type, deserialised, oldest first.</summary>
+    public async Task<IReadOnlyList<TEvent>> OutboxPayloadsAsync<TEvent>(CancellationToken cancellationToken)
+        where TEvent : class, IIntegrationEvent
+    {
+        await using AsyncServiceScope scope = application.Services.CreateAsyncScope();
+
+        string eventType = typeof(TEvent).FullName!;
+
+        List<string> payloads = await scope.ServiceProvider.GetRequiredService<PlatformDbContext>()
+            .OutboxMessages.AsNoTracking()
+            .Where(message => message.EventType == eventType)
+            .OrderBy(message => message.Id)
+            .Select(message => message.Payload)
+            .ToListAsync(cancellationToken);
+
+        return [.. payloads.Select(payload =>
+            (TEvent)OutboxPayload.Deserialize(payload, typeof(TEvent))!)];
+    }
+
+    /// <summary>What is known about a device's reachability, or nothing if it has never been due.</summary>
+    public async Task<ReachabilityRow?> ReachabilityAsync(Guid deviceId, CancellationToken cancellationToken)
+    {
+        await using AsyncServiceScope scope = application.Services.CreateAsyncScope();
+
+        return await scope.ServiceProvider.GetRequiredService<InventoryDbContext>()
+            .DeviceReachabilities.AsNoTracking()
+            .Where(row => row.DeviceId == deviceId)
+            .Select(row => new ReachabilityRow(
+                row.PendingState,
+                row.PendingObservations,
+                row.NextProbeAt,
+                row.LastProbeAt,
+                row.LastChangedAt,
+                row.LastRttMilliseconds,
+                row.LastLossPercent,
+                row.LastAppliedJobId,
+                row.LastError))
+            .SingleOrDefaultAsync(cancellationToken);
+    }
+
+    /// <summary>A device's published state, straight off the row.</summary>
+    public async Task<DeviceState> DeviceStateAsync(Guid deviceId, CancellationToken cancellationToken)
+    {
+        await using AsyncServiceScope scope = application.Services.CreateAsyncScope();
+
+        return await scope.ServiceProvider.GetRequiredService<InventoryDbContext>()
+            .Devices.AsNoTracking()
+            .Where(device => device.Id == deviceId)
+            .Select(device => device.State)
+            .SingleAsync(cancellationToken);
+    }
+
+    /// <summary>Every job queued for a device, oldest first.</summary>
+    public async Task<IReadOnlyList<Guid>> JobIdsForAsync(Guid deviceId, CancellationToken cancellationToken)
+    {
+        await using AsyncServiceScope scope = application.Services.CreateAsyncScope();
+
+        return await scope.ServiceProvider.GetRequiredService<InventoryDbContext>()
+            .CollectorJobs.AsNoTracking()
+            .Where(job => job.DeviceId == deviceId)
+            .OrderBy(job => job.Id)
+            .Select(job => job.Id)
+            .ToListAsync(cancellationToken);
+    }
+
+    /// <summary>The parameter document a queued job carries.</summary>
+    public async Task<string?> JobParametersAsync(Guid jobId, CancellationToken cancellationToken)
+    {
+        await using AsyncServiceScope scope = application.Services.CreateAsyncScope();
+
+        return await scope.ServiceProvider.GetRequiredService<InventoryDbContext>()
+            .CollectorJobs.AsNoTracking()
+            .Where(job => job.Id == jobId)
+            .Select(job => job.Parameters)
+            .SingleAsync(cancellationToken);
+    }
+
+    /// <summary>Brings a device's next probe forward, which is what waiting an interval does.</summary>
+    public async Task MakeDueAsync(Guid deviceId, CancellationToken cancellationToken)
+    {
+        await using AsyncServiceScope scope = application.Services.CreateAsyncScope();
+
+        InventoryDbContext context = scope.ServiceProvider.GetRequiredService<InventoryDbContext>();
+
+        DeviceReachability row = await context.DeviceReachabilities
+            .SingleAsync(candidate => candidate.DeviceId == deviceId, cancellationToken);
+
+        row.NextProbeAt = DateTimeOffset.UtcNow.AddMinutes(-1);
+
+        await context.SaveChangesAsync(cancellationToken);
+    }
+
     public async ValueTask DisposeAsync()
     {
         client.Dispose();
@@ -453,6 +611,31 @@ internal sealed record CollectorJobRow(
     string? LeasedBy,
     string? Detail,
     string? Result);
+
+/// <summary>What a test wants the reachability schedule configured as.</summary>
+/// <remarks>
+/// Defaults that make a test fast rather than realistic: the estate is probed on a short
+/// interval, and the thresholds are the smallest numbers that still distinguish "once" from
+/// "enough times".
+/// </remarks>
+internal sealed record ReachabilitySettings(
+    int PollIntervalSeconds = 10,
+    int ScanIntervalSeconds = 1,
+    int MaxJobsPerScan = 500,
+    int FailureThreshold = 3,
+    int SuccessThreshold = 2);
+
+/// <summary>One reachability row, reduced to what these tests assert on.</summary>
+internal sealed record ReachabilityRow(
+    DeviceState PendingState,
+    int PendingObservations,
+    DateTimeOffset NextProbeAt,
+    DateTimeOffset? LastProbeAt,
+    DateTimeOffset? LastChangedAt,
+    double? LastRttMilliseconds,
+    double? LastLossPercent,
+    Guid? LastAppliedJobId,
+    string? LastError);
 
 /// <summary>One collector's self-reported state.</summary>
 internal sealed record CollectorNodeRow(string Name, string? Version, int Capacity, int Running);

@@ -18,6 +18,24 @@ internal sealed class CollectorJobQueue(
 {
     public async Task<Result<Guid>> EnqueueAsync(NewCollectorJob job, CancellationToken cancellationToken)
     {
+        Result<Guid> staged = await EnlistAsync(context, job, cancellationToken);
+
+        if (!staged.IsSuccess)
+        {
+            return staged;
+        }
+
+        await context.SaveChangesAsync(cancellationToken);
+
+        return staged;
+    }
+
+    public async Task<Result<Guid>> EnlistAsync(
+        InventoryDbContext target,
+        NewCollectorJob job,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(target);
         ArgumentNullException.ThrowIfNull(job);
 
         string? parameters = job.Parameters?.GetRawText();
@@ -30,13 +48,13 @@ internal sealed class CollectorJobQueue(
         // Checked here rather than by a foreign key, because both tables soft-delete: a row that
         // still exists is not the same as a device that is still live, and only a query knows
         // the difference (WP-1.1, WP-1.2).
-        if (job.DeviceId is { } deviceId && !await DeviceIsLiveAsync(deviceId, cancellationToken))
+        if (job.DeviceId is { } deviceId && !await DeviceIsLiveAsync(target, deviceId, cancellationToken))
         {
             return Result<Guid>.Failure(CollectorErrors.UnknownDevice(deviceId));
         }
 
         if (job.CredentialProfileId is { } profileId
-            && !await CredentialProfileIsLiveAsync(profileId, cancellationToken))
+            && !await CredentialProfileIsLiveAsync(target, profileId, cancellationToken))
         {
             return Result<Guid>.Failure(CollectorErrors.UnknownCredentialProfile(profileId));
         }
@@ -58,20 +76,24 @@ internal sealed class CollectorJobQueue(
             UpdatedAt = now
         };
 
-        context.CollectorJobs.Add(queued);
-
-        await context.SaveChangesAsync(cancellationToken);
+        target.CollectorJobs.Add(queued);
 
         return queued.Id;
     }
 
-    private Task<bool> DeviceIsLiveAsync(Guid deviceId, CancellationToken cancellationToken) =>
-        context.Devices.AnyAsync(
+    private static Task<bool> DeviceIsLiveAsync(
+        InventoryDbContext target,
+        Guid deviceId,
+        CancellationToken cancellationToken) =>
+        target.Devices.AnyAsync(
             device => device.Id == deviceId && device.DeletedAt == null,
             cancellationToken);
 
-    private Task<bool> CredentialProfileIsLiveAsync(Guid profileId, CancellationToken cancellationToken) =>
-        context.CredentialProfiles.AnyAsync(
+    private static Task<bool> CredentialProfileIsLiveAsync(
+        InventoryDbContext target,
+        Guid profileId,
+        CancellationToken cancellationToken) =>
+        target.CredentialProfiles.AnyAsync(
             profile => profile.Id == profileId && profile.DeletedAt == null,
             cancellationToken);
 }

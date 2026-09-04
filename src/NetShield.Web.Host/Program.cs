@@ -71,6 +71,11 @@ builder.AddNetShieldAudit();
 builder.AddNetShieldIdentity();
 builder.AddNetShieldInventory();
 
+// The reachability schedule: what actually puts work in the collector queue. Opt-in for the
+// reason the outbox dispatcher is — exactly one process decides what the estate is asked to do,
+// and this is the process. The schema step registers the same module and never reaches here.
+builder.AddNetShieldReachabilityScheduler();
+
 // The OpenAPI description of every /api endpoint. CONVENTIONS.md §4 generates it from the
 // endpoints and generates the TypeScript client from it; src/NetShield.Web.Host/openapi/v1.json
 // is the committed copy the client is built from.
