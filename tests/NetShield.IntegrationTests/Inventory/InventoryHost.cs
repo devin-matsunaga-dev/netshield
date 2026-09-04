@@ -1,3 +1,5 @@
+using System.Globalization;
+
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 
@@ -6,6 +8,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
+using NetShield.Contracts.Collector;
 using NetShield.Contracts.Identity;
 
 using NetShield.Identity;
@@ -14,10 +17,12 @@ using NetShield.Identity.Passwords;
 using NetShield.Identity.Persistence;
 using NetShield.Identity.Users;
 
+using NetShield.IntegrationTests.Collector;
 using NetShield.IntegrationTests.Identity;
 using NetShield.IntegrationTests.Platform;
 
 using NetShield.Inventory;
+using NetShield.Inventory.Collector;
 using NetShield.Inventory.Credentials;
 using NetShield.Inventory.Endpoints;
 using NetShield.Inventory.Persistence;
@@ -27,6 +32,7 @@ using NetShield.Platform.Auditing;
 using NetShield.Platform.Messaging;
 using NetShield.Platform.Persistence;
 using NetShield.Platform.Problems;
+using NetShield.Platform.Results;
 
 namespace NetShield.IntegrationTests.Inventory;
 
@@ -43,6 +49,7 @@ namespace NetShield.IntegrationTests.Inventory;
 internal sealed class InventoryHost(
     WebApplication application,
     SessionClient client,
+    CollectorClient collector,
     string connectionString,
     RecordingLoggerProvider logs) : IAsyncDisposable
 {
@@ -64,6 +71,18 @@ internal sealed class InventoryHost(
 
     /// <summary>A second fixture key, for the rotation tests. Bytes 0x20 to 0x3f.</summary>
     internal const string RotatedKeyEncryptionKey = "ICEiIyQlJicoKSorLC0uLzAxMjM0NTY3ODk6Ozw9Pj8=";
+
+    /// <summary>
+    /// The shared secret this suite's collector presents. Recognisably a fixture, and long enough
+    /// to clear the floor the options validator enforces (CONVENTIONS.md §9).
+    /// </summary>
+    internal const string CollectorSharedSecret = "integration-test-collector-secret-0000000000";
+
+    /// <summary>What the collector in this suite calls itself.</summary>
+    internal const string CollectorName = "collector-test";
+
+    /// <summary>The client, presenting the shared secret and holding no session.</summary>
+    public CollectorClient Collector => collector;
 
     /// <summary>The client, holding whatever cookies the API has set on it.</summary>
     public SessionClient Client => client;
@@ -90,13 +109,25 @@ internal sealed class InventoryHost(
     /// under <see cref="ActiveKeyId"/>.
     /// </param>
     /// <param name="activeKeyId">Which of them new material is sealed under.</param>
+    /// <param name="leaseSeconds">
+    /// How long a collector lease lasts. The default is the API's own; an expiry test asks for
+    /// the shortest the options allow rather than waiting five minutes for one.
+    /// </param>
+    /// <param name="maxAttempts">How many leases a job gets before it is abandoned.</param>
+    /// <param name="collectorSecret">
+    /// The shared secret this host will accept, so a test can start one whose secret is not the
+    /// one its client presents.
+    /// </param>
     public static async Task<InventoryHost> StartAsync(
         PostgresFixture postgres,
         CancellationToken cancellationToken,
         UserRole role = UserRole.Administrator,
         string? database = null,
         IReadOnlyList<(string Id, string Key)>? keyRing = null,
-        string? activeKeyId = null)
+        string? activeKeyId = null,
+        int leaseSeconds = 300,
+        int maxAttempts = 3,
+        string collectorSecret = CollectorSharedSecret)
     {
         string connectionString = database ?? await postgres.CreateDatabaseAsync(cancellationToken);
 
@@ -114,7 +145,10 @@ internal sealed class InventoryHost(
         {
             ["Identity:PasswordHashing:MemoryKib"] = TestMemoryKib,
             ["Identity:PasswordHashing:Iterations"] = "1",
-            ["Security:CredentialEncryption:ActiveKeyId"] = activeKeyId ?? keys[0].Id
+            ["Security:CredentialEncryption:ActiveKeyId"] = activeKeyId ?? keys[0].Id,
+            ["Collector:SharedSecret"] = collectorSecret,
+            ["Collector:Jobs:LeaseSeconds"] = leaseSeconds.ToString(CultureInfo.InvariantCulture),
+            ["Collector:Jobs:MaxAttempts"] = maxAttempts.ToString(CultureInfo.InvariantCulture)
         };
 
         foreach ((string id, string key) in keys)
@@ -173,9 +207,12 @@ internal sealed class InventoryHost(
 
         await application.StartAsync(cancellationToken);
 
-        SessionClient client = new(new HttpClient { BaseAddress = new Uri(application.Urls.First()) });
+        Uri baseAddress = new(application.Urls.First());
 
-        InventoryHost host = new(application, client, connectionString, logs);
+        SessionClient client = new(new HttpClient { BaseAddress = baseAddress });
+        CollectorClient collector = new(baseAddress, CollectorSharedSecret);
+
+        InventoryHost host = new(application, client, collector, connectionString, logs);
 
         await host.SignInAsync(role, cancellationToken);
 
@@ -259,6 +296,23 @@ internal sealed class InventoryHost(
     }
 
     /// <summary>
+    /// The <c>after</c> snapshots of every audit row with this action, as they were stored — that
+    /// is, after redaction.
+    /// </summary>
+    public async Task<IReadOnlyList<string>> AuditSnapshotsAsync(
+        string action,
+        CancellationToken cancellationToken)
+    {
+        await using AsyncServiceScope scope = application.Services.CreateAsyncScope();
+
+        return await scope.ServiceProvider.GetRequiredService<PlatformDbContext>()
+            .Set<AuditEntry>().AsNoTracking()
+            .Where(entry => entry.Action == action && entry.After != null)
+            .Select(entry => entry.After!)
+            .ToListAsync(cancellationToken);
+    }
+
+    /// <summary>
     /// The bytes actually written for a profile, straight off the row. What a test needs to show
     /// that the column holds no plaintext and that a rotation moved the key.
     /// </summary>
@@ -307,9 +361,80 @@ internal sealed class InventoryHost(
             .SingleOrDefaultAsync(cancellationToken);
     }
 
+    /// <summary>
+    /// Queues a job through the module's own enqueue port, which is how WP-1.4 and WP-1.6 will.
+    /// </summary>
+    /// <remarks>
+    /// There is no route for this and there is not meant to be: WP-1.3 builds the lease model,
+    /// and the packages that decide what to collect own the scheduling that fills the queue.
+    /// </remarks>
+    public Task<Guid> EnqueueAsync(
+        NewCollectorJob job,
+        CancellationToken cancellationToken) =>
+        InScopeAsync(async services =>
+        {
+            Result<Guid> queued = await services.GetRequiredService<ICollectorJobQueue>()
+                .EnqueueAsync(job, cancellationToken);
+
+            if (!queued.IsSuccess)
+            {
+                throw new InvalidOperationException($"Could not queue the job: {queued.Error.Message}");
+            }
+
+            return queued.Value;
+        });
+
+    /// <summary>One collector job row, reduced to what these tests assert on.</summary>
+    public async Task<CollectorJobRow> JobAsync(Guid jobId, CancellationToken cancellationToken)
+    {
+        await using AsyncServiceScope scope = application.Services.CreateAsyncScope();
+
+        return await scope.ServiceProvider.GetRequiredService<InventoryDbContext>()
+            .CollectorJobs.AsNoTracking()
+            .Where(job => job.Id == jobId)
+            .Select(job => new CollectorJobRow(
+                job.Status,
+                job.Outcome,
+                job.Attempts,
+                job.LeaseToken,
+                job.LeasedBy,
+                job.Detail,
+                job.Result))
+            .SingleAsync(cancellationToken);
+    }
+
+    /// <summary>Moves a job's lease into the past, which is what waiting for one to expire does.</summary>
+    public async Task ExpireLeaseAsync(Guid jobId, CancellationToken cancellationToken)
+    {
+        await using AsyncServiceScope scope = application.Services.CreateAsyncScope();
+
+        InventoryDbContext context = scope.ServiceProvider.GetRequiredService<InventoryDbContext>();
+
+        CollectorJob job = await context.CollectorJobs.SingleAsync(candidate => candidate.Id == jobId, cancellationToken);
+
+        job.LeasedUntil = DateTimeOffset.UtcNow.AddMinutes(-1);
+
+        await context.SaveChangesAsync(cancellationToken);
+    }
+
+    /// <summary>What a collector has reported about itself, or nothing if none has.</summary>
+    public async Task<CollectorNodeRow?> CollectorNodeAsync(string name, CancellationToken cancellationToken)
+    {
+        await using AsyncServiceScope scope = application.Services.CreateAsyncScope();
+
+        string normalized = name.ToUpperInvariant();
+
+        return await scope.ServiceProvider.GetRequiredService<InventoryDbContext>()
+            .CollectorNodes.AsNoTracking()
+            .Where(node => node.NormalizedName == normalized)
+            .Select(node => new CollectorNodeRow(node.Name, node.Version, node.Capacity, node.Running))
+            .SingleOrDefaultAsync(cancellationToken);
+    }
+
     public async ValueTask DisposeAsync()
     {
         client.Dispose();
+        collector.Dispose();
 
         await application.StopAsync();
         await application.DisposeAsync();
@@ -318,6 +443,19 @@ internal sealed class InventoryHost(
 
 /// <summary>One audit row, reduced to what these tests assert on.</summary>
 internal sealed record AuditRow(string Action, string? TargetType, string? TargetId, AuditOutcome Outcome);
+
+/// <summary>One collector job, reduced to what these tests assert on.</summary>
+internal sealed record CollectorJobRow(
+    CollectorJobStatus Status,
+    CollectorJobOutcome? Outcome,
+    int Attempts,
+    string? LeaseToken,
+    string? LeasedBy,
+    string? Detail,
+    string? Result);
+
+/// <summary>One collector's self-reported state.</summary>
+internal sealed record CollectorNodeRow(string Name, string? Version, int Capacity, int Running);
 
 /// <summary>The three columns a sealed credential occupies.</summary>
 /// <param name="KeyId">Which key-encryption key the wrapped data key is under.</param>

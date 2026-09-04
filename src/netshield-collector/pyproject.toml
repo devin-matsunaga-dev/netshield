@@ -1,0 +1,60 @@
+[project]
+name = "netshield-collector"
+version = "0.1.0"
+description = "NetShield pull collector: ICMP, SNMP, and read-only SSH against network devices."
+requires-python = ">=3.13"
+
+# Four runtime dependencies, and no protocol library among them yet: WP-1.3 builds the job
+# contract and the loop that runs it, and the packages that add ICMP, SNMP and SSH bring their
+# own. There is deliberately no database driver here, now or later — ARCHITECTURE.md §7 says the
+# collector holds no database credential and never touches PostgreSQL, and the surest way to keep
+# that true is for it to have nothing to connect with.
+dependencies = [
+    "httpx>=0.28,<0.29",
+    "pydantic>=2.10,<3",
+    "pydantic-settings>=2.7,<3",
+    "structlog>=24.4,<26",
+]
+
+[dependency-groups]
+dev = [
+    "mypy>=1.14,<2",
+    "pytest>=8.3,<9",
+    "pytest-asyncio>=0.25,<2",
+    "respx>=0.22,<0.23",
+    "ruff>=0.9,<1",
+]
+
+# An application, not a library. uv installs the dependencies and leaves the source where it is;
+# `python -m collector` runs from this directory, which is what the Aspire resource and the
+# deployment image both do.
+[tool.uv]
+package = false
+
+[tool.ruff]
+line-length = 100
+target-version = "py313"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "N", "UP", "B", "A", "C4", "SIM", "RUF", "ASYNC", "S", "T20"]
+
+[tool.ruff.lint.per-file-ignores]
+# S101 is pytest's assert. S105-S107 fire on the fixture shared secret and on every lease token
+# in the suite, because "token" and "secret" read as passwords to a name-based rule — the same
+# rule the API's own SecretRedactor uses, and the same false positive. The values are fixtures
+# recognisably not belonging to anything (CONVENTIONS.md §9); T20's print ban is not relaxed,
+# here or anywhere.
+"tests/*" = ["S101", "S105", "S106", "S107"]
+
+[tool.mypy]
+python_version = "3.13"
+strict = true
+warn_unreachable = true
+# Every module this project ships is annotated; a dependency without stubs is a dependency whose
+# surface we are not checking, and there are none of those today.
+disallow_any_unimported = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"

@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 
+using NetShield.Inventory.Collector;
 using NetShield.Inventory.Credentials;
 using NetShield.Inventory.Devices;
 
@@ -33,6 +34,12 @@ public sealed class InventoryDbContext(DbContextOptions<InventoryDbContext> opti
     /// <summary>Which devices may be reached with which credential profile.</summary>
     internal DbSet<DeviceCredentialProfile> DeviceCredentialProfiles => Set<DeviceCredentialProfile>();
 
+    /// <summary>Work queued for the collector fleet, pending and finished alike.</summary>
+    internal DbSet<CollectorJob> CollectorJobs => Set<CollectorJob>();
+
+    /// <summary>The collectors that have reported in, one row each.</summary>
+    internal DbSet<CollectorNode> CollectorNodes => Set<CollectorNode>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         ArgumentNullException.ThrowIfNull(modelBuilder);
@@ -40,6 +47,8 @@ public sealed class InventoryDbContext(DbContextOptions<InventoryDbContext> opti
         modelBuilder.ApplyConfiguration(new DeviceConfiguration());
         modelBuilder.ApplyConfiguration(new CredentialProfileConfiguration());
         modelBuilder.ApplyConfiguration(new DeviceCredentialProfileConfiguration());
+        modelBuilder.ApplyConfiguration(new CollectorJobConfiguration());
+        modelBuilder.ApplyConfiguration(new CollectorNodeConfiguration());
 
         // outbox_messages, mapped here so a device write and the event describing it are one
         // transaction on one connection. NetShield.Platform owns the table and the migration

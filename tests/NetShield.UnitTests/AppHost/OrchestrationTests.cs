@@ -61,10 +61,17 @@ public sealed partial class OrchestrationTests(AppHostModel model) : IClassFixtu
         IReadOnlyList<string> references = RelationshipsOf("web-host", "Reference");
 
         references.Should().BeEquivalentTo(
-            ["netshield", "cache", "mail", "identity-admin-password", "credential-kek"],
-            "the API reads PostgreSQL, Redis and the SMTP sink, Aspire supplies all three, and both "
-            + "the first-run administrator's password and the credential key-encryption key reach it "
-            + "the same way rather than from a file");
+            [
+                "netshield",
+                "cache",
+                "mail",
+                "identity-admin-password",
+                "credential-kek",
+                "collector-shared-secret"
+            ],
+            "the API reads PostgreSQL, Redis and the SMTP sink, Aspire supplies all three, and the "
+            + "first-run administrator's password, the credential key-encryption key and the "
+            + "collector's shared secret reach it the same way rather than from a file");
     }
 
     /// <summary>
@@ -75,6 +82,52 @@ public sealed partial class OrchestrationTests(AppHostModel model) : IClassFixtu
     [Fact]
     public void TheMigrator_DoesNotReceiveTheCredentialKey_BecauseItEncryptsNothing() =>
         RelationshipsOf("db-migrator", "Reference").Should().NotContain("credential-kek");
+
+    [Fact]
+    public void TheMigrator_DoesNotReceiveTheCollectorSecret_BecauseItServesNothing() =>
+        RelationshipsOf("db-migrator", "Reference").Should().NotContain("collector-shared-secret");
+
+    /// <summary>
+    /// ARCHITECTURE.md §2 models five runtime processes. The collector is the fifth, and an
+    /// AppHost that modelled four of them would be a misleading picture of the system.
+    /// </summary>
+    [Fact]
+    public void TheCollector_IsInTheModel() =>
+        model.Resource("collector").Should().NotBeNull();
+
+    /// <summary>
+    /// ARCHITECTURE.md §7: the collector holds no database credential and never touches
+    /// PostgreSQL. There is no reference here to make that a rule rather than an omission.
+    /// </summary>
+    [Fact]
+    public void TheCollector_ReferencesNoStore()
+    {
+        IReadOnlyList<string> references = RelationshipsOf("collector", "Reference");
+
+        references.Should().NotContain("netshield");
+        references.Should().NotContain("cache");
+    }
+
+    [Fact]
+    public async Task TheCollector_IsGivenTheApiAddressTheSecretAndItsName()
+    {
+        IReadOnlyList<string> names = await AppHostModel.EnvironmentNamesOf(model.Resource("collector"));
+
+        names.Should().Contain("NETSHIELD_API_URL");
+        names.Should().Contain("NETSHIELD_COLLECTOR_SECRET");
+        names.Should().Contain("NETSHIELD_COLLECTOR_NAME");
+    }
+
+    [Fact]
+    public void TheCollectorSecret_IsASecretParameter_SoItIsNeverWrittenIntoTheRepository()
+    {
+        ParameterResource parameter = model.Resource("collector-shared-secret")
+            .Should().BeAssignableTo<ParameterResource>().Subject;
+
+        parameter.Secret.Should().BeTrue(
+            "it is the whole of the internal contract's defence; the dashboard must mask it and it "
+            + "must not be written to the manifest in plaintext (SPEC.md §5)");
+    }
 
     [Fact]
     public void TheCredentialKey_IsASecretParameter_SoItIsNeverWrittenIntoTheRepository()

@@ -4,21 +4,27 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 
+using NetShield.Contracts.Collector.Events;
 using NetShield.Contracts.Inventory;
 using NetShield.Contracts.Inventory.Events;
 
+using NetShield.Inventory.Collector;
+using NetShield.Inventory.Collector.Contract;
+using NetShield.Inventory.Collector.Handlers;
 using NetShield.Inventory.Credentials;
 using NetShield.Inventory.Credentials.Handlers;
 using NetShield.Inventory.Devices.Handlers;
 using NetShield.Inventory.Endpoints;
 
 using NetShield.Platform;
+using NetShield.Platform.Authentication;
 
 namespace NetShield.Inventory;
 
 /// <summary>
-/// Registers the Inventory module: the device and credential handlers, their validators, the
-/// envelope encryption a credential is sealed with, and the integration events this module can
+/// Registers the Inventory module: the device, credential and collector handlers, their
+/// validators, the envelope encryption a credential is sealed with, the shared secret the
+/// internal collector contract authenticates by, and the integration events this module can
 /// publish.
 /// </summary>
 /// <remarks>
@@ -42,6 +48,16 @@ public static class InventoryServiceCollectionExtensions
         // the first request that touched a credential (ARCHITECTURE.md §8).
         builder.AddNetShieldEnvelopeEncryption();
 
+        // And the same act for the internal contract: this module serves /internal/collector, so
+        // registering the module is what makes the shared secret required and the routes
+        // authenticable. It keeps the secret out of the schema step, which serves nothing.
+        builder.AddNetShieldCollectorAuthentication();
+
+        builder.Services.AddOptions<CollectorJobOptions>()
+            .Bind(builder.Configuration.GetSection(CollectorJobOptions.SectionName))
+            .ValidateDataAnnotations()
+            .ValidateOnStart();
+
         builder.Services.TryAddScoped<GetDeviceListHandler>();
         builder.Services.TryAddScoped<GetDeviceHandler>();
         builder.Services.TryAddScoped<CreateDeviceHandler>();
@@ -58,10 +74,15 @@ public static class InventoryServiceCollectionExtensions
         builder.Services.TryAddScoped<GetDeviceCredentialProfilesHandler>();
         builder.Services.TryAddScoped<SetDeviceCredentialProfilesHandler>();
 
-        // The decrypt path. Registered so WP-1.3 can take a dependency on it; nothing in this
-        // package's HTTP surface resolves one, and the interface is internal to this module so
-        // nothing outside it can name the type to ask for.
+        // The decrypt path. Its one production caller is LeaseCollectorJobsHandler below; the
+        // interface is still internal to this module, so nothing outside it can name the type to
+        // ask for one (WP-1.2 left this decision to WP-1.3, and the answer was not to widen it).
         builder.Services.TryAddScoped<ICredentialResolver, CredentialResolver>();
+
+        builder.Services.TryAddScoped<ICollectorJobQueue, CollectorJobQueue>();
+        builder.Services.TryAddScoped<LeaseCollectorJobsHandler>();
+        builder.Services.TryAddScoped<SubmitCollectorResultsHandler>();
+        builder.Services.TryAddScoped<RecordHeartbeatHandler>();
 
         builder.Services.TryAddScoped<IValidator<CreateDeviceRequest>, CreateDeviceRequestValidator>();
         builder.Services.TryAddScoped<IValidator<UpdateDeviceRequest>, UpdateDeviceRequestValidator>();
@@ -75,6 +96,11 @@ public static class InventoryServiceCollectionExtensions
         builder.Services.TryAddScoped<IValidator<SetDeviceCredentialProfilesRequest>,
             SetDeviceCredentialProfilesRequestValidator>();
 
+        builder.Services.TryAddScoped<IValidator<CollectorResultsRequest>,
+            CollectorResultsRequestValidator>();
+        builder.Services.TryAddScoped<IValidator<CollectorHeartbeatRequest>,
+            CollectorHeartbeatRequestValidator>();
+
         // Declared here rather than at the composition root, so that a module and the events it
         // publishes arrive together. An event the registry does not know is refused at the write
         // rather than becoming a row nothing can read back.
@@ -85,9 +111,17 @@ public static class InventoryServiceCollectionExtensions
         builder.Services.AddIntegrationEvent<CredentialProfileUpdated>();
         builder.Services.AddIntegrationEvent<CredentialProfileRemoved>();
         builder.Services.AddIntegrationEvent<DeviceCredentialProfilesChanged>();
+        builder.Services.AddIntegrationEvent<CollectorJobCompleted>();
 
         builder.Services.ConfigureHttpJsonOptions(json =>
-            json.SerializerOptions.TypeInfoResolverChain.Insert(0, InventorySerializerContext.Default));
+        {
+            json.SerializerOptions.TypeInfoResolverChain.Insert(0, InventorySerializerContext.Default);
+
+            // The internal contract's shapes, kept in a context of their own because they include
+            // an opened credential and the public context describes what the SPA is generated
+            // from.
+            json.SerializerOptions.TypeInfoResolverChain.Insert(1, CollectorSerializerContext.Default);
+        });
 
         return builder;
     }

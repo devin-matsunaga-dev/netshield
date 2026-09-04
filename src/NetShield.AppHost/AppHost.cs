@@ -83,6 +83,27 @@ IResourceBuilder<ParameterResource> credentialKey = builder.AddParameter(
     secret: true,
     persist: true);
 
+// The shared secret netshield-collector presents on /internal/collector (ARCHITECTURE.md §7).
+// Generated once and persisted to the AppHost's user-secrets store, so the collector and the API
+// still agree after a restart. Unlike the key-encryption key above, this one is a bearer token
+// rather than a key: its only requirement is that it is long and unguessable, so Aspire's own
+// generator is exactly right for it and no custom default is needed.
+//
+// A deployment supplies this the same way it supplies the other two — from a secret store, a
+// mounted file, or a KMS — and gives the same value to the API and to every collector.
+IResourceBuilder<ParameterResource> collectorSecret = builder.AddParameter(
+    "collector-shared-secret",
+    new GenerateParameterDefault
+    {
+        MinLength = 48,
+        MinLower = 1,
+        MinUpper = 1,
+        MinNumeric = 1,
+        MinSpecial = 0
+    },
+    secret: true,
+    persist: true);
+
 // The schema step. It is the same project as the API, run with --migrate: it applies every
 // context's migrations, seeds the first-run administrator, and exits without binding a socket.
 // A sixth project would be a change to the five-process model in ARCHITECTURE.md §2; a startup
@@ -106,6 +127,9 @@ IResourceBuilder<ProjectResource> webHost = builder.AddProject<Projects.NetShiel
     // ActiveKeyId to it, which is what NetShield.Web.Host --rewrap then walks the table for.
     .WithEnvironment("Security__CredentialEncryption__ActiveKeyId", "dev")
     .WithEnvironment("Security__CredentialEncryption__Keys__dev", credentialKey)
+    // The other half of the collector contract. The API holds the secret it will compare against;
+    // db-migrator does not get it either, for the same reason it does not get the key ring.
+    .WithEnvironment("Collector__SharedSecret", collectorSecret)
     .WithHttpHealthCheck("/health/ready")
     // Not merely started: finished. The API must never come up against a half-migrated schema,
     // and on a fresh volume the administrator it seeds is created by the step above.
@@ -128,6 +152,21 @@ builder.AddViteApp("web-client", "../NetShield.Web.Client")
     .WithNpm()
     .WithReference(webHost)
     .WithEnvironment("NETSHIELD_API_URL", webHost.GetEndpoint("http"))
+    .WaitFor(webHost);
+
+// The pull-collection worker (ARCHITECTURE.md §2). uv owns the environment, so the resource runs
+// `uv sync` before `python -m collector` — a fresh clone comes up with one command, the same
+// promise npm install makes for the SPA above.
+//
+// It is handed three things and no more: where the API is, the shared secret, and what to call
+// itself. It holds no database credential and never touches PostgreSQL (ARCHITECTURE.md §7);
+// there is no connection string reference here to make that a rule rather than an omission.
+// Device credentials reach it per job, in the lease response, and are never written to its disk.
+builder.AddPythonModule("collector", "../netshield-collector", "collector")
+    .WithUv()
+    .WithEnvironment("NETSHIELD_API_URL", webHost.GetEndpoint("http"))
+    .WithEnvironment("NETSHIELD_COLLECTOR_SECRET", collectorSecret)
+    .WithEnvironment("NETSHIELD_COLLECTOR_NAME", "collector-dev")
     .WaitFor(webHost);
 
 // The push-ingest worker. Registered so that aspire run models every runtime process

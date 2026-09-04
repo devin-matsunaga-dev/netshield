@@ -48,6 +48,13 @@ internal static class ApiDocument
     /// <summary>A fixture key-encryption key: base64 of the bytes 0x00 to 0x1f, in order.</summary>
     public const string TestKeyEncryptionKey = "AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8=";
 
+    /// <summary>
+    /// A fixture collector shared secret. The module validates one at startup, and this host has
+    /// to start for a routing table to exist. It authenticates nothing — no request is ever made
+    /// over this host's socket.
+    /// </summary>
+    public const string TestCollectorSecret = "document-fixture-collector-secret-0000000000";
+
     /// <summary>The document as JSON, exactly as it is committed.</summary>
     public static async Task<string> GenerateAsync(CancellationToken cancellationToken)
     {
@@ -64,14 +71,15 @@ internal static class ApiDocument
         // pipeline is built, not as each route is mapped. Nothing is ever requested over it.
         builder.WebHost.UseUrls("http://127.0.0.1:0");
 
-        // The Inventory module validates its key ring at startup, so the host needs one to start.
-        // The bytes are 0x00..0x1f in order — recognisably not a key anybody generated, sealing
-        // nothing, and reading no row. CONVENTIONS.md §9 forbids committing a secret; this is a
-        // fixture that lets a document be produced.
+        // The Inventory module validates its key ring and its collector secret at startup, so the
+        // host needs both to start. The key bytes are 0x00..0x1f in order — recognisably not a key
+        // anybody generated, sealing nothing, and reading no row. CONVENTIONS.md §9 forbids
+        // committing a secret; these are fixtures that let a document be produced.
         builder.Configuration.AddInMemoryCollection(new Dictionary<string, string?>
         {
             ["Security:CredentialEncryption:ActiveKeyId"] = "test",
-            ["Security:CredentialEncryption:Keys:test"] = TestKeyEncryptionKey
+            ["Security:CredentialEncryption:Keys:test"] = TestKeyEncryptionKey,
+            ["Collector:SharedSecret"] = TestCollectorSecret
         });
 
         builder.AddNetShieldPlatform();

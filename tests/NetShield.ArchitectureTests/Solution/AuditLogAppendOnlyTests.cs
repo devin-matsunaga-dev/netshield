@@ -130,18 +130,35 @@ public sealed partial class AuditLogAppendOnlyTests
     private static string StripComments(string source) => Comment().Replace(source, " ");
 
     /// <summary>
-    /// The file as this rule reads it: comments gone, and the one phrase that reads as a mutation
+    /// The file as this rule reads it: comments gone, and the phrases that read as a mutation
     /// without being one taken out with them.
     /// </summary>
     private static string Readable(string source) =>
-        StripComments(source).Replace(HttpMethodTest, " ", StringComparison.Ordinal);
+        Exemptions.Aggregate(
+            StripComments(source),
+            (text, exemption) => text.Replace(exemption, " ", StringComparison.Ordinal));
 
     /// <summary>
-    /// Asking whether a request method is <c>DELETE</c> is how the audit middleware decides that
-    /// a call changes state. It names no row, reaches no table, and is the only exemption this
-    /// rule has — spelled out in full so that adding a second one has to be a deliberate edit.
+    /// The phrases that match the pattern and are not a mutation of anything, let alone of
+    /// <c>audit_log</c>. Spelled out in full so that adding one has to be a deliberate edit here.
     /// </summary>
-    private const string HttpMethodTest = "HttpMethods.IsDelete";
+    /// <remarks>
+    /// <para>
+    /// <c>HttpMethods.IsDelete</c> is how the audit middleware decides that a call changes state.
+    /// It names no row and reaches no table.
+    /// </para>
+    /// <para>
+    /// <c>DeletedAt</c> is the soft-delete column CONVENTIONS.md §3 puts on the inventory tables.
+    /// Reading it is how a handler tells a live device from a removed one, and it cannot be a
+    /// path into <c>audit_log</c>: <c>AuditEntry</c> has no such property and the table has no
+    /// such column — WP-0.5 gave it neither that nor an <c>updated_at</c>, on purpose.
+    /// </para>
+    /// <para>
+    /// A property rather than a field: <c>AuditSourceFiles</c> is initialised above and would
+    /// otherwise read this before the field initialiser had run.
+    /// </para>
+    /// </remarks>
+    private static string[] Exemptions => ["HttpMethods.IsDelete", "DeletedAt"];
 
     private sealed record SourceFile(string Path, string Code);
 
