@@ -31,7 +31,10 @@ from collector.snmp.session import FixtureSession
 API_URL = "http://api.test"
 
 WALKS = Path(__file__).parent / "fixtures" / "snmp"
-"""Where the recorded walks live."""
+"""Where the recorded fingerprint walks live."""
+
+CLIENT_WALKS = WALKS / "clients"
+"""Where the recorded client-table walks live."""
 
 # Recognisably not a real secret, and long enough to satisfy the API's own floor.
 SHARED_SECRET = "test-shared-secret-0000000000000000000000000000"
@@ -88,8 +91,23 @@ def walk_fixture(name: str) -> dict[str, str]:
 
 
 def walk_session(name: str) -> FixtureSession:
-    """A session replaying one recorded walk."""
+    """A session replaying one recorded fingerprint walk."""
     return FixtureSession(walk_fixture(name))
+
+
+def client_walk_fixture(name: str) -> dict[str, str]:
+    """One recorded client-table walk's values, by file stem."""
+    document = json.loads((CLIENT_WALKS / f"{name}.json").read_text())
+    values = document["values"]
+
+    assert isinstance(values, dict)
+
+    return {str(oid): str(value) for oid, value in values.items()}
+
+
+def client_walk_session(name: str) -> FixtureSession:
+    """A session replaying one recorded client-table walk."""
+    return FixtureSession(client_walk_fixture(name))
 
 
 def snmp_credential(
@@ -188,4 +206,43 @@ def sweep_job(
             "concurrency": 8,
             "maxResponders": 1024,
         },
+    )
+
+
+def client_job(
+    *,
+    parameters: dict[str, object] | None = None,
+    credential: JobCredential | None = None,
+    device: JobDevice | None = None,
+    address: str = "192.0.2.10",
+) -> LeasedJob:
+    """A leased Discover job carrying the client walk's parameters."""
+    return LeasedJob(
+        job_id=uuid4(),
+        kind=JobKind.DISCOVER,
+        lease_token="lease-token",
+        lease_expires_at=datetime.now(UTC),
+        attempt=1,
+        device=device
+        if device is not None
+        else JobDevice.model_validate(
+            {
+                "deviceId": str(uuid4()),
+                "hostname": "lab-sw-01",
+                "ipAddress": address,
+                "vendor": "Unknown",
+            }
+        ),
+        parameters=parameters
+        if parameters is not None
+        else {
+            "walk": "clients",
+            "timeoutSeconds": 2.0,
+            "retries": 1,
+            "maxRepetitions": 25,
+            "maxRows": 5000,
+            "maxNeighbors": 1000,
+            "maxForwardingEntries": 1000,
+        },
+        credential=credential if credential is not None else snmp_credential(),
     )

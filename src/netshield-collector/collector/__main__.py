@@ -21,7 +21,7 @@ from collector.icmp import IcmpExecutor
 from collector.jobs import ExecutorRegistry
 from collector.logging import configure_logging
 from collector.runner import CollectorRunner
-from collector.snmp import SnmpWalkExecutor
+from collector.snmp import ClientWalkExecutor, SnmpWalkExecutor
 from collector.vendors import VendorRegistry, snmp_adapters
 
 _LOG: Final = structlog.get_logger(__name__)
@@ -32,19 +32,23 @@ def build_registries() -> tuple[ExecutorRegistry, VendorRegistry]:
 
     ``IcmpExecutor`` answers for ``Poll`` jobs whose parameters name the ICMP probe, which is
     every job the reachability schedule queues. ``DiscoverExecutor`` answers for ``Discover``
-    jobs and dispatches on ``parameters.walk`` to one of the two walks a ``Discover`` can be: the
-    SNMP fingerprint of a device an on-demand walk asked for, or the range sweep a discovery run
-    queued. A job of a kind or a walk this build cannot run is reported as a failure naming the
-    reason rather than dropped.
+    jobs and dispatches on ``parameters.walk`` to one of the three walks a ``Discover`` can be:
+    the SNMP fingerprint of a device an on-demand walk asked for, the range sweep a discovery run
+    queued, or the read of a device's ARP and forwarding tables the client schedule queued. A job
+    of a kind or a walk this build cannot run is reported as a failure naming the reason rather
+    than dropped.
 
-    ICMP needs no vendor adapter and asks the registry for none — an echo request is the same
-    question whoever made the box, which is also why the sweep needs none. The SNMP walk is
-    handed the registry, because which private MIB is worth reading is the one thing that is not
-    the same.
+    Only the fingerprint walk is handed the vendor registry. ICMP needs no adapter — an echo
+    request is the same question whoever made the box — and neither does the sweep. Nor does the
+    client walk: IP-MIB and BRIDGE-MIB are the same everywhere, which is exactly why client
+    tracking works on a device NetShield cannot otherwise identify. Which private MIB is worth
+    reading is the one thing that is not the same, and only the fingerprint asks it.
     """
     vendors = VendorRegistry(snmp_adapters())
 
-    discover = DiscoverExecutor([SnmpWalkExecutor(vendors), RangeSweepExecutor()])
+    discover = DiscoverExecutor(
+        [SnmpWalkExecutor(vendors), RangeSweepExecutor(), ClientWalkExecutor()]
+    )
 
     return ExecutorRegistry([IcmpExecutor(), discover]), vendors
 

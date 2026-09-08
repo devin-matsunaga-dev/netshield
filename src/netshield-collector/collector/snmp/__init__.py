@@ -8,18 +8,21 @@ Read only. This package sends ``get`` and ``getbulk`` and nothing else; the SNMP
 appears nowhere in NetShield and is forbidden by ARCHITECTURE.md §1 rather than merely
 unimplemented.
 
-``SnmpWalkExecutor`` is one of two walks a ``Discover`` job can name — the other is
-``collector.discovery``'s range sweep — and it is reached through ``DiscoverExecutor`` rather
-than being registered for the kind itself. It does not import anything from that package: the
-dispatcher's contract is structural, so the two protocols stay independent and ``__main__`` is
-the only place that knows both exist.
+This package supplies two of the three walks a ``Discover`` job can name — the fingerprint walk
+and the client-table walk — and ``collector.discovery`` supplies the third, the range sweep. All
+three are reached through ``DiscoverExecutor`` rather than being registered for the kind itself,
+and this package imports nothing from that one: the dispatcher's contract is structural, so the
+two protocol packages stay independent and ``__main__`` is the only place that knows both exist.
 """
 
+from collector.snmp.clients import ClientWalkExecutor, ClientWalkJobError
 from collector.snmp.executor import WALK_NAME, SnmpJobError, SnmpWalkExecutor
 from collector.snmp.session import PySnmpSession, SnmpError, SnmpSession
 
 __all__ = [
     "WALK_NAME",
+    "ClientWalkExecutor",
+    "ClientWalkJobError",
     "PySnmpSession",
     "SnmpError",
     "SnmpJobError",

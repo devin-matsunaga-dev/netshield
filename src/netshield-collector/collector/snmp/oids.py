@@ -94,3 +94,97 @@ ENT_PHYSICAL_MODEL_NAME: Final = "1.3.6.1.2.1.47.1.1.1.1.13"
 
 ENT_PHYSICAL_CLASS_CHASSIS: Final = 3
 """``PhysicalClass.chassis``. The entry that describes the box itself rather than a part of it."""
+
+# --- IP-MIB, ipNetToPhysicalTable (RFC 4293). Columns under 1.3.6.1.2.1.4.35.1. ---
+
+IP_NET_TO_PHYSICAL_TABLE: Final = "1.3.6.1.2.1.4.35.1"
+"""``ipNetToPhysicalEntry`` — the modern neighbour cache. IPv4 and IPv6 in one table.
+
+The index is ``ifIndex.addressType.addressLength.address...``, which is why
+:func:`collector.snmp.tables.rows` keeps an index as the dotted string that followed the column
+rather than parsing it as one integer: an entry for 10.0.0.1 on interface 3 is indexed
+``3.1.4.10.0.0.1``, and for an IPv6 address it is nineteen sub-identifiers long.
+"""
+
+IP_NET_TO_PHYSICAL_PHYS_ADDRESS: Final = "1.3.6.1.2.1.4.35.1.4"
+"""``ipNetToPhysicalPhysAddress`` — the hardware address the entry binds to."""
+
+IP_NET_TO_PHYSICAL_TYPE: Final = "1.3.6.1.2.1.4.35.1.7"
+"""``ipNetToPhysicalType`` — other(1), invalid(2), dynamic(3), static(4), local(5)."""
+
+IP_NET_TO_PHYSICAL_STATE: Final = "1.3.6.1.2.1.4.35.1.8"
+"""``ipNetToPhysicalState`` — reachable(1) … unknown(6). An entry in ``incomplete(5)`` is the
+device saying it asked and got no answer, which is not a client."""
+
+IP_NET_TO_PHYSICAL_TYPE_INVALID: Final = 2
+"""``invalid``. The row is being removed and binds nothing."""
+
+IP_NET_TO_PHYSICAL_STATE_INCOMPLETE: Final = 5
+"""``incomplete``. Address resolution is in progress and has resolved nothing."""
+
+ADDRESS_TYPE_IPV4: Final = 1
+ADDRESS_TYPE_IPV6: Final = 2
+"""``InetAddressType`` from INET-ADDRESS-MIB, as it appears in the index."""
+
+# --- RFC 1213 / IP-MIB, ipNetToMediaTable. Columns under 1.3.6.1.2.1.4.22.1. ---
+
+IP_NET_TO_MEDIA_TABLE: Final = "1.3.6.1.2.1.4.22.1"
+"""``ipNetToMediaEntry`` — the older, IPv4-only ARP table.
+
+Deprecated by RFC 4293 and still the only one plenty of agents answer, so it is the fallback
+rather than the first choice. Its index is ``ifIndex.a.b.c.d``, which is five sub-identifiers and
+always IPv4.
+"""
+
+IP_NET_TO_MEDIA_PHYS_ADDRESS: Final = "1.3.6.1.2.1.4.22.1.2"
+IP_NET_TO_MEDIA_NET_ADDRESS: Final = "1.3.6.1.2.1.4.22.1.3"
+IP_NET_TO_MEDIA_TYPE: Final = "1.3.6.1.2.1.4.22.1.4"
+"""``ipNetToMediaType`` — other(1), invalid(2), dynamic(3), static(4)."""
+
+IP_NET_TO_MEDIA_TYPE_INVALID: Final = 2
+
+# --- Q-BRIDGE-MIB, dot1qTpFdbTable (RFC 4363). Columns under 1.3.6.1.2.1.17.7.1.2.2.1. ---
+
+DOT1Q_TP_FDB_TABLE: Final = "1.3.6.1.2.1.17.7.1.2.2.1"
+"""``dot1qTpFdbEntry`` — the VLAN-aware forwarding database.
+
+Preferred over the older ``dot1dTpFdbTable`` because it is indexed by
+``dot1qFdbId.macAddress``, so one walk covers every VLAN and each entry says which VLAN it was
+learned on. The VLAN-unaware table has to be walked once per VLAN through a community string
+suffixed ``@vlan`` on some platforms, which is a per-vendor trick this collector does not do.
+"""
+
+DOT1Q_TP_FDB_PORT: Final = "1.3.6.1.2.1.17.7.1.2.2.1.2"
+"""``dot1qTpFdbPort`` — the *bridge port* number, not the ``ifIndex``."""
+
+DOT1Q_TP_FDB_STATUS: Final = "1.3.6.1.2.1.17.7.1.2.2.1.3"
+"""``dot1qTpFdbStatus`` — other(1), invalid(2), learned(3), self(4), mgmt(5)."""
+
+DOT1Q_TP_FDB_STATUS_INVALID: Final = 2
+DOT1Q_TP_FDB_STATUS_SELF: Final = 4
+"""``self``. The address is the bridge's own, not something attached to the port."""
+
+# --- BRIDGE-MIB, dot1dTpFdbTable (RFC 4188). Columns under 1.3.6.1.2.1.17.4.3.1. ---
+
+DOT1D_TP_FDB_TABLE: Final = "1.3.6.1.2.1.17.4.3.1"
+"""``dot1dTpFdbEntry`` — the VLAN-unaware forwarding database, indexed by MAC alone."""
+
+DOT1D_TP_FDB_PORT: Final = "1.3.6.1.2.1.17.4.3.1.2"
+DOT1D_TP_FDB_STATUS: Final = "1.3.6.1.2.1.17.4.3.1.3"
+"""``dot1dTpFdbStatus`` — other(1), invalid(2), learned(3), self(4), mgmt(5)."""
+
+DOT1D_TP_FDB_STATUS_INVALID: Final = 2
+DOT1D_TP_FDB_STATUS_SELF: Final = 4
+
+# --- BRIDGE-MIB, dot1dBasePortTable. Columns under 1.3.6.1.2.1.17.1.4.1. ---
+
+DOT1D_BASE_PORT_TABLE: Final = "1.3.6.1.2.1.17.1.4.1"
+"""``dot1dBasePortEntry`` — how a bridge port number becomes an ``ifIndex``.
+
+Both forwarding tables are keyed by a bridge port, which is a number local to the bridge and is
+*not* the interface index the rest of NetShield speaks. Without this join a forwarding entry names
+a port nothing else in the inventory can identify.
+"""
+
+DOT1D_BASE_PORT_IF_INDEX: Final = "1.3.6.1.2.1.17.1.4.1.2"
+"""``dot1dBasePortIfIndex`` — the ``ifIndex`` a bridge port belongs to."""

@@ -1,0 +1,16 @@
+{
+  "description": "An older agent: only the deprecated IPv4 ipNetToMediaTable, and no bridge MIB at all",
+  "synthetic": true,
+  "note": "Hand-authored. Proves the ipNetToMedia fallback is reached only when ipNetToPhysical produced nothing, and that an invalid entry is dropped.",
+  "values": {
+    "1.3.6.1.2.1.4.22.1.2.1.172.16.4.10": "AA:BB:CC:00:00:60",
+    "1.3.6.1.2.1.4.22.1.3.1.172.16.4.10": "172.16.4.10",
+    "1.3.6.1.2.1.4.22.1.4.1.172.16.4.10": "3",
+    "1.3.6.1.2.1.4.22.1.2.1.172.16.4.11": "AA:BB:CC:00:00:61",
+    "1.3.6.1.2.1.4.22.1.3.1.172.16.4.11": "172.16.4.11",
+    "1.3.6.1.2.1.4.22.1.4.1.172.16.4.11": "3",
+    "1.3.6.1.2.1.4.22.1.2.1.172.16.4.12": "AA:BB:CC:00:00:62",
+    "1.3.6.1.2.1.4.22.1.3.1.172.16.4.12": "172.16.4.12",
+    "1.3.6.1.2.1.4.22.1.4.1.172.16.4.12": "2"
+  }
+}

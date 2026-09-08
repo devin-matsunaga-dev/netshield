@@ -4,16 +4,20 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 using NetShield.Contracts.Messaging;
 
 using NetShield.Platform.Auditing;
 using NetShield.Platform.Authorization;
+using NetShield.Platform.Caching;
 using NetShield.Platform.Cryptography;
 using NetShield.Platform.Logging;
 using NetShield.Platform.Messaging;
 using NetShield.Platform.Time;
+
+using StackExchange.Redis;
 
 namespace NetShield.Platform;
 
@@ -42,6 +46,17 @@ public static class PlatformServiceCollectionExtensions
             .Bind(builder.Configuration.GetSection(OutboxOptions.SectionName))
             .ValidateDataAnnotations()
             .ValidateOnStart();
+
+        // The cache, resolved from whether the host actually registered a Redis connection.
+        // ARCHITECTURE.md §3 says Redis is never a source of truth and a full flush costs
+        // nothing but a cold cache — so a host with no connection gets the null store and works,
+        // more slowly, rather than failing to start. The schema step is exactly such a host.
+        builder.Services.TryAddSingleton<ICacheStore>(provider =>
+            provider.GetService<IConnectionMultiplexer>() is { } connection
+                ? new RedisCacheStore(
+                    connection,
+                    provider.GetRequiredService<ILogger<RedisCacheStore>>())
+                : new NullCacheStore());
 
         builder.Services.TryAddSingleton<IntegrationEventRegistry>();
         builder.Services.TryAddSingleton<OutboxEnlistment>();

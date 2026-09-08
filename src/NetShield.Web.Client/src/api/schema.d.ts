@@ -180,6 +180,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/devices/{id}/client-walk": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["QueueDeviceClientWalk"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/discovery/seeds": {
         parameters: {
             query?: never;
@@ -340,6 +356,86 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/clients": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ListClients"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/clients/resolve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ResolveAsset"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/clients/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetClient"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/clients/{id}/ip-history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ListClientIpHistory"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/clients/{id}/port-history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ListClientPortHistory"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/credential-profiles": {
         parameters: {
             query?: never;
@@ -408,6 +504,24 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** @enum {unknown} */
+        AssetKind: "Unresolved" | "Device" | "Client";
+        AssetResolution: {
+            ipAddress: string;
+            /** Format: date-time */
+            at: string;
+            kind: components["schemas"]["AssetKind"];
+            /** Format: uuid */
+            deviceId: null | string;
+            deviceHostname: null | string;
+            /** Format: uuid */
+            clientId: null | string;
+            macAddress: null | string;
+            /** Format: date-time */
+            observedFrom: null | string;
+            /** Format: date-time */
+            observedTo: null | string;
+        };
         AuthenticatedUser: {
             /** Format: uuid */
             id: string;
@@ -420,6 +534,86 @@ export interface components {
         ChangePasswordRequest: {
             currentPassword: string;
             newPassword: string;
+        };
+        ClientDetail: {
+            /** Format: uuid */
+            id: string;
+            macAddress: string;
+            oui: string;
+            locallyAdministered: boolean;
+            hostname: null | string;
+            ipBindings: components["schemas"]["ClientIpBindingSummary"][];
+            portBindings: components["schemas"]["ClientPortBindingSummary"][];
+            /** Format: date-time */
+            firstSeenAt: string;
+            /** Format: date-time */
+            lastSeenAt: string;
+        };
+        ClientIpBindingSummary: {
+            /** Format: uuid */
+            id: string;
+            ipAddress: string;
+            source: components["schemas"]["ClientObservationSource"];
+            /** Format: uuid */
+            deviceId: null | string;
+            deviceHostname: null | string;
+            /** Format: date-time */
+            observedFrom: string;
+            /** Format: date-time */
+            observedTo: null | string;
+            /** Format: date-time */
+            lastSeenAt: string;
+        };
+        /** @enum {unknown} */
+        ClientObservationSource: "ArpTable" | "MacAddressTable" | "DhcpLease" | "WirelessAssociation";
+        ClientPortBindingSummary: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            deviceId: string;
+            deviceHostname: null | string;
+            /** Format: int32 */
+            ifIndex: number | string;
+            interfaceName: null | string;
+            /** Format: int32 */
+            vlanId: null | number | string;
+            /** Format: int32 */
+            macCountOnPort: null | number | string;
+            source: components["schemas"]["ClientObservationSource"];
+            /** Format: date-time */
+            observedFrom: string;
+            /** Format: date-time */
+            observedTo: null | string;
+            /** Format: date-time */
+            lastSeenAt: string;
+        };
+        ClientSummary: {
+            /** Format: uuid */
+            id: string;
+            macAddress: string;
+            oui: string;
+            locallyAdministered: boolean;
+            hostname: null | string;
+            ipAddress: null | string;
+            /** Format: uuid */
+            deviceId: null | string;
+            deviceHostname: null | string;
+            /** Format: int32 */
+            ifIndex: null | number | string;
+            /** Format: int32 */
+            vlanId: null | number | string;
+            /** Format: date-time */
+            firstSeenAt: string;
+            /** Format: date-time */
+            lastSeenAt: string;
+        };
+        ClientWalkQueued: {
+            /** Format: uuid */
+            jobId: string;
+            /** Format: uuid */
+            deviceId: string;
+            /** Format: date-time */
+            queuedAt: string;
         };
         CreateCredentialProfileRequest: {
             name: string;
@@ -501,6 +695,24 @@ export interface components {
         };
         /** @enum {unknown} */
         CriticalityTier: "Low" | "Medium" | "High" | "Critical";
+        CursorPageOfClientIpBindingSummary: {
+            items: components["schemas"]["ClientIpBindingSummary"][];
+            nextCursor: null | string;
+            /** Format: int64 */
+            totalCount?: null | number | string;
+        };
+        CursorPageOfClientPortBindingSummary: {
+            items: components["schemas"]["ClientPortBindingSummary"][];
+            nextCursor: null | string;
+            /** Format: int64 */
+            totalCount?: null | number | string;
+        };
+        CursorPageOfClientSummary: {
+            items: components["schemas"]["ClientSummary"][];
+            nextCursor: null | string;
+            /** Format: int64 */
+            totalCount?: null | number | string;
+        };
         CursorPageOfCredentialProfileSummary: {
             items: components["schemas"]["CredentialProfileSummary"][];
             nextCursor: null | string;
@@ -1511,6 +1723,55 @@ export interface operations {
             };
         };
     };
+    QueueDeviceClientWalk: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Accepted */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClientWalkQueued"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
     ListDiscoverySeeds: {
         parameters: {
             query?: {
@@ -2209,6 +2470,237 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    ListClients: {
+        parameters: {
+            query?: {
+                search?: string;
+                deviceId?: string;
+                vlanId?: number | string;
+                seenSince?: string;
+                onlyActive?: boolean;
+                cursor?: string;
+                limit?: number | string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CursorPageOfClientSummary"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    ResolveAsset: {
+        parameters: {
+            query?: {
+                ipAddress?: string;
+                at?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssetResolution"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    GetClient: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClientDetail"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    ListClientIpHistory: {
+        parameters: {
+            query?: {
+                cursor?: string;
+                limit?: number | string;
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CursorPageOfClientIpBindingSummary"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    ListClientPortHistory: {
+        parameters: {
+            query?: {
+                cursor?: string;
+                limit?: number | string;
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CursorPageOfClientPortBindingSummary"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
             };
             /** @description Forbidden */
             403: {

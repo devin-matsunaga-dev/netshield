@@ -14,9 +14,9 @@ namespace NetShield.ArchitectureTests.Solution;
 /// <para>
 /// WP-1.4 settled that a <c>Poll</c> carries a <c>probe</c> naming which probe to run, and WP-1.5
 /// that a <c>Discover</c> carries a <c>walk</c>. WP-1.6 is the package that made the second one
-/// matter: a fingerprint walk and a range sweep are both <c>Discover</c> jobs, they sit in the
-/// same table looking identical, and the only thing telling them apart is a string this
-/// repository writes and <c>netshield-collector</c> reads.
+/// matter and WP-1.8 added a third: a fingerprint walk, a range sweep and a client-table read are
+/// all <c>Discover</c> jobs, they sit in the same table looking identical, and the only thing
+/// telling them apart is a string this repository writes and <c>netshield-collector</c> reads.
 /// </para>
 /// <para>
 /// There is no generator between the two — the collector contract is deliberately absent from
@@ -48,6 +48,14 @@ public sealed class JobDiscriminatorParityTests
     }
 
     [Fact]
+    public void TheClientWalkDiscriminator_IsTheSameOnBothSides()
+    {
+        Constant("snmp/clients.py", "WALK_NAME").Should().Be(
+            ApiConstant("Clients/ClientWalkParameters.cs", "WalkName"),
+            "a Discover job naming this walk is what the client-table executor answers for");
+    }
+
+    [Fact]
     public void TheIcmpProbeDiscriminator_IsTheSameOnBothSides()
     {
         Constant("icmp/executor.py", "PROBE_NAME").Should().Be(
@@ -56,12 +64,20 @@ public sealed class JobDiscriminatorParityTests
     }
 
     [Fact]
-    public void TheTwoDiscoverWalks_AreDifferentFromEachOther()
+    public void TheDiscoverWalks_AreAllDifferentFromEachOther()
     {
-        // The whole point of a discriminator. If these ever collided, each executor would answer
-        // the other's jobs and the API's result handlers would read the wrong payloads.
-        Constant("snmp/executor.py", "WALK_NAME")
-            .Should().NotBe(Constant("discovery/executor.py", "SWEEP_NAME"));
+        // The whole point of a discriminator. If any two of these collided, each executor would
+        // answer the other's jobs and the API's result handlers would read the wrong payloads —
+        // which for the client walk would mean one walk's result closing intervals another walk
+        // had opened.
+        string[] walks =
+        [
+            Constant("snmp/executor.py", "WALK_NAME"),
+            Constant("discovery/executor.py", "SWEEP_NAME"),
+            Constant("snmp/clients.py", "WALK_NAME")
+        ];
+
+        walks.Should().OnlyHaveUniqueItems();
     }
 
     [Fact]

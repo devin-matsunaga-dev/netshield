@@ -13,6 +13,7 @@ from typing import Any
 
 import pytest
 
+from collector.__main__ import build_registries
 from collector.discovery import (
     SWEEP_NAME,
     DiscoverExecutor,
@@ -22,6 +23,7 @@ from collector.discovery import (
 from collector.icmp.probe import ProbeOutcome, ProbeReply
 from collector.jobs import ExecutorRegistry
 from collector.models import JobKind, LeasedJob
+from collector.snmp.clients import WALK_NAME as CLIENT_WALK_NAME
 from collector.snmp.executor import WALK_NAME
 from tests.conftest import sweep_job, walk_job
 
@@ -111,6 +113,30 @@ async def test_parameters_that_name_no_walk_are_refused() -> None:
 def test_registering_a_walk_twice_is_a_mistake_rather_than_a_merge() -> None:
     with pytest.raises(ValueError, match=SWEEP_NAME):
         DiscoverExecutor([_StubWalk(SWEEP_NAME), _StubWalk(SWEEP_NAME)])
+
+
+def test_the_entry_point_registers_every_walk_a_discover_can_be() -> None:
+    # Three now: the fingerprint of a device, the sweep of a range, and the read of a device's
+    # client tables. A walk the build does not register is reported as a failure naming the
+    # reason, which is a quiet way for a whole schedule to do nothing.
+    executors, _ = build_registries()
+    discover = executors.for_kind(JobKind.DISCOVER)
+
+    assert isinstance(discover, DiscoverExecutor)
+    assert len(discover) == 3
+
+
+async def test_a_client_walk_reaches_the_client_walk_and_not_the_others() -> None:
+    sweep = _StubWalk(SWEEP_NAME)
+    snmp = _StubWalk(WALK_NAME)
+    clients = _StubWalk(CLIENT_WALK_NAME)
+    executor = DiscoverExecutor([sweep, snmp, clients])
+
+    await executor.execute(sweep_job(parameters={"walk": CLIENT_WALK_NAME}))
+
+    assert len(clients.jobs) == 1
+    assert sweep.jobs == []
+    assert snmp.jobs == []
 
 
 # --- The sweep walk ----------------------------------------------------------------------------

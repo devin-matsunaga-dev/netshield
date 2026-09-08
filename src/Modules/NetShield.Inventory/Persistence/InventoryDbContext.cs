@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 
+using NetShield.Inventory.Clients;
 using NetShield.Inventory.Collector;
 using NetShield.Inventory.Credentials;
 using NetShield.Inventory.Devices;
@@ -69,6 +70,21 @@ public sealed class InventoryDbContext(DbContextOptions<InventoryDbContext> opti
     /// <summary>Blocks discovery will never offer as candidates.</summary>
     internal DbSet<DiscoveryIgnore> DiscoveryIgnores => Set<DiscoveryIgnore>();
 
+    /// <summary>Endpoints observed on the network, one row per hardware address.</summary>
+    internal DbSet<Client> Clients => Set<Client>();
+
+    /// <summary>
+    /// Which client held which address, and when. The table every time-accurate resolution
+    /// reads, and the reason its invariants are indexes rather than conventions.
+    /// </summary>
+    internal DbSet<ClientIpBinding> ClientIpBindings => Set<ClientIpBinding>();
+
+    /// <summary>Which device's port reported which client, and when.</summary>
+    internal DbSet<ClientPortBinding> ClientPortBindings => Set<ClientPortBinding>();
+
+    /// <summary>What reading each device's client tables established, one row per device.</summary>
+    internal DbSet<DeviceClientScan> DeviceClientScans => Set<DeviceClientScan>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         ArgumentNullException.ThrowIfNull(modelBuilder);
@@ -87,6 +103,10 @@ public sealed class InventoryDbContext(DbContextOptions<InventoryDbContext> opti
         modelBuilder.ApplyConfiguration(new DiscoveryRunHostConfiguration());
         modelBuilder.ApplyConfiguration(new DiscoveryCandidateConfiguration());
         modelBuilder.ApplyConfiguration(new DiscoveryIgnoreConfiguration());
+        modelBuilder.ApplyConfiguration(new ClientConfiguration());
+        modelBuilder.ApplyConfiguration(new ClientIpBindingConfiguration());
+        modelBuilder.ApplyConfiguration(new ClientPortBindingConfiguration());
+        modelBuilder.ApplyConfiguration(new DeviceClientScanConfiguration());
 
         // outbox_messages, mapped here so a device write and the event describing it are one
         // transaction on one connection. NetShield.Platform owns the table and the migration

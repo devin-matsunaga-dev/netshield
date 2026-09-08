@@ -23,6 +23,259 @@ namespace NetShield.Inventory.Persistence.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("NetShield.Inventory.Clients.Client", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<DateTimeOffset>("FirstSeenAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("first_seen_at");
+
+                    b.Property<string>("Hostname")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
+                        .HasColumnName("hostname");
+
+                    b.Property<DateTimeOffset>("LastSeenAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_seen_at");
+
+                    b.Property<bool>("LocallyAdministered")
+                        .HasColumnType("boolean")
+                        .HasColumnName("locally_administered");
+
+                    b.Property<string>("MacAddress")
+                        .IsRequired()
+                        .HasMaxLength(17)
+                        .HasColumnType("character varying(17)")
+                        .HasColumnName("mac_address");
+
+                    b.Property<string>("Oui")
+                        .IsRequired()
+                        .HasMaxLength(8)
+                        .HasColumnType("character varying(8)")
+                        .HasColumnName("oui");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id")
+                        .HasName("pk_clients");
+
+                    b.HasIndex("MacAddress")
+                        .IsUnique()
+                        .HasDatabaseName("ix_clients_mac_address");
+
+                    b.HasIndex("Oui")
+                        .HasDatabaseName("ix_clients_oui");
+
+                    b.HasIndex("LastSeenAt", "Id")
+                        .HasDatabaseName("ix_clients_last_seen_at_id");
+
+                    b.ToTable("clients", (string)null);
+                });
+
+            modelBuilder.Entity("NetShield.Inventory.Clients.ClientIpBinding", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("ClientId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("client_id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid?>("DeviceId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("device_id");
+
+                    b.Property<IPAddress>("IpAddress")
+                        .IsRequired()
+                        .HasColumnType("inet")
+                        .HasColumnName("ip_address");
+
+                    b.Property<DateTimeOffset>("LastSeenAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_seen_at");
+
+                    b.Property<DateTimeOffset>("ObservedFrom")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("observed_from");
+
+                    b.Property<DateTimeOffset?>("ObservedTo")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("observed_to");
+
+                    b.Property<string>("Source")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("source");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id")
+                        .HasName("pk_client_ip_bindings");
+
+                    b.HasIndex("DeviceId")
+                        .HasDatabaseName("ix_client_ip_bindings_device_id");
+
+                    b.HasIndex("ClientId", "ObservedFrom")
+                        .HasDatabaseName("ix_client_ip_bindings_client_id_from");
+
+                    b.ToTable("client_ip_bindings", (string)null);
+                });
+
+            modelBuilder.Entity("NetShield.Inventory.Clients.ClientPortBinding", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("ClientId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("client_id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid>("DeviceId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("device_id");
+
+                    b.Property<int>("IfIndex")
+                        .HasColumnType("integer")
+                        .HasColumnName("if_index");
+
+                    b.Property<DateTimeOffset>("LastSeenAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_seen_at");
+
+                    b.Property<int?>("MacCountOnPort")
+                        .HasColumnType("integer")
+                        .HasColumnName("mac_count_on_port");
+
+                    b.Property<DateTimeOffset>("ObservedFrom")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("observed_from");
+
+                    b.Property<DateTimeOffset?>("ObservedTo")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("observed_to");
+
+                    b.Property<string>("Source")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("source");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<int?>("VlanId")
+                        .HasColumnType("integer")
+                        .HasColumnName("vlan_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_client_port_bindings");
+
+                    b.HasIndex("ClientId", "DeviceId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_client_port_bindings_open")
+                        .HasFilter("observed_to IS NULL");
+
+                    b.HasIndex("ClientId", "ObservedFrom")
+                        .HasDatabaseName("ix_client_port_bindings_client_id_from");
+
+                    b.HasIndex("DeviceId", "IfIndex")
+                        .HasDatabaseName("ix_client_port_bindings_device_id_if_index");
+
+                    b.ToTable("client_port_bindings", (string)null);
+                });
+
+            modelBuilder.Entity("NetShield.Inventory.Clients.DeviceClientScan", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid>("DeviceId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("device_id");
+
+                    b.Property<bool?>("ForwardingSupported")
+                        .HasColumnType("boolean")
+                        .HasColumnName("forwarding_supported");
+
+                    b.Property<Guid?>("LastAppliedJobId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("last_applied_job_id");
+
+                    b.Property<string>("LastError")
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)")
+                        .HasColumnName("last_error");
+
+                    b.Property<int?>("LastForwardingCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("last_forwarding_count");
+
+                    b.Property<int?>("LastNeighborCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("last_neighbor_count");
+
+                    b.Property<DateTimeOffset?>("LastWalkAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_walk_at");
+
+                    b.Property<bool?>("NeighborsSupported")
+                        .HasColumnType("boolean")
+                        .HasColumnName("neighbors_supported");
+
+                    b.Property<DateTimeOffset>("NextWalkAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("next_walk_at");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id")
+                        .HasName("pk_device_client_scans");
+
+                    b.HasIndex("DeviceId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_device_client_scans_device_id");
+
+                    b.HasIndex("NextWalkAt")
+                        .HasDatabaseName("ix_device_client_scans_next_walk_at");
+
+                    b.ToTable("device_client_scans", (string)null);
+                });
+
             modelBuilder.Entity("NetShield.Inventory.Collector.CollectorJob", b =>
                 {
                     b.Property<Guid>("Id")

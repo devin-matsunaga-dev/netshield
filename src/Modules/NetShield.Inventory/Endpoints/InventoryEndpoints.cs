@@ -7,8 +7,10 @@ namespace NetShield.Inventory.Endpoints;
 /// </summary>
 /// <remarks>
 /// The module now serves devices, what a walk and a probe established about one, the on-demand
-/// fingerprint walk of one, credential profiles, the assignment between profiles and devices,
-/// discovery seeds, runs, candidates and the ignore list, and the internal collector contract —
+/// fingerprint and client-table walks of one, credential profiles, the assignment between
+/// profiles and devices, discovery seeds, runs, candidates and the ignore list, the tracked
+/// clients with their address and port history and the resolution over them, and the internal
+/// collector contract —
 /// and CONVENTIONS.md §2 asks for one file per resource behind one <c>Map{Module}Endpoints</c>
 /// extension. This is that extension. The composition root calls it and nothing else, which is
 /// also what keeps <c>ApiDocumentParityTests</c> comparing one name per module rather than a
@@ -31,10 +33,12 @@ public static class InventoryEndpoints
         endpoints.MapDeviceFingerprintEndpoints();
         endpoints.MapDeviceInterfaceEndpoints();
         endpoints.MapDeviceReachabilityEndpoints();
+        endpoints.MapDeviceClientWalkEndpoints();
         endpoints.MapDiscoverySeedEndpoints();
         endpoints.MapDiscoveryRunEndpoints();
         endpoints.MapDiscoveryCandidateEndpoints();
         endpoints.MapDiscoveryIgnoreEndpoints();
+        endpoints.MapClientEndpoints();
         endpoints.MapCredentialProfileEndpoints();
         endpoints.MapDeviceCredentialProfileEndpoints();
         endpoints.MapCollectorEndpoints();

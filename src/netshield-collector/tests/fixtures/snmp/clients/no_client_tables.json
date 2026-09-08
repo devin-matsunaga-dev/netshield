@@ -1,0 +1,8 @@
+{
+  "description": "A device that implements neither a neighbour cache nor a forwarding database",
+  "synthetic": true,
+  "note": "Hand-authored, and deliberately almost empty. Proves that both readings report themselves unsupported, so the API leaves every binding alone rather than reading silence as 'nobody is attached'.",
+  "values": {
+    "1.3.6.1.2.1.1.5.0": "lab-appliance-01"
+  }
+}

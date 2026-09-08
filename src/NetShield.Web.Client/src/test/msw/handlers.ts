@@ -1,3 +1,4 @@
+import { clientHandlers, createClientsApi, type ClientsApiState } from '@/test/msw/clientsApi';
 import {
   createInventoryApi,
   inventoryHandlers,
@@ -18,10 +19,17 @@ export let api: TestApiState = createTestApi();
  */
 export let inventory: InventoryApiState = createInventoryApi();
 
+/**
+ * The clients the SPA sees. Separate from the inventory for the same reason the inventory is
+ * separate from the session: a test about the client table has nothing to say about devices.
+ */
+export let clients: ClientsApiState = createClientsApi();
+
 /** Resets the API to a signed-in administrator, optionally with something changed. */
 export function resetApi(overrides: Partial<TestApiState> = {}): TestApiState {
   api = createTestApi(overrides);
   inventory = createInventoryApi();
+  clients = createClientsApi();
 
   return api;
 }
@@ -38,6 +46,17 @@ export function setInventory(overrides: Partial<InventoryApiState> = {}): Invent
  * that drifts from the contract fails to type-check rather than passing a test that lies. The
  * handlers read `api` when they are called, so replacing it needs no word to MSW.
  */
-export const handlers = [...authHandlers(() => api), ...inventoryHandlers(() => inventory)];
+/** Replaces the clients a test sees. Called after `resetApi`, which empties them. */
+export function setClients(overrides: Partial<ClientsApiState> = {}): ClientsApiState {
+  clients = createClientsApi(overrides);
+
+  return clients;
+}
+
+export const handlers = [
+  ...authHandlers(() => api),
+  ...inventoryHandlers(() => inventory),
+  ...clientHandlers(() => clients),
+];
 
 export { readOnlyUser, testUser } from '@/test/msw/testApi';

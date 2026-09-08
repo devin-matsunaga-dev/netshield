@@ -8,6 +8,8 @@ using NetShield.Contracts.Collector.Events;
 using NetShield.Contracts.Inventory;
 using NetShield.Contracts.Inventory.Events;
 
+using NetShield.Inventory.Clients;
+using NetShield.Inventory.Clients.Handlers;
 using NetShield.Inventory.Collector;
 using NetShield.Inventory.Collector.Contract;
 using NetShield.Inventory.Collector.Handlers;
@@ -19,6 +21,7 @@ using NetShield.Inventory.Discovery.Handlers;
 using NetShield.Inventory.Endpoints;
 using NetShield.Inventory.Reachability;
 using NetShield.Inventory.Reachability.Handlers;
+using NetShield.Inventory.Resolution;
 
 using NetShield.Platform;
 using NetShield.Platform.Authentication;
@@ -70,6 +73,11 @@ public static class InventoryServiceCollectionExtensions
 
         builder.Services.AddOptions<DiscoveryOptions>()
             .Bind(builder.Configuration.GetSection(DiscoveryOptions.SectionName))
+            .ValidateDataAnnotations()
+            .ValidateOnStart();
+
+        builder.Services.AddOptions<ClientOptions>()
+            .Bind(builder.Configuration.GetSection(ClientOptions.SectionName))
             .ValidateDataAnnotations()
             .ValidateOnStart();
 
@@ -142,6 +150,34 @@ public static class InventoryServiceCollectionExtensions
         builder.Services.AddScoped<IIntegrationEventHandler<CollectorJobCompleted>,
             RecordRangeSweepResultHandler>();
 
+        // Client tracking: the schedule that reads the estate's ARP and forwarding tables, the
+        // fourth CollectorJobCompleted subscriber that folds what they said into closed
+        // intervals, and the resolution every downstream enrichment leans on. The loop that
+        // drives the schedule is the separate opt-in below, for the reason the other two are.
+        builder.Services.TryAddScoped<ClientSchedulePass>();
+        builder.Services.TryAddScoped<ClientObservationApplier>();
+        builder.Services.TryAddScoped<QueueClientWalkHandler>();
+        builder.Services.TryAddScoped<GetClientListHandler>();
+        builder.Services.TryAddScoped<GetClientHandler>();
+        builder.Services.TryAddScoped<GetClientIpHistoryHandler>();
+        builder.Services.TryAddScoped<GetClientPortHistoryHandler>();
+        builder.Services.TryAddScoped<ResolveAssetHandler>();
+        builder.Services.AddScoped<IIntegrationEventHandler<CollectorJobCompleted>,
+            RecordClientWalkResultHandler>();
+
+        // ResolveAssetAt. Internal to the module, the way the credential resolver is: nothing
+        // outside NetShield.Inventory can name the type to ask for one, and its read surface is
+        // GET /api/v1/clients/resolve.
+        builder.Services.TryAddScoped<IAssetResolver, AssetResolver>();
+
+        // And the half of the cache that keeps it honest. A device arriving at an address,
+        // leaving one, or moving between two makes the cached history for those addresses wrong;
+        // DeviceUpdated carries the previous address so that the entry a device has just vacated
+        // can be named at all (WP-1.1 wrote that member for this).
+        builder.Services.AddScoped<IIntegrationEventHandler<DeviceCreated>, AssetCacheInvalidator>();
+        builder.Services.AddScoped<IIntegrationEventHandler<DeviceUpdated>, AssetCacheInvalidator>();
+        builder.Services.AddScoped<IIntegrationEventHandler<DeviceRemoved>, AssetCacheInvalidator>();
+
         builder.Services.TryAddScoped<IValidator<CreateDeviceRequest>, CreateDeviceRequestValidator>();
         builder.Services.TryAddScoped<IValidator<UpdateDeviceRequest>, UpdateDeviceRequestValidator>();
 
@@ -184,6 +220,7 @@ public static class InventoryServiceCollectionExtensions
         builder.Services.AddIntegrationEvent<DeviceDiscovered>();
         builder.Services.AddIntegrationEvent<DiscoveryRunStarted>();
         builder.Services.AddIntegrationEvent<DiscoveryRunCompleted>();
+        builder.Services.AddIntegrationEvent<ClientDiscovered>();
 
         builder.Services.ConfigureHttpJsonOptions(json =>
         {
@@ -237,6 +274,26 @@ public static class InventoryServiceCollectionExtensions
         ArgumentNullException.ThrowIfNull(builder);
 
         builder.Services.AddHostedService<DiscoveryScheduler>();
+
+        return builder;
+    }
+
+    /// <summary>
+    /// Starts the client schedule: the loop that reads each device's ARP and forwarding tables
+    /// so that <c>ResolveAssetAt</c> has something to resolve through.
+    /// </summary>
+    /// <remarks>
+    /// Separate from <see cref="AddNetShieldInventory{TBuilder}"/> for the reason the other two
+    /// schedulers are separate: exactly one process should decide what the estate is asked to do,
+    /// and the schema step registers the module on its way past without becoming a third thing
+    /// walking five hundred devices.
+    /// </remarks>
+    public static TBuilder AddNetShieldClientScheduler<TBuilder>(this TBuilder builder)
+        where TBuilder : IHostApplicationBuilder
+    {
+        ArgumentNullException.ThrowIfNull(builder);
+
+        builder.Services.AddHostedService<ClientScheduler>();
 
         return builder;
     }

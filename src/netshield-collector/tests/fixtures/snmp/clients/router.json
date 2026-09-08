@@ -1,0 +1,16 @@
+{
+  "description": "A router: a neighbour cache with IPv4 and IPv6 entries, and no forwarding database",
+  "synthetic": true,
+  "note": "Hand-authored. Proves that a device implementing no BRIDGE-MIB reports forwarding as unsupported rather than as empty, and that an IPv6 neighbour entry is reassembled from the sixteen octets of its index.",
+  "values": {
+    "1.3.6.1.2.1.4.35.1.4.2.1.4.192.0.2.50": "AA:BB:CC:00:00:50",
+    "1.3.6.1.2.1.4.35.1.7.2.1.4.192.0.2.50": "3",
+    "1.3.6.1.2.1.4.35.1.8.2.1.4.192.0.2.50": "1",
+    "1.3.6.1.2.1.4.35.1.4.2.1.4.192.0.2.51": "AA:BB:CC:00:00:51",
+    "1.3.6.1.2.1.4.35.1.7.2.1.4.192.0.2.51": "3",
+    "1.3.6.1.2.1.4.35.1.8.2.1.4.192.0.2.51": "1",
+    "1.3.6.1.2.1.4.35.1.4.2.2.16.32.1.13.184.0.0.0.0.0.0.0.0.0.0.0.80": "AA:BB:CC:00:00:50",
+    "1.3.6.1.2.1.4.35.1.7.2.2.16.32.1.13.184.0.0.0.0.0.0.0.0.0.0.0.80": "3",
+    "1.3.6.1.2.1.4.35.1.8.2.2.16.32.1.13.184.0.0.0.0.0.0.0.0.0.0.0.80": "1"
+  }
+}

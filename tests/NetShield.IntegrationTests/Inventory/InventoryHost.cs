@@ -24,12 +24,14 @@ using NetShield.IntegrationTests.Identity;
 using NetShield.IntegrationTests.Platform;
 
 using NetShield.Inventory;
+using NetShield.Inventory.Clients;
 using NetShield.Inventory.Collector;
 using NetShield.Inventory.Credentials;
 using NetShield.Inventory.Discovery;
 using NetShield.Inventory.Endpoints;
 using NetShield.Inventory.Persistence;
 using NetShield.Inventory.Reachability;
+using NetShield.Inventory.Resolution;
 
 using NetShield.Platform;
 using NetShield.Platform.Auditing;
@@ -37,6 +39,8 @@ using NetShield.Platform.Messaging;
 using NetShield.Platform.Persistence;
 using NetShield.Platform.Problems;
 using NetShield.Platform.Results;
+
+using StackExchange.Redis;
 
 namespace NetShield.IntegrationTests.Inventory;
 
@@ -137,10 +141,13 @@ internal sealed class InventoryHost(
         int maxAttempts = 3,
         string collectorSecret = CollectorSharedSecret,
         ReachabilitySettings? reachability = null,
-        DiscoverySettings? discovery = null)
+        DiscoverySettings? discovery = null,
+        string? redisConnectionString = null,
+        ClientSettings? clients = null)
     {
         ReachabilitySettings probes = reachability ?? new ReachabilitySettings();
         DiscoverySettings sweeps = discovery ?? new DiscoverySettings();
+        ClientSettings tracking = clients ?? new ClientSettings();
 
         string connectionString = database ?? await postgres.CreateDatabaseAsync(cancellationToken);
 
@@ -179,7 +186,15 @@ internal sealed class InventoryHost(
             ["Inventory:Discovery:MaxJobsPerRun"] =
                 sweeps.MaxJobsPerRun.ToString(CultureInfo.InvariantCulture),
             ["Inventory:Discovery:MaxRunsPerScan"] =
-                sweeps.MaxRunsPerScan.ToString(CultureInfo.InvariantCulture)
+                sweeps.MaxRunsPerScan.ToString(CultureInfo.InvariantCulture),
+            ["Inventory:Clients:WalkIntervalSeconds"] =
+                tracking.WalkIntervalSeconds.ToString(CultureInfo.InvariantCulture),
+            ["Inventory:Clients:ScanIntervalSeconds"] =
+                tracking.ScanIntervalSeconds.ToString(CultureInfo.InvariantCulture),
+            ["Inventory:Clients:MaxJobsPerScan"] =
+                tracking.MaxJobsPerScan.ToString(CultureInfo.InvariantCulture),
+            ["Inventory:Clients:ResolutionCacheSeconds"] =
+                tracking.ResolutionCacheSeconds.ToString(CultureInfo.InvariantCulture)
         };
 
         for (int index = 0; index < sweeps.CredentialKindOrder.Count; index++)
@@ -218,6 +233,16 @@ internal sealed class InventoryHost(
         builder.Services.AddDbContext<InventoryDbContext>(options =>
             options.UseNpgsql(connectionString, npgsql => npgsql.EnableRetryOnFailure())
                 .UseInventoryConventions());
+
+        // Registered before the platform, because the platform's cache resolves from whether a
+        // Redis connection is there: a host given one gets the real store and a host given none
+        // gets the null store. Both are legitimate configurations (ARCHITECTURE.md §3), and the
+        // resolution suite runs against each so the two cannot come to disagree about an answer.
+        if (redisConnectionString is not null)
+        {
+            builder.Services.AddSingleton<IConnectionMultiplexer>(
+                await ConnectionMultiplexer.ConnectAsync(redisConnectionString));
+        }
 
         builder.AddNetShieldPlatform();
         builder.Services.AddNetShieldProblemDetails();
@@ -497,6 +522,313 @@ internal sealed class InventoryHost(
     public Task<int> ScheduleDiscoveryAsync(CancellationToken cancellationToken) =>
         InScopeAsync(services => services.GetRequiredService<DiscoverySchedulePass>()
             .ScheduleDueAsync(cancellationToken));
+
+    /// <summary>
+    /// Runs one pass of the client schedule, which is what the background loop does on a timer
+    /// in the API. The loop itself is not registered here, for the same reason.
+    /// </summary>
+    /// <returns>How many client walks were queued.</returns>
+    public Task<int> ScheduleClientsAsync(CancellationToken cancellationToken) =>
+        InScopeAsync(services => services.GetRequiredService<ClientSchedulePass>()
+            .ScheduleDueAsync(cancellationToken));
+
+    /// <summary>
+    /// Resolves an address at an instant through the module's own port, which is how
+    /// <c>NetShield.Ingest</c> will once Phase 4 wires the enrichment path.
+    /// </summary>
+    /// <remarks>
+    /// Reached out of the container by hand because <c>IAssetResolver</c> is internal to the
+    /// module and has no HTTP surface of its own — the same shape <c>ICredentialResolver</c> is
+    /// exercised in. The route at <c>/api/v1/clients/resolve</c> is tested through the client.
+    /// </remarks>
+    public Task<AssetResolution> ResolveAsync(
+        string address,
+        DateTimeOffset at,
+        CancellationToken cancellationToken) =>
+        InScopeAsync(services => services.GetRequiredService<IAssetResolver>()
+            .ResolveAtAsync(System.Net.IPAddress.Parse(address), at, cancellationToken));
+
+    /// <summary>
+    /// Times many warm resolutions of one address inside a single scope, and returns them in
+    /// microseconds, sorted.
+    /// </summary>
+    /// <remarks>
+    /// One scope for the whole run, deliberately. A scope per call would also build an
+    /// <c>InventoryDbContext</c> each time, and the measurement would then be mostly about the
+    /// dependency-injection container — which is not what "resolution is under 1 ms warm" is a
+    /// claim about, and is the part most sensitive to whatever else the machine is doing. It is
+    /// also the shape the caller will have: ARCHITECTURE.md §6 puts resolution inside the ingest
+    /// pipeline, which enriches many events per scope rather than one.
+    /// </remarks>
+    /// <param name="address">The address to resolve.</param>
+    /// <param name="at">The instant to resolve it at.</param>
+    /// <param name="iterations">How many timed resolutions to make.</param>
+    /// <param name="cancellationToken">Cancellation.</param>
+    /// <param name="warmup">
+    /// How many untimed resolutions to make first. Zero times a genuinely cold read — the first
+    /// call for an address is the one that queries PostgreSQL and writes the entry back.
+    /// </param>
+    public async Task<double[]> TimeResolutionsAsync(
+        string address,
+        DateTimeOffset at,
+        int iterations,
+        CancellationToken cancellationToken,
+        int warmup = 10)
+    {
+        await using AsyncServiceScope scope = application.Services.CreateAsyncScope();
+
+        IAssetResolver resolver = scope.ServiceProvider.GetRequiredService<IAssetResolver>();
+        System.Net.IPAddress parsed = System.Net.IPAddress.Parse(address);
+
+        // Warm the cache entry, and let the Redis connection settle, before anything is timed.
+        for (int index = 0; index < warmup; index++)
+        {
+            await resolver.ResolveAtAsync(parsed, at, cancellationToken);
+        }
+
+        double[] microseconds = new double[iterations];
+
+        for (int index = 0; index < iterations; index++)
+        {
+            long started = System.Diagnostics.Stopwatch.GetTimestamp();
+
+            await resolver.ResolveAtAsync(parsed, at, cancellationToken);
+
+            microseconds[index] =
+                System.Diagnostics.Stopwatch.GetElapsedTime(started).TotalMicroseconds;
+        }
+
+        Array.Sort(microseconds);
+
+        return microseconds;
+    }
+
+    /// <summary>Every client, oldest first.</summary>
+    public async Task<IReadOnlyList<ClientRow>> ClientsAsync(CancellationToken cancellationToken)
+    {
+        await using AsyncServiceScope scope = application.Services.CreateAsyncScope();
+
+        return await scope.ServiceProvider.GetRequiredService<InventoryDbContext>()
+            .Clients.AsNoTracking()
+            .OrderBy(client => client.Id)
+            .Select(client => new ClientRow(
+                client.Id,
+                client.MacAddress,
+                client.Oui,
+                client.LocallyAdministered,
+                client.FirstSeenAt,
+                client.LastSeenAt))
+            .ToListAsync(cancellationToken);
+    }
+
+    /// <summary>Every address interval, newest first, with the MAC that held it.</summary>
+    public async Task<IReadOnlyList<ClientIpBindingRow>> IpBindingsAsync(
+        CancellationToken cancellationToken,
+        string? address = null)
+    {
+        await using AsyncServiceScope scope = application.Services.CreateAsyncScope();
+
+        InventoryDbContext context = scope.ServiceProvider.GetRequiredService<InventoryDbContext>();
+
+        var rows = await (
+            from binding in context.ClientIpBindings.AsNoTracking()
+            join client in context.Clients.AsNoTracking() on binding.ClientId equals client.Id
+            orderby binding.ObservedFrom descending, binding.Id descending
+            select new
+            {
+                binding.ClientId,
+                client.MacAddress,
+                binding.IpAddress,
+                binding.ObservedFrom,
+                binding.ObservedTo,
+                binding.LastSeenAt
+            })
+            .ToListAsync(cancellationToken);
+
+        return
+        [
+            .. rows
+                .Select(row => new ClientIpBindingRow(
+                    row.ClientId,
+                    row.MacAddress,
+                    row.IpAddress.ToString(),
+                    row.ObservedFrom,
+                    row.ObservedTo,
+                    row.LastSeenAt))
+                .Where(row => address is null || row.IpAddress == address)
+        ];
+    }
+
+    /// <summary>Every port interval, newest first, with the MAC it reported.</summary>
+    public async Task<IReadOnlyList<ClientPortBindingRow>> PortBindingsAsync(
+        CancellationToken cancellationToken)
+    {
+        await using AsyncServiceScope scope = application.Services.CreateAsyncScope();
+
+        InventoryDbContext context = scope.ServiceProvider.GetRequiredService<InventoryDbContext>();
+
+        return await (
+            from binding in context.ClientPortBindings.AsNoTracking()
+            join client in context.Clients.AsNoTracking() on binding.ClientId equals client.Id
+            orderby binding.ObservedFrom descending, binding.Id descending
+            select new ClientPortBindingRow(
+                binding.ClientId,
+                client.MacAddress,
+                binding.DeviceId,
+                binding.IfIndex,
+                binding.VlanId,
+                binding.MacCountOnPort,
+                binding.ObservedFrom,
+                binding.ObservedTo))
+            .ToListAsync(cancellationToken);
+    }
+
+    /// <summary>What reading a device's client tables established, or nothing if none has been read.</summary>
+    public async Task<ClientScanRow?> ClientScanAsync(Guid deviceId, CancellationToken cancellationToken)
+    {
+        await using AsyncServiceScope scope = application.Services.CreateAsyncScope();
+
+        return await scope.ServiceProvider.GetRequiredService<InventoryDbContext>()
+            .DeviceClientScans.AsNoTracking()
+            .Where(row => row.DeviceId == deviceId)
+            .Select(row => new ClientScanRow(
+                row.NextWalkAt,
+                row.LastWalkAt,
+                row.LastAppliedJobId,
+                row.NeighborsSupported,
+                row.ForwardingSupported,
+                row.LastNeighborCount,
+                row.LastForwardingCount,
+                row.LastError))
+            .SingleOrDefaultAsync(cancellationToken);
+    }
+
+    /// <summary>Moves a device's next client walk into the past, which waiting for one does.</summary>
+    public async Task MakeClientScanDueAsync(Guid deviceId, CancellationToken cancellationToken)
+    {
+        await using AsyncServiceScope scope = application.Services.CreateAsyncScope();
+
+        InventoryDbContext context = scope.ServiceProvider.GetRequiredService<InventoryDbContext>();
+
+        DeviceClientScan scan = await context.DeviceClientScans
+            .SingleAsync(row => row.DeviceId == deviceId, cancellationToken);
+
+        scan.NextWalkAt = DateTimeOffset.UtcNow.AddMinutes(-1);
+
+        await context.SaveChangesAsync(cancellationToken);
+    }
+
+    /// <summary>
+    /// Seeds an address interval directly, for a test about resolution rather than about walking.
+    /// </summary>
+    /// <remarks>
+    /// It writes what a walk would have written, including the invariants: the caller says which
+    /// interval it wants and the partial unique index refuses a second open one for an address,
+    /// so a fixture that produced an impossible history fails here rather than in an assertion.
+    /// </remarks>
+    public async Task<Guid> SeedBindingAsync(
+        string mac,
+        string address,
+        DateTimeOffset observedFrom,
+        DateTimeOffset? observedTo,
+        CancellationToken cancellationToken)
+    {
+        await using AsyncServiceScope scope = application.Services.CreateAsyncScope();
+
+        InventoryDbContext context = scope.ServiceProvider.GetRequiredService<InventoryDbContext>();
+
+        string normalized = mac.ToUpperInvariant();
+
+        Client? client = await context.Clients
+            .SingleOrDefaultAsync(row => row.MacAddress == normalized, cancellationToken);
+
+        if (client is null)
+        {
+            client = new Client
+            {
+                Id = Guid.CreateVersion7(observedFrom),
+                MacAddress = normalized,
+                Oui = normalized[..8],
+                LocallyAdministered = false,
+                FirstSeenAt = observedFrom,
+                LastSeenAt = observedTo ?? observedFrom,
+                CreatedAt = observedFrom,
+                UpdatedAt = observedFrom
+            };
+
+            context.Clients.Add(client);
+        }
+
+        context.ClientIpBindings.Add(new ClientIpBinding
+        {
+            Id = Guid.CreateVersion7(observedFrom),
+            ClientId = client.Id,
+            IpAddress = System.Net.IPAddress.Parse(address),
+            Source = ClientObservationSource.ArpTable,
+            ObservedFrom = observedFrom,
+            ObservedTo = observedTo,
+            LastSeenAt = observedTo ?? observedFrom,
+            CreatedAt = observedFrom,
+            UpdatedAt = observedFrom
+        });
+
+        await context.SaveChangesAsync(cancellationToken);
+
+        return client.Id;
+    }
+
+    /// <summary>
+    /// Seeds an estate of clients, each holding one address, for a test about scale.
+    /// </summary>
+    /// <remarks>
+    /// SPEC.md §1 targets 5,000 tracked clients, which is what a warm resolution has to stay
+    /// under a millisecond at. Written in one batch rather than through the walk path: what is
+    /// being measured is the read, and building the rows through the collector round trip would
+    /// spend a minute proving something the round-trip suite already proves.
+    /// </remarks>
+    public async Task SeedClientsAsync(int count, CancellationToken cancellationToken)
+    {
+        await using AsyncServiceScope scope = application.Services.CreateAsyncScope();
+
+        InventoryDbContext context = scope.ServiceProvider.GetRequiredService<InventoryDbContext>();
+
+        DateTimeOffset now = DateTimeOffset.UtcNow.AddHours(-1);
+
+        for (int index = 0; index < count; index++)
+        {
+            // 10.64.0.1 upwards, which stays inside one /16 for the whole target scale.
+            string address = $"10.64.{(index / 254) & 0xFF}.{(index % 254) + 1}";
+            string mac = $"AA:BB:CC:{(index >> 16) & 0xFF:X2}:{(index >> 8) & 0xFF:X2}:{index & 0xFF:X2}";
+
+            Guid clientId = Guid.CreateVersion7(now);
+
+            context.Clients.Add(new Client
+            {
+                Id = clientId,
+                MacAddress = mac,
+                Oui = mac[..8],
+                LocallyAdministered = true,
+                FirstSeenAt = now,
+                LastSeenAt = now,
+                CreatedAt = now,
+                UpdatedAt = now
+            });
+
+            context.ClientIpBindings.Add(new ClientIpBinding
+            {
+                Id = Guid.CreateVersion7(now),
+                ClientId = clientId,
+                IpAddress = System.Net.IPAddress.Parse(address),
+                Source = ClientObservationSource.ArpTable,
+                ObservedFrom = now,
+                LastSeenAt = now,
+                CreatedAt = now,
+                UpdatedAt = now
+            });
+        }
+
+        await context.SaveChangesAsync(cancellationToken);
+    }
 
     /// <summary>
     /// Delivers every pending outbox row, which is what makes a subscriber run.
@@ -797,6 +1129,56 @@ internal sealed record ReachabilitySettings(
     int MaxJobsPerScan = 500,
     int FailureThreshold = 3,
     int SuccessThreshold = 2);
+
+/// <summary>
+/// How this host tracks clients, at intervals short enough that a test does not wait a quarter of
+/// an hour for a device to fall due.
+/// </summary>
+internal sealed record ClientSettings(
+    int WalkIntervalSeconds = 60,
+    int ScanIntervalSeconds = 1,
+    int MaxJobsPerScan = 100,
+    int ResolutionCacheSeconds = 300);
+
+/// <summary>One client row, reduced to what these tests assert on.</summary>
+internal sealed record ClientRow(
+    Guid Id,
+    string MacAddress,
+    string Oui,
+    bool LocallyAdministered,
+    DateTimeOffset FirstSeenAt,
+    DateTimeOffset LastSeenAt);
+
+/// <summary>One address interval, reduced to what these tests assert on.</summary>
+internal sealed record ClientIpBindingRow(
+    Guid ClientId,
+    string MacAddress,
+    string IpAddress,
+    DateTimeOffset ObservedFrom,
+    DateTimeOffset? ObservedTo,
+    DateTimeOffset LastSeenAt);
+
+/// <summary>One port interval, reduced to what these tests assert on.</summary>
+internal sealed record ClientPortBindingRow(
+    Guid ClientId,
+    string MacAddress,
+    Guid DeviceId,
+    int IfIndex,
+    int? VlanId,
+    int? MacCountOnPort,
+    DateTimeOffset ObservedFrom,
+    DateTimeOffset? ObservedTo);
+
+/// <summary>One client-scan row, reduced to what these tests assert on.</summary>
+internal sealed record ClientScanRow(
+    DateTimeOffset NextWalkAt,
+    DateTimeOffset? LastWalkAt,
+    Guid? LastAppliedJobId,
+    bool? NeighborsSupported,
+    bool? ForwardingSupported,
+    int? LastNeighborCount,
+    int? LastForwardingCount,
+    string? LastError);
 
 /// <summary>One reachability row, reduced to what these tests assert on.</summary>
 /// <summary>One sweep job of a run, reduced to what these tests assert on.</summary>

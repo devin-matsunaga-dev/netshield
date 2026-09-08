@@ -81,6 +81,11 @@ builder.AddNetShieldReachabilityScheduler();
 // the process that decides to send packets at addresses no device claims.
 builder.AddNetShieldDiscoveryScheduler();
 
+// And the client schedule: the loop that reads each device's ARP and forwarding tables, so that
+// ResolveAssetAt has intervals to resolve through. Opt-in for the same reason — this is the
+// process that decides to open an SNMP session to every device in the estate on a timer.
+builder.AddNetShieldClientScheduler();
+
 // The OpenAPI description of every /api endpoint. CONVENTIONS.md §4 generates it from the
 // endpoints and generates the TypeScript client from it; src/NetShield.Web.Host/openapi/v1.json
 // is the committed copy the client is built from.
