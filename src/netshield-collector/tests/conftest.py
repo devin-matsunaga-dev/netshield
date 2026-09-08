@@ -36,6 +36,9 @@ WALKS = Path(__file__).parent / "fixtures" / "snmp"
 CLIENT_WALKS = WALKS / "clients"
 """Where the recorded client-table walks live."""
 
+TOPOLOGY_WALKS = WALKS / "topology"
+"""Where the recorded neighbour and route walks live."""
+
 # Recognisably not a real secret, and long enough to satisfy the API's own floor.
 SHARED_SECRET = "test-shared-secret-0000000000000000000000000000"
 
@@ -108,6 +111,21 @@ def client_walk_fixture(name: str) -> dict[str, str]:
 def client_walk_session(name: str) -> FixtureSession:
     """A session replaying one recorded client-table walk."""
     return FixtureSession(client_walk_fixture(name))
+
+
+def topology_walk_fixture(name: str) -> dict[str, str]:
+    """One recorded topology walk's values, by file stem."""
+    document = json.loads((TOPOLOGY_WALKS / f"{name}.json").read_text())
+    values = document["values"]
+
+    assert isinstance(values, dict)
+
+    return {str(oid): str(value) for oid, value in values.items()}
+
+
+def topology_walk_session(name: str) -> FixtureSession:
+    """A session replaying one recorded neighbour or route walk."""
+    return FixtureSession(topology_walk_fixture(name))
 
 
 def snmp_credential(
@@ -243,6 +261,84 @@ def client_job(
             "maxRows": 5000,
             "maxNeighbors": 1000,
             "maxForwardingEntries": 1000,
+        },
+        credential=credential if credential is not None else snmp_credential(),
+    )
+
+
+def neighbor_job(
+    *,
+    parameters: dict[str, object] | None = None,
+    credential: JobCredential | None = None,
+    device: JobDevice | None = None,
+    vendor: str = "CiscoIos",
+    address: str = "192.0.2.10",
+) -> LeasedJob:
+    """A leased Discover job carrying the neighbour walk's parameters."""
+    return LeasedJob(
+        job_id=uuid4(),
+        kind=JobKind.DISCOVER,
+        lease_token="lease-token",
+        lease_expires_at=datetime.now(UTC),
+        attempt=1,
+        device=device
+        if device is not None
+        else JobDevice.model_validate(
+            {
+                "deviceId": str(uuid4()),
+                "hostname": "lab-sw-01",
+                "ipAddress": address,
+                "vendor": vendor,
+            }
+        ),
+        parameters=parameters
+        if parameters is not None
+        else {
+            "walk": "neighbors",
+            "timeoutSeconds": 2.0,
+            "retries": 1,
+            "maxRepetitions": 25,
+            "maxRows": 5000,
+            "maxNeighbors": 1000,
+        },
+        credential=credential if credential is not None else snmp_credential(),
+    )
+
+
+def route_job(
+    *,
+    parameters: dict[str, object] | None = None,
+    credential: JobCredential | None = None,
+    device: JobDevice | None = None,
+    vendor: str = "CiscoIos",
+    address: str = "192.0.2.10",
+) -> LeasedJob:
+    """A leased Discover job carrying the route walk's parameters."""
+    return LeasedJob(
+        job_id=uuid4(),
+        kind=JobKind.DISCOVER,
+        lease_token="lease-token",
+        lease_expires_at=datetime.now(UTC),
+        attempt=1,
+        device=device
+        if device is not None
+        else JobDevice.model_validate(
+            {
+                "deviceId": str(uuid4()),
+                "hostname": "lab-rtr-01",
+                "ipAddress": address,
+                "vendor": vendor,
+            }
+        ),
+        parameters=parameters
+        if parameters is not None
+        else {
+            "walk": "routes",
+            "timeoutSeconds": 2.0,
+            "retries": 1,
+            "maxRepetitions": 25,
+            "maxRows": 20000,
+            "maxNextHops": 500,
         },
         credential=credential if credential is not None else snmp_credential(),
     )

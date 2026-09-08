@@ -1331,6 +1331,380 @@ namespace NetShield.Inventory.Persistence.Migrations
                     b.ToTable("device_reachability", (string)null);
                 });
 
+            modelBuilder.Entity("NetShield.Inventory.Topology.DeviceAdjacency", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("ADeviceId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("a_device_id");
+
+                    b.Property<int>("AIfIndex")
+                        .HasColumnType("integer")
+                        .HasColumnName("a_if_index");
+
+                    b.Property<string>("AInterfaceName")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
+                        .HasColumnName("a_interface_name");
+
+                    b.Property<string>("AdjacencyKey")
+                        .IsRequired()
+                        .HasMaxLength(600)
+                        .HasColumnType("character varying(600)")
+                        .HasColumnName("adjacency_key");
+
+                    b.Property<string>("BChassisId")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
+                        .HasColumnName("b_chassis_id");
+
+                    b.Property<string>("BChassisIdKind")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("b_chassis_id_kind");
+
+                    b.Property<Guid?>("BDeviceId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("b_device_id");
+
+                    b.Property<int?>("BIfIndex")
+                        .HasColumnType("integer")
+                        .HasColumnName("b_if_index");
+
+                    b.Property<string>("BInterfaceName")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
+                        .HasColumnName("b_interface_name");
+
+                    b.Property<string>("BPortId")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
+                        .HasColumnName("b_port_id");
+
+                    b.Property<string>("BSystemName")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
+                        .HasColumnName("b_system_name");
+
+                    b.Property<string>("Confidence")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("confidence");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<DateTimeOffset>("FirstDiscoveredAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("first_discovered_at");
+
+                    b.Property<DateTimeOffset>("LastSeenAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_seen_at");
+
+                    b.Property<bool>("ObservedFromA")
+                        .HasColumnType("boolean")
+                        .HasColumnName("observed_from_a");
+
+                    b.Property<bool>("ObservedFromB")
+                        .HasColumnType("boolean")
+                        .HasColumnName("observed_from_b");
+
+                    b.PrimitiveCollection<string[]>("SourcesA")
+                        .IsRequired()
+                        .HasColumnType("text[]")
+                        .HasColumnName("sources_a");
+
+                    b.PrimitiveCollection<string[]>("SourcesB")
+                        .IsRequired()
+                        .HasColumnType("text[]")
+                        .HasColumnName("sources_b");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<DateTimeOffset?>("WithdrawnAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("withdrawn_at");
+
+                    b.HasKey("Id")
+                        .HasName("pk_device_adjacencies");
+
+                    b.HasIndex("ADeviceId", "WithdrawnAt")
+                        .HasDatabaseName("ix_device_adjacencies_a_device_id_live");
+
+                    b.HasIndex("BDeviceId", "WithdrawnAt")
+                        .HasDatabaseName("ix_device_adjacencies_b_device_id_live");
+
+                    b.HasIndex("ADeviceId", "AIfIndex", "AdjacencyKey")
+                        .IsUnique()
+                        .HasDatabaseName("ix_device_adjacencies_open")
+                        .HasFilter("withdrawn_at IS NULL");
+
+                    b.ToTable("device_adjacencies", (string)null);
+                });
+
+            modelBuilder.Entity("NetShield.Inventory.Topology.DeviceNeighbor", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid?>("AdjacencyId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("adjacency_id");
+
+                    b.Property<string>("AdjacencyKey")
+                        .IsRequired()
+                        .HasMaxLength(600)
+                        .HasColumnType("character varying(600)")
+                        .HasColumnName("adjacency_key");
+
+                    b.Property<int?>("Capabilities")
+                        .HasColumnType("integer")
+                        .HasColumnName("capabilities");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid>("DeviceId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("device_id");
+
+                    b.Property<int?>("EvidenceCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("evidence_count");
+
+                    b.Property<DateTimeOffset>("FirstDiscoveredAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("first_discovered_at");
+
+                    b.Property<DateTimeOffset>("LastSeenAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_seen_at");
+
+                    b.Property<int>("LocalIfIndex")
+                        .HasColumnType("integer")
+                        .HasColumnName("local_if_index");
+
+                    b.Property<string>("LocalInterfaceName")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
+                        .HasColumnName("local_interface_name");
+
+                    b.Property<string>("RemoteChassisId")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
+                        .HasColumnName("remote_chassis_id");
+
+                    b.Property<string>("RemoteChassisIdKind")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("remote_chassis_id_kind");
+
+                    b.Property<Guid?>("RemoteDeviceId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("remote_device_id");
+
+                    b.Property<int?>("RemoteIfIndex")
+                        .HasColumnType("integer")
+                        .HasColumnName("remote_if_index");
+
+                    b.Property<string>("RemoteInterfaceName")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
+                        .HasColumnName("remote_interface_name");
+
+                    b.Property<string>("RemoteKey")
+                        .IsRequired()
+                        .HasMaxLength(600)
+                        .HasColumnType("character varying(600)")
+                        .HasColumnName("remote_key");
+
+                    b.Property<IPAddress>("RemoteManagementAddress")
+                        .HasColumnType("inet")
+                        .HasColumnName("remote_management_address");
+
+                    b.Property<string>("RemotePlatform")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
+                        .HasColumnName("remote_platform");
+
+                    b.Property<string>("RemotePortDescription")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
+                        .HasColumnName("remote_port_description");
+
+                    b.Property<string>("RemotePortId")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
+                        .HasColumnName("remote_port_id");
+
+                    b.Property<string>("RemotePortIdKind")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("remote_port_id_kind");
+
+                    b.Property<string>("RemoteSystemDescription")
+                        .HasMaxLength(1024)
+                        .HasColumnType("character varying(1024)")
+                        .HasColumnName("remote_system_description");
+
+                    b.Property<string>("RemoteSystemName")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
+                        .HasColumnName("remote_system_name");
+
+                    b.Property<string>("Source")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("source");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<DateTimeOffset?>("WithdrawnAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("withdrawn_at");
+
+                    b.HasKey("Id")
+                        .HasName("pk_device_neighbors");
+
+                    b.HasIndex("AdjacencyId")
+                        .HasDatabaseName("ix_device_neighbors_adjacency_id");
+
+                    b.HasIndex("RemoteDeviceId")
+                        .HasDatabaseName("ix_device_neighbors_remote_device_id");
+
+                    b.HasIndex("DeviceId", "WithdrawnAt")
+                        .HasDatabaseName("ix_device_neighbors_device_id_live");
+
+                    b.HasIndex("DeviceId", "Source", "LocalIfIndex", "RemoteKey")
+                        .IsUnique()
+                        .HasDatabaseName("ix_device_neighbors_open")
+                        .HasFilter("withdrawn_at IS NULL");
+
+                    b.ToTable("device_neighbors", (string)null);
+                });
+
+            modelBuilder.Entity("NetShield.Inventory.Topology.DeviceTopologyScan", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<bool?>("CdpSupported")
+                        .HasColumnType("boolean")
+                        .HasColumnName("cdp_supported");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid>("DeviceId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("device_id");
+
+                    b.Property<int?>("LastCdpCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("last_cdp_count");
+
+                    b.Property<int?>("LastLldpCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("last_lldp_count");
+
+                    b.Property<string>("LastNeighborError")
+                        .HasMaxLength(1024)
+                        .HasColumnType("character varying(1024)")
+                        .HasColumnName("last_neighbor_error");
+
+                    b.Property<Guid?>("LastNeighborJobId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("last_neighbor_job_id");
+
+                    b.Property<DateTimeOffset?>("LastNeighborWalkAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_neighbor_walk_at");
+
+                    b.Property<int?>("LastNextHopCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("last_next_hop_count");
+
+                    b.Property<int?>("LastRouteCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("last_route_count");
+
+                    b.Property<string>("LastRouteError")
+                        .HasMaxLength(1024)
+                        .HasColumnType("character varying(1024)")
+                        .HasColumnName("last_route_error");
+
+                    b.Property<Guid?>("LastRouteJobId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("last_route_job_id");
+
+                    b.Property<DateTimeOffset?>("LastRouteWalkAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_route_walk_at");
+
+                    b.Property<bool?>("LldpSupported")
+                        .HasColumnType("boolean")
+                        .HasColumnName("lldp_supported");
+
+                    b.Property<DateTimeOffset>("NextNeighborWalkAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("next_neighbor_walk_at");
+
+                    b.Property<DateTimeOffset>("NextRouteWalkAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("next_route_walk_at");
+
+                    b.Property<string>("RouteTable")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("route_table");
+
+                    b.Property<bool?>("RoutingSupported")
+                        .HasColumnType("boolean")
+                        .HasColumnName("routing_supported");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id")
+                        .HasName("pk_device_topology_scans");
+
+                    b.HasIndex("DeviceId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_device_topology_scans_device_id");
+
+                    b.HasIndex("NextNeighborWalkAt")
+                        .HasDatabaseName("ix_device_topology_scans_next_neighbor_walk_at");
+
+                    b.HasIndex("NextRouteWalkAt")
+                        .HasDatabaseName("ix_device_topology_scans_next_route_walk_at");
+
+                    b.ToTable("device_topology_scans", (string)null);
+                });
+
             modelBuilder.Entity("NetShield.Platform.Messaging.OutboxMessage", b =>
                 {
                     b.Property<Guid>("Id")

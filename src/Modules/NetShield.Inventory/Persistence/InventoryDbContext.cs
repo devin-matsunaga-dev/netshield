@@ -6,6 +6,7 @@ using NetShield.Inventory.Credentials;
 using NetShield.Inventory.Devices;
 using NetShield.Inventory.Discovery;
 using NetShield.Inventory.Reachability;
+using NetShield.Inventory.Topology;
 
 using NetShield.Platform.Messaging;
 
@@ -85,6 +86,21 @@ public sealed class InventoryDbContext(DbContextOptions<InventoryDbContext> opti
     /// <summary>What reading each device's client tables established, one row per device.</summary>
     internal DbSet<DeviceClientScan> DeviceClientScans => Set<DeviceClientScan>();
 
+    /// <summary>
+    /// What each protocol said is on the other end of each interface — the raw evidence an
+    /// adjacency is reconciled from.
+    /// </summary>
+    internal DbSet<DeviceNeighbor> DeviceNeighbors => Set<DeviceNeighbor>();
+
+    /// <summary>
+    /// The topology graph's edges, one row per link. ARCHITECTURE.md §1: relationships are
+    /// adjacency tables in PostgreSQL, and one hop is all V1 builds.
+    /// </summary>
+    internal DbSet<DeviceAdjacency> DeviceAdjacencies => Set<DeviceAdjacency>();
+
+    /// <summary>What reading each device's topology established, one row per device.</summary>
+    internal DbSet<DeviceTopologyScan> DeviceTopologyScans => Set<DeviceTopologyScan>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         ArgumentNullException.ThrowIfNull(modelBuilder);
@@ -107,6 +123,9 @@ public sealed class InventoryDbContext(DbContextOptions<InventoryDbContext> opti
         modelBuilder.ApplyConfiguration(new ClientIpBindingConfiguration());
         modelBuilder.ApplyConfiguration(new ClientPortBindingConfiguration());
         modelBuilder.ApplyConfiguration(new DeviceClientScanConfiguration());
+        modelBuilder.ApplyConfiguration(new DeviceNeighborConfiguration());
+        modelBuilder.ApplyConfiguration(new DeviceAdjacencyConfiguration());
+        modelBuilder.ApplyConfiguration(new DeviceTopologyScanConfiguration());
 
         // outbox_messages, mapped here so a device write and the event describing it are one
         // transaction on one connection. NetShield.Platform owns the table and the migration

@@ -1,0 +1,28 @@
+{
+  "description": "An LLDP entry on a local port number that resolves to no interface",
+  "synthetic": true,
+  "note": "Hand-authored. Port 44 has a local(7) port id that is not a number and names no interface the device reported, so its neighbour is dropped rather than attributed to whatever happened to have ifIndex 44. Port 1 resolves normally and is kept.",
+  "values": {
+    "1.3.6.1.2.1.31.1.1.1.1.1": "Gi0/1",
+    "1.3.6.1.2.1.2.2.1.2.1": "GigabitEthernet0/1",
+    "1.0.8802.1.1.2.1.3.1.0": "4",
+    "1.0.8802.1.1.2.1.3.2.0": "00:1C:73:00:00:0A",
+    "1.0.8802.1.1.2.1.3.3.0": "odd-sw-10",
+    "1.0.8802.1.1.2.1.3.7.1.2.1": "5",
+    "1.0.8802.1.1.2.1.3.7.1.3.1": "Gi0/1",
+    "1.0.8802.1.1.2.1.3.7.1.4.1": "GigabitEthernet0/1",
+    "1.0.8802.1.1.2.1.3.7.1.2.44": "7",
+    "1.0.8802.1.1.2.1.3.7.1.3.44": "port-forty-four",
+    "1.0.8802.1.1.2.1.3.7.1.4.44": "an interface nothing else reports",
+    "1.0.8802.1.1.2.1.4.1.1.4.10.1.1": "4",
+    "1.0.8802.1.1.2.1.4.1.1.5.10.1.1": "00:1C:73:00:00:01",
+    "1.0.8802.1.1.2.1.4.1.1.6.10.1.1": "5",
+    "1.0.8802.1.1.2.1.4.1.1.7.10.1.1": "Et9",
+    "1.0.8802.1.1.2.1.4.1.1.9.10.1.1": "core-sw-1",
+    "1.0.8802.1.1.2.1.4.1.1.4.11.44.2": "4",
+    "1.0.8802.1.1.2.1.4.1.1.5.11.44.2": "00:1C:73:00:00:FF",
+    "1.0.8802.1.1.2.1.4.1.1.6.11.44.2": "5",
+    "1.0.8802.1.1.2.1.4.1.1.7.11.44.2": "Et1",
+    "1.0.8802.1.1.2.1.4.1.1.9.11.44.2": "unreachable-neighbour"
+  }
+}

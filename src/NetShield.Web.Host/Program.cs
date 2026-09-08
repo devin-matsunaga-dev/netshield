@@ -86,6 +86,11 @@ builder.AddNetShieldDiscoveryScheduler();
 // process that decides to open an SNMP session to every device in the estate on a timer.
 builder.AddNetShieldClientScheduler();
 
+// And the topology schedule: the loop that reads each device's neighbour protocols and
+// routing table, so that the adjacency graph stays current and Phase 6's downstream-alert
+// suppression has a graph to reason about. Opt-in for the same reason as the other three.
+builder.AddNetShieldTopologyScheduler();
+
 // The OpenAPI description of every /api endpoint. CONVENTIONS.md §4 generates it from the
 // endpoints and generates the TypeScript client from it; src/NetShield.Web.Host/openapi/v1.json
 // is the committed copy the client is built from.

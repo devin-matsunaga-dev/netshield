@@ -196,6 +196,70 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/devices/{id}/adjacencies": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ListDeviceAdjacencies"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/devices/{id}/topology-scan": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetDeviceTopologyScan"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/devices/{id}/neighbor-walk": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["QueueDeviceNeighborWalk"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/devices/{id}/route-walk": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["QueueDeviceRouteWalk"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/discovery/seeds": {
         parameters: {
             query?: never;
@@ -505,6 +569,26 @@ export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
         /** @enum {unknown} */
+        AdjacencyConfidence: "Confirmed" | "Probable" | "Possible";
+        AdjacencyEvidence: {
+            /** Format: uuid */
+            observedByDeviceId: string;
+            source: components["schemas"]["NeighborSource"];
+            /** Format: int32 */
+            localIfIndex: number | string;
+            remoteChassisId: string;
+            remoteChassisIdKind: components["schemas"]["NeighborIdKind"];
+            remotePortId: null | string;
+            remoteSystemName: null | string;
+            remoteManagementAddress: null | string;
+            /** Format: int32 */
+            evidenceCount: null | number | string;
+            /** Format: date-time */
+            firstDiscoveredAt: string;
+            /** Format: date-time */
+            lastSeenAt: string;
+        };
+        /** @enum {unknown} */
         AssetKind: "Unresolved" | "Device" | "Client";
         AssetResolution: {
             ipAddress: string;
@@ -719,6 +803,12 @@ export interface components {
             /** Format: int64 */
             totalCount?: null | number | string;
         };
+        CursorPageOfDeviceAdjacencySummary: {
+            items: components["schemas"]["DeviceAdjacencySummary"][];
+            nextCursor: null | string;
+            /** Format: int64 */
+            totalCount?: null | number | string;
+        };
         CursorPageOfDeviceInterfaceSummary: {
             items: components["schemas"]["DeviceInterfaceSummary"][];
             nextCursor: null | string;
@@ -760,6 +850,34 @@ export interface components {
             nextCursor: null | string;
             /** Format: int64 */
             totalCount?: null | number | string;
+        };
+        DeviceAdjacencySummary: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            aDeviceId: string;
+            aDeviceHostname: null | string;
+            /** Format: int32 */
+            aIfIndex: number | string;
+            aInterfaceName: null | string;
+            /** Format: uuid */
+            bDeviceId: null | string;
+            bDeviceHostname: null | string;
+            /** Format: int32 */
+            bIfIndex: null | number | string;
+            bInterfaceName: null | string;
+            bChassisId: string;
+            bChassisIdKind: components["schemas"]["NeighborIdKind"];
+            bPortId: null | string;
+            bSystemName: null | string;
+            sources: components["schemas"]["NeighborSource"][];
+            confidence: components["schemas"]["AdjacencyConfidence"];
+            bidirectional: boolean;
+            /** Format: date-time */
+            firstDiscoveredAt: string;
+            /** Format: date-time */
+            lastSeenAt: string;
+            evidence: components["schemas"]["AdjacencyEvidence"][];
         };
         DeviceDetail: {
             /** Format: uuid */
@@ -867,6 +985,32 @@ export interface components {
             tags: string[];
             /** Format: date-time */
             updatedAt: string;
+        };
+        DeviceTopologyScanDetail: {
+            /** Format: uuid */
+            deviceId: string;
+            /** Format: date-time */
+            nextNeighborWalkAt: string;
+            /** Format: date-time */
+            lastNeighborWalkAt: null | string;
+            lldpSupported: null | boolean;
+            cdpSupported: null | boolean;
+            /** Format: int32 */
+            lastLldpCount: null | number | string;
+            /** Format: int32 */
+            lastCdpCount: null | number | string;
+            lastNeighborError: null | string;
+            /** Format: date-time */
+            nextRouteWalkAt: string;
+            /** Format: date-time */
+            lastRouteWalkAt: null | string;
+            routingSupported: null | boolean;
+            routeTable: null | string;
+            /** Format: int32 */
+            lastRouteCount: null | number | string;
+            /** Format: int32 */
+            lastNextHopCount: null | number | string;
+            lastRouteError: null | string;
         };
         /** @enum {unknown} */
         DeviceVendor: "Unknown" | "CiscoIos" | "CiscoNxOs" | "JuniperJunOs" | "AristaEos" | "FortinetFortiOs" | "MikroTikRouterOs" | "GenericSnmp";
@@ -1051,6 +1195,19 @@ export interface components {
             password: string;
         };
         /** @enum {unknown} */
+        NeighborIdKind: "Unknown" | "ChassisComponent" | "InterfaceAlias" | "PortComponent" | "MacAddress" | "NetworkAddress" | "InterfaceName" | "AgentCircuitId" | "Local" | "DeviceId";
+        /** @enum {unknown} */
+        NeighborSource: "Lldp" | "Cdp" | "Routing";
+        NeighborWalkQueued: {
+            /** Format: uuid */
+            jobId: string;
+            /** Format: uuid */
+            deviceId: string;
+            walk: components["schemas"]["TopologyWalkKind"];
+            /** Format: date-time */
+            queuedAt: string;
+        };
+        /** @enum {unknown} */
         Permission: "InventoryRead" | "InventoryWrite" | "CredentialsManage" | "DiscoveryRun" | "TopologyRead" | "TelemetryRead" | "FlowsRead" | "LogsRead" | "AlertsRead" | "AlertsManage" | "AlertRulesWrite" | "ConfigsRead" | "ConfigsManage" | "ComplianceRead" | "ComplianceManage" | "VulnerabilitiesRead" | "VulnerabilitiesManage" | "ReportsRead" | "ReportsManage" | "PoliciesWrite" | "AuditRead" | "SystemAdminister";
         ProblemDetails: {
             type?: null | string;
@@ -1080,6 +1237,8 @@ export interface components {
         SnmpAuthAlgorithm: "Md5" | "Sha1" | "Sha224" | "Sha256" | "Sha384" | "Sha512" | null;
         /** @enum {unknown} */
         SnmpPrivacyAlgorithm: "None" | "Des" | "Aes128" | "Aes192" | "Aes256" | null;
+        /** @enum {unknown} */
+        TopologyWalkKind: "Neighbors" | "Routes";
         UpdateCredentialProfileRequest: {
             name: string;
             description?: null | string;
@@ -1741,6 +1900,196 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ClientWalkQueued"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    ListDeviceAdjacencies: {
+        parameters: {
+            query?: {
+                cursor?: string;
+                limit?: number | string;
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CursorPageOfDeviceAdjacencySummary"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    GetDeviceTopologyScan: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeviceTopologyScanDetail"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    QueueDeviceNeighborWalk: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Accepted */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NeighborWalkQueued"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    QueueDeviceRouteWalk: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Accepted */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NeighborWalkQueued"];
                 };
             };
             /** @description Forbidden */

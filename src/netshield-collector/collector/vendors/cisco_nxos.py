@@ -8,7 +8,7 @@ from typing import ClassVar, Final
 
 from collector.models import JobKind
 from collector.snmp.facts import PhysicalEntity, SystemGroup, VendorFacts
-from collector.vendors.base import SnmpVendorAdapter
+from collector.vendors.base import CDP, LLDP, SnmpVendorAdapter
 
 _VERSION: Final = re.compile(r"(?:System version|Version)\s+([^\s,]+)")
 """``sysDescr`` reads "Cisco NX-OS(tm) n9000, Software (n9000-dk9), Version 9.3(5), RELEASE …"."""
@@ -22,6 +22,10 @@ class CiscoNxOsAdapter(SnmpVendorAdapter):
     supported_kinds: ClassVar[frozenset[JobKind]] = frozenset(
         {JobKind.DISCOVER, JobKind.POLL, JobKind.CONFIG_FETCH}
     )
+
+    # CDP is Cisco's own protocol and CISCO-CDP-MIB is Cisco's own MIB. Declaring it here is
+    # what makes the neighbour walk ask for it on this platform and on no other.
+    neighbor_protocols: ClassVar[frozenset[str]] = frozenset({LLDP, CDP})
 
     # cevChassis, under CISCO-ENTITY-VENDORTYPE-OID-MIB, which is where a Nexus reports itself.
     # Longer than the IOS arc, so the registry's longest-prefix rule picks this one for a Nexus

@@ -25,7 +25,7 @@ from collector.vendors import (
     VendorRegistry,
     snmp_adapters,
 )
-from collector.vendors.base import GENERIC_SNMP
+from collector.vendors.base import CDP, GENERIC_SNMP, LLDP
 
 VENDORS = frozenset(
     {
@@ -65,6 +65,38 @@ def test_generic_snmp_cannot_serve_a_config_fetch_and_every_named_vendor_can() -
     for adapter in snmp_adapters():
         assert JobKind.DISCOVER in adapter.supported_kinds
         assert (JobKind.CONFIG_FETCH in adapter.supported_kinds) is (adapter.vendor != GENERIC_SNMP)
+
+
+def test_every_adapter_speaks_lldp() -> None:
+    """IEEE 802.1AB is the standard, and every platform SPEC.md §4 names implements it.
+
+    Including the generic fallback: a device NetShield cannot identify is still asked for LLDP,
+    because the protocol is not the vendor's and asking costs one subtree that answers nothing
+    where it is absent.
+    """
+    for adapter in snmp_adapters():
+        assert LLDP in adapter.neighbor_protocols
+
+
+def test_cdp_is_declared_by_the_two_cisco_adapters_and_by_nothing_else() -> None:
+    """CDP is Cisco's protocol in Cisco's private MIB.
+
+    This is the whole of the vendor seam the neighbour walk depends on. If it ever grew a third
+    member the walk would start reading an enterprise subtree from a device that has none — and
+    the alternative, asking every device for it, is the guess CONVENTIONS.md §5 exists to stop.
+    """
+    speaks_cdp = {
+        adapter.vendor for adapter in snmp_adapters() if CDP in adapter.neighbor_protocols
+    }
+
+    assert speaks_cdp == {"CiscoIos", "CiscoNxOs"}
+
+
+def test_no_adapter_declares_a_protocol_the_collector_cannot_read() -> None:
+    known = {LLDP, CDP}
+
+    for adapter in snmp_adapters():
+        assert adapter.neighbor_protocols <= known
 
 
 # --- Resolution --------------------------------------------------------------------------------
@@ -159,6 +191,7 @@ def test_an_adapter_that_is_not_built_on_the_shared_base_still_gets_to_answer() 
     class BespokeAdapter:
         vendor: ClassVar[str] = "Bespoke"
         supported_kinds: ClassVar[frozenset[JobKind]] = frozenset({JobKind.DISCOVER})
+        neighbor_protocols: ClassVar[frozenset[str]] = frozenset({LLDP})
         reduced_capability: ClassVar[bool] = False
         system_object_id_prefixes: ClassVar[tuple[str, ...]] = ()
         system_description_markers: ClassVar[tuple[str, ...]] = ()

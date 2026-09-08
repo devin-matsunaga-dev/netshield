@@ -32,6 +32,7 @@ using NetShield.Inventory.Endpoints;
 using NetShield.Inventory.Persistence;
 using NetShield.Inventory.Reachability;
 using NetShield.Inventory.Resolution;
+using NetShield.Inventory.Topology;
 
 using NetShield.Platform;
 using NetShield.Platform.Auditing;
@@ -143,11 +144,13 @@ internal sealed class InventoryHost(
         ReachabilitySettings? reachability = null,
         DiscoverySettings? discovery = null,
         string? redisConnectionString = null,
-        ClientSettings? clients = null)
+        ClientSettings? clients = null,
+        TopologySettings? topology = null)
     {
         ReachabilitySettings probes = reachability ?? new ReachabilitySettings();
         DiscoverySettings sweeps = discovery ?? new DiscoverySettings();
         ClientSettings tracking = clients ?? new ClientSettings();
+        TopologySettings graph = topology ?? new TopologySettings();
 
         string connectionString = database ?? await postgres.CreateDatabaseAsync(cancellationToken);
 
@@ -194,7 +197,16 @@ internal sealed class InventoryHost(
             ["Inventory:Clients:MaxJobsPerScan"] =
                 tracking.MaxJobsPerScan.ToString(CultureInfo.InvariantCulture),
             ["Inventory:Clients:ResolutionCacheSeconds"] =
-                tracking.ResolutionCacheSeconds.ToString(CultureInfo.InvariantCulture)
+                tracking.ResolutionCacheSeconds.ToString(CultureInfo.InvariantCulture),
+            ["Inventory:Topology:Enabled"] = graph.Enabled ? "true" : "false",
+            ["Inventory:Topology:NeighborWalkIntervalSeconds"] =
+                graph.NeighborWalkIntervalSeconds.ToString(CultureInfo.InvariantCulture),
+            ["Inventory:Topology:RouteWalkIntervalSeconds"] =
+                graph.RouteWalkIntervalSeconds.ToString(CultureInfo.InvariantCulture),
+            ["Inventory:Topology:ScanIntervalSeconds"] =
+                graph.ScanIntervalSeconds.ToString(CultureInfo.InvariantCulture),
+            ["Inventory:Topology:MaxJobsPerScan"] =
+                graph.MaxJobsPerScan.ToString(CultureInfo.InvariantCulture)
         };
 
         for (int index = 0; index < sweeps.CredentialKindOrder.Count; index++)
@@ -477,6 +489,51 @@ internal sealed class InventoryHost(
             .SingleAsync(cancellationToken);
     }
 
+    /// <summary>Every collector job, oldest first, with the parameters it carries.</summary>
+    public async Task<IReadOnlyList<CollectorJobParametersRow>> CollectorJobsAsync(
+        CancellationToken cancellationToken)
+    {
+        await using AsyncServiceScope scope = application.Services.CreateAsyncScope();
+
+        // The coalesce is in memory rather than in the query: `parameters` is a json column, and
+        // COALESCE(parameters, '') asks PostgreSQL to read an empty string as JSON.
+        var rows = await scope.ServiceProvider.GetRequiredService<InventoryDbContext>()
+            .CollectorJobs.AsNoTracking()
+            .OrderBy(job => job.Id)
+            .Select(job => new
+            {
+                job.Id,
+                job.DeviceId,
+                job.Kind,
+                job.Status,
+                job.Parameters
+            })
+            .ToListAsync(cancellationToken);
+
+        return
+        [
+            .. rows.Select(row => new CollectorJobParametersRow(
+                row.Id,
+                row.DeviceId,
+                row.Kind,
+                row.Status,
+                row.Parameters ?? string.Empty))
+        ];
+    }
+
+    /// <summary>Every live device's id, oldest first.</summary>
+    public async Task<IReadOnlyList<Guid>> DeviceIdsAsync(CancellationToken cancellationToken)
+    {
+        await using AsyncServiceScope scope = application.Services.CreateAsyncScope();
+
+        return await scope.ServiceProvider.GetRequiredService<InventoryDbContext>()
+            .Devices.AsNoTracking()
+            .Where(device => device.DeletedAt == null)
+            .OrderBy(device => device.Id)
+            .Select(device => device.Id)
+            .ToListAsync(cancellationToken);
+    }
+
     /// <summary>Moves a job's lease into the past, which is what waiting for one to expire does.</summary>
     public async Task ExpireLeaseAsync(Guid jobId, CancellationToken cancellationToken)
     {
@@ -530,6 +587,15 @@ internal sealed class InventoryHost(
     /// <returns>How many client walks were queued.</returns>
     public Task<int> ScheduleClientsAsync(CancellationToken cancellationToken) =>
         InScopeAsync(services => services.GetRequiredService<ClientSchedulePass>()
+            .ScheduleDueAsync(cancellationToken));
+
+    /// <summary>
+    /// Runs one pass of the topology schedule, which is what the background loop does on a timer
+    /// in the API. The loop itself is not registered here, for the same reason.
+    /// </summary>
+    /// <returns>How many topology walks were queued.</returns>
+    public Task<int> ScheduleTopologyAsync(CancellationToken cancellationToken) =>
+        InScopeAsync(services => services.GetRequiredService<TopologySchedulePass>()
             .ScheduleDueAsync(cancellationToken));
 
     /// <summary>
@@ -1019,6 +1085,133 @@ internal sealed class InventoryHost(
             .SingleOrDefaultAsync(cancellationToken);
     }
 
+    /// <summary>Every live edge, oldest first.</summary>
+    public async Task<IReadOnlyList<AdjacencyRow>> AdjacenciesAsync(
+        CancellationToken cancellationToken,
+        bool includeWithdrawn = false)
+    {
+        await using AsyncServiceScope scope = application.Services.CreateAsyncScope();
+
+        return await scope.ServiceProvider.GetRequiredService<InventoryDbContext>()
+            .DeviceAdjacencies.AsNoTracking()
+            .Where(edge => includeWithdrawn || edge.WithdrawnAt == null)
+            .OrderBy(edge => edge.Id)
+            .Select(edge => new AdjacencyRow(
+                edge.Id,
+                edge.ADeviceId,
+                edge.AIfIndex,
+                edge.AInterfaceName,
+                edge.BDeviceId,
+                edge.BIfIndex,
+                edge.BChassisId,
+                edge.BChassisIdKind,
+                edge.BPortId,
+                edge.BSystemName,
+                edge.SourcesA,
+                edge.SourcesB,
+                edge.Confidence,
+                edge.ObservedFromA,
+                edge.ObservedFromB,
+                edge.FirstDiscoveredAt,
+                edge.LastSeenAt,
+                edge.WithdrawnAt))
+            .ToListAsync(cancellationToken);
+    }
+
+    /// <summary>Every neighbour observation, oldest first.</summary>
+    public async Task<IReadOnlyList<NeighborRow>> NeighborsAsync(
+        CancellationToken cancellationToken,
+        bool includeWithdrawn = false)
+    {
+        await using AsyncServiceScope scope = application.Services.CreateAsyncScope();
+
+        return await scope.ServiceProvider.GetRequiredService<InventoryDbContext>()
+            .DeviceNeighbors.AsNoTracking()
+            .Where(row => includeWithdrawn || row.WithdrawnAt == null)
+            .OrderBy(row => row.Id)
+            .Select(row => new NeighborRow(
+                row.DeviceId,
+                row.Source,
+                row.LocalIfIndex,
+                row.RemoteChassisId,
+                row.RemotePortId,
+                row.RemoteDeviceId,
+                row.RemoteIfIndex,
+                row.AdjacencyId,
+                row.EvidenceCount,
+                row.FirstDiscoveredAt,
+                row.LastSeenAt,
+                row.WithdrawnAt))
+            .ToListAsync(cancellationToken);
+    }
+
+    /// <summary>One device's topology scan row, or nothing when nothing has walked it.</summary>
+    public async Task<TopologyScanRow?> TopologyScanAsync(
+        Guid deviceId,
+        CancellationToken cancellationToken)
+    {
+        await using AsyncServiceScope scope = application.Services.CreateAsyncScope();
+
+        return await scope.ServiceProvider.GetRequiredService<InventoryDbContext>()
+            .DeviceTopologyScans.AsNoTracking()
+            .Where(scan => scan.DeviceId == deviceId)
+            .Select(scan => new TopologyScanRow(
+                scan.NextNeighborWalkAt,
+                scan.LastNeighborWalkAt,
+                scan.LldpSupported,
+                scan.CdpSupported,
+                scan.LastLldpCount,
+                scan.LastCdpCount,
+                scan.LastNeighborError,
+                scan.NextRouteWalkAt,
+                scan.LastRouteWalkAt,
+                scan.RoutingSupported,
+                scan.RouteTable,
+                scan.LastRouteCount,
+                scan.LastRouteError))
+            .SingleOrDefaultAsync(cancellationToken);
+    }
+
+    /// <summary>
+    /// Records interfaces for a device without running a fingerprint walk.
+    /// </summary>
+    /// <remarks>
+    /// The topology reconciler resolves a neighbour's advertised port against the far device's
+    /// interface inventory, which WP-1.5's walk populates. Seeding it directly keeps a test about
+    /// adjacency from having to drive a second walk of a second device to establish something the
+    /// fingerprint suite already proves.
+    /// </remarks>
+    public async Task SeedInterfacesAsync(
+        Guid deviceId,
+        IReadOnlyList<(int IfIndex, string Name, string Description, string? PhysicalAddress)> ports,
+        CancellationToken cancellationToken)
+    {
+        await using AsyncServiceScope scope = application.Services.CreateAsyncScope();
+
+        InventoryDbContext context = scope.ServiceProvider.GetRequiredService<InventoryDbContext>();
+
+        DateTimeOffset now = DateTimeOffset.UtcNow;
+
+        foreach ((int ifIndex, string name, string description, string? physical) in ports)
+        {
+            context.DeviceInterfaces.Add(new DeviceInterface
+            {
+                Id = Guid.CreateVersion7(now),
+                DeviceId = deviceId,
+                IfIndex = ifIndex,
+                Name = name,
+                Description = description,
+                PhysicalAddress = physical,
+                FirstSeenAt = now,
+                LastSeenAt = now,
+                CreatedAt = now,
+                UpdatedAt = now
+            });
+        }
+
+        await context.SaveChangesAsync(cancellationToken);
+    }
+
     /// <summary>A device's interface inventory, in ifIndex order.</summary>
     public async Task<IReadOnlyList<InterfaceRow>> InterfacesAsync(
         Guid deviceId,
@@ -1092,6 +1285,14 @@ internal sealed class InventoryHost(
 internal sealed record AuditRow(string Action, string? TargetType, string? TargetId, AuditOutcome Outcome);
 
 /// <summary>One collector job, reduced to what these tests assert on.</summary>
+/// <summary>One queued job, reduced to what a schedule test asserts on.</summary>
+internal sealed record CollectorJobParametersRow(
+    Guid Id,
+    Guid? DeviceId,
+    CollectorJobKind Kind,
+    CollectorJobStatus Status,
+    string Parameters);
+
 internal sealed record CollectorJobRow(
     CollectorJobStatus Status,
     CollectorJobOutcome? Outcome,
@@ -1140,6 +1341,21 @@ internal sealed record ClientSettings(
     int MaxJobsPerScan = 100,
     int ResolutionCacheSeconds = 300);
 
+/// <summary>
+/// How the topology schedule is configured for a test.
+/// </summary>
+/// <remarks>
+/// Defaults that make a test fast rather than realistic, the way the other three settings records
+/// do. The route interval stays above the neighbour interval, because which of the two a pass
+/// picks when both are due is a rule worth exercising as it actually runs.
+/// </remarks>
+internal sealed record TopologySettings(
+    bool Enabled = true,
+    int NeighborWalkIntervalSeconds = 60,
+    int RouteWalkIntervalSeconds = 120,
+    int ScanIntervalSeconds = 1,
+    int MaxJobsPerScan = 100);
+
 /// <summary>One client row, reduced to what these tests assert on.</summary>
 internal sealed record ClientRow(
     Guid Id,
@@ -1168,6 +1384,62 @@ internal sealed record ClientPortBindingRow(
     int? MacCountOnPort,
     DateTimeOffset ObservedFrom,
     DateTimeOffset? ObservedTo);
+
+/// <summary>One edge, reduced to what these tests assert on.</summary>
+internal sealed record AdjacencyRow(
+    Guid Id,
+    Guid ADeviceId,
+    int AIfIndex,
+    string? AInterfaceName,
+    Guid? BDeviceId,
+    int? BIfIndex,
+    string BChassisId,
+    NeighborIdKind BChassisIdKind,
+    string? BPortId,
+    string? BSystemName,
+    IReadOnlyList<string> SourcesA,
+    IReadOnlyList<string> SourcesB,
+    AdjacencyConfidence Confidence,
+    bool ObservedFromA,
+    bool ObservedFromB,
+    DateTimeOffset FirstDiscoveredAt,
+    DateTimeOffset LastSeenAt,
+    DateTimeOffset? WithdrawnAt)
+{
+    /// <summary>Every protocol supporting the edge, from either end.</summary>
+    public IReadOnlyList<string> Sources => [.. SourcesA.Concat(SourcesB).Distinct().Order()];
+}
+
+/// <summary>One neighbour observation, reduced to what these tests assert on.</summary>
+internal sealed record NeighborRow(
+    Guid DeviceId,
+    NeighborSource Source,
+    int LocalIfIndex,
+    string RemoteChassisId,
+    string? RemotePortId,
+    Guid? RemoteDeviceId,
+    int? RemoteIfIndex,
+    Guid? AdjacencyId,
+    int? EvidenceCount,
+    DateTimeOffset FirstDiscoveredAt,
+    DateTimeOffset LastSeenAt,
+    DateTimeOffset? WithdrawnAt);
+
+/// <summary>One topology-scan row, reduced to what these tests assert on.</summary>
+internal sealed record TopologyScanRow(
+    DateTimeOffset NextNeighborWalkAt,
+    DateTimeOffset? LastNeighborWalkAt,
+    bool? LldpSupported,
+    bool? CdpSupported,
+    int? LastLldpCount,
+    int? LastCdpCount,
+    string? LastNeighborError,
+    DateTimeOffset NextRouteWalkAt,
+    DateTimeOffset? LastRouteWalkAt,
+    bool? RoutingSupported,
+    string? RouteTable,
+    int? LastRouteCount,
+    string? LastRouteError);
 
 /// <summary>One client-scan row, reduced to what these tests assert on.</summary>
 internal sealed record ClientScanRow(

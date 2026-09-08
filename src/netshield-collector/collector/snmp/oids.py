@@ -188,3 +188,166 @@ a port nothing else in the inventory can identify.
 
 DOT1D_BASE_PORT_IF_INDEX: Final = "1.3.6.1.2.1.17.1.4.1.2"
 """``dot1dBasePortIfIndex`` — the ``ifIndex`` a bridge port belongs to."""
+
+# --- LLDP-MIB (IEEE 802.1AB). The one neighbour protocol every vendor in SPEC.md §4 speaks. ---
+
+LLDP_LOC_CHASSIS_ID_SUBTYPE: Final = "1.0.8802.1.1.2.1.3.1.0"
+"""``lldpLocChassisIdSubtype`` — how this device identifies itself."""
+
+LLDP_LOC_CHASSIS_ID: Final = "1.0.8802.1.1.2.1.3.2.0"
+"""``lldpLocChassisId`` — the identity this device advertises, usually its base MAC address."""
+
+LLDP_LOC_SYS_NAME: Final = "1.0.8802.1.1.2.1.3.3.0"
+"""``lldpLocSysName`` — the name this device advertises."""
+
+LLDP_LOCAL_SCALARS: Final = (
+    LLDP_LOC_CHASSIS_ID_SUBTYPE,
+    LLDP_LOC_CHASSIS_ID,
+    LLDP_LOC_SYS_NAME,
+)
+"""What a device says about *itself* over LLDP.
+
+Read because it is the other half of every edge: a neighbour's ``lldpRemChassisId`` is matched
+against this value on the device that advertised it, which is how two ends of one cable are
+recognised as one link rather than as two unrelated observations.
+"""
+
+LLDP_LOC_PORT_TABLE: Final = "1.0.8802.1.1.2.1.3.7.1"
+"""``lldpLocPortEntry`` — the local ports LLDP runs on, indexed by ``lldpLocPortNum``.
+
+``lldpLocPortNum`` is *not* an ``ifIndex``. IEEE 802.1AB says only that it is locally unique and
+stable across reinitialisations; some vendors happen to use the interface index and others use a
+dense sequence of their own. The join back to an ``ifIndex`` is therefore by name — see
+:func:`collector.snmp.lldp.resolve_local_ports`.
+"""
+
+LLDP_LOC_PORT_ID_SUBTYPE: Final = "1.0.8802.1.1.2.1.3.7.1.2"
+LLDP_LOC_PORT_ID: Final = "1.0.8802.1.1.2.1.3.7.1.3"
+LLDP_LOC_PORT_DESC: Final = "1.0.8802.1.1.2.1.3.7.1.4"
+
+LLDP_REM_TABLE: Final = "1.0.8802.1.1.2.1.4.1.1"
+"""``lldpRemEntry`` — what this device has heard from its neighbours.
+
+Indexed by ``lldpRemTimeMark.lldpRemLocalPortNum.lldpRemIndex``: three sub-identifiers, of which
+only the middle one identifies a port. The time mark changes whenever the entry is refreshed, so
+an index is not stable and nothing may be keyed by it.
+"""
+
+LLDP_REM_CHASSIS_ID_SUBTYPE: Final = "1.0.8802.1.1.2.1.4.1.1.4"
+LLDP_REM_CHASSIS_ID: Final = "1.0.8802.1.1.2.1.4.1.1.5"
+LLDP_REM_PORT_ID_SUBTYPE: Final = "1.0.8802.1.1.2.1.4.1.1.6"
+LLDP_REM_PORT_ID: Final = "1.0.8802.1.1.2.1.4.1.1.7"
+LLDP_REM_PORT_DESC: Final = "1.0.8802.1.1.2.1.4.1.1.8"
+LLDP_REM_SYS_NAME: Final = "1.0.8802.1.1.2.1.4.1.1.9"
+LLDP_REM_SYS_DESC: Final = "1.0.8802.1.1.2.1.4.1.1.10"
+LLDP_REM_SYS_CAP_ENABLED: Final = "1.0.8802.1.1.2.1.4.1.1.12"
+
+LLDP_REM_MAN_ADDR_TABLE: Final = "1.0.8802.1.1.2.1.4.2.1"
+"""``lldpRemManAddrEntry`` — a neighbour's management addresses.
+
+The address is in the index, not in a column:
+``lldpRemTimeMark.lldpRemLocalPortNum.lldpRemIndex.addressSubtype.addressLength.address…``. It is
+what turns a neighbour into a device NetShield already knows: an address that matches a device's
+``primary_ip_address`` identifies the far end of the cable.
+"""
+
+LLDP_REM_MAN_ADDR_IF_ID: Final = "1.0.8802.1.1.2.1.4.2.1.4"
+"""``lldpRemManAddrIfId`` — read only so that the walk sees the table's rows at all."""
+
+# ``LldpChassisIdSubtype`` and ``LldpPortIdSubtype`` (IEEE 802.1AB). The two enumerations share
+# no numbering, which is why they are separate tables here rather than one shared mapping.
+LLDP_CHASSIS_ID_SUBTYPES: Final = {
+    1: "ChassisComponent",
+    2: "InterfaceAlias",
+    3: "PortComponent",
+    4: "MacAddress",
+    5: "NetworkAddress",
+    6: "InterfaceName",
+    7: "Local",
+}
+
+LLDP_PORT_ID_SUBTYPES: Final = {
+    1: "InterfaceAlias",
+    2: "PortComponent",
+    3: "MacAddress",
+    4: "NetworkAddress",
+    5: "InterfaceName",
+    6: "AgentCircuitId",
+    7: "Local",
+}
+
+LLDP_ID_KIND_UNKNOWN: Final = "Unknown"
+"""What an absent or unrecognised subtype is reported as. The API's enum has the same member."""
+
+LLDP_INTERFACE_NAME_SUBTYPES: Final = frozenset({"InterfaceName", "InterfaceAlias"})
+"""The subtypes whose value is an interface name, and can therefore be joined to an ``ifIndex``."""
+
+# --- CISCO-CDP-MIB, cdpCacheTable. Columns under 1.3.6.1.4.1.9.9.23.1.2.1.1. ---
+
+CDP_CACHE_TABLE: Final = "1.3.6.1.4.1.9.9.23.1.2.1.1"
+"""``cdpCacheEntry`` — what a Cisco device has heard over CDP.
+
+Indexed by ``cdpCacheIfIndex.cdpCacheDeviceIndex``, so unlike LLDP the local interface index is
+in the index itself and needs no join.
+
+CDP is Cisco's own protocol and this is Cisco's own MIB, which is why only the two Cisco adapters
+declare it (CONVENTIONS.md §5: the vendor decides, shared code does not branch on a name).
+"""
+
+CDP_CACHE_ADDRESS_TYPE: Final = "1.3.6.1.4.1.9.9.23.1.2.1.1.3"
+CDP_CACHE_ADDRESS: Final = "1.3.6.1.4.1.9.9.23.1.2.1.1.4"
+"""``cdpCacheAddress`` — the neighbour's address as raw octets, not as text."""
+
+CDP_CACHE_VERSION: Final = "1.3.6.1.4.1.9.9.23.1.2.1.1.5"
+CDP_CACHE_DEVICE_ID: Final = "1.3.6.1.4.1.9.9.23.1.2.1.1.6"
+"""``cdpCacheDeviceId`` — usually the neighbour's host name, which WP-1.1 settled is not an
+identity. That is the whole reason LLDP outranks CDP where the two disagree."""
+
+CDP_CACHE_DEVICE_PORT: Final = "1.3.6.1.4.1.9.9.23.1.2.1.1.7"
+CDP_CACHE_PLATFORM: Final = "1.3.6.1.4.1.9.9.23.1.2.1.1.8"
+CDP_CACHE_CAPABILITIES: Final = "1.3.6.1.4.1.9.9.23.1.2.1.1.9"
+
+CDP_ADDRESS_TYPE_IP: Final = 1
+CDP_ADDRESS_TYPE_IPV6: Final = 20
+"""``NetworkProtocol`` from CISCO-TC, for the two families NetShield tracks."""
+
+# --- IP-FORWARD-MIB, inetCidrRouteTable (RFC 4292). Columns under 1.3.6.1.2.1.4.24.7.1. ---
+
+INET_CIDR_ROUTE_TABLE: Final = "1.3.6.1.2.1.4.24.7.1"
+"""``inetCidrRouteEntry`` — the modern routing table, covering IPv4 and IPv6 in one walk.
+
+The next hop is in the index rather than in a column, and the index is long: destination type,
+length-prefixed destination, prefix length, length-prefixed policy OID, next-hop type,
+length-prefixed next hop.
+"""
+
+INET_CIDR_ROUTE_IF_INDEX: Final = "1.3.6.1.2.1.4.24.7.1.7"
+INET_CIDR_ROUTE_TYPE: Final = "1.3.6.1.2.1.4.24.7.1.8"
+"""``inetCidrRouteType`` — other(1), reject(2), local(3), remote(4)."""
+
+INET_CIDR_ROUTE_TYPE_REMOTE: Final = 4
+
+# --- IP-FORWARD-MIB, ipCidrRouteTable (RFC 2096, deprecated). Under 1.3.6.1.2.1.4.24.4.1. ---
+
+IP_CIDR_ROUTE_TABLE: Final = "1.3.6.1.2.1.4.24.4.1"
+"""``ipCidrRouteEntry`` — IPv4 only. Its index is ``dest.mask.tos.nextHop``: thirteen
+sub-identifiers, always, which makes it far easier to read than its successor."""
+
+IP_CIDR_ROUTE_NEXT_HOP: Final = "1.3.6.1.2.1.4.24.4.1.4"
+IP_CIDR_ROUTE_IF_INDEX: Final = "1.3.6.1.2.1.4.24.4.1.5"
+IP_CIDR_ROUTE_TYPE: Final = "1.3.6.1.2.1.4.24.4.1.6"
+"""``ipCidrRouteType`` — other(1), reject(2), local(3), remote(4)."""
+
+IP_CIDR_ROUTE_TYPE_REMOTE: Final = 4
+
+# --- RFC 1213, ipRouteTable. Columns under 1.3.6.1.2.1.4.21.1. ---
+
+IP_ROUTE_TABLE: Final = "1.3.6.1.2.1.4.21.1"
+"""``ipRouteEntry`` — the oldest routing table, indexed by destination alone. The last fallback."""
+
+IP_ROUTE_IF_INDEX: Final = "1.3.6.1.2.1.4.21.1.2"
+IP_ROUTE_NEXT_HOP: Final = "1.3.6.1.2.1.4.21.1.7"
+IP_ROUTE_TYPE: Final = "1.3.6.1.2.1.4.21.1.8"
+"""``ipRouteType`` — other(1), invalid(2), direct(3), indirect(4)."""
+
+IP_ROUTE_TYPE_INDIRECT: Final = 4

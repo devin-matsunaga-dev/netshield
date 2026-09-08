@@ -1,0 +1,9 @@
+{
+  "description": "An access switch with no routing table of any kind",
+  "synthetic": true,
+  "note": "Hand-authored. None of the three tables answers, so the reading is unsupported and no L3 edge may be withdrawn on the strength of it.",
+  "values": {
+    "1.3.6.1.2.1.31.1.1.1.1.1": "Gi0/1",
+    "1.3.6.1.2.1.2.2.1.2.1": "GigabitEthernet0/1"
+  }
+}

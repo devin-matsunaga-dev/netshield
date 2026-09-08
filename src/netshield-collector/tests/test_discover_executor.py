@@ -25,6 +25,8 @@ from collector.jobs import ExecutorRegistry
 from collector.models import JobKind, LeasedJob
 from collector.snmp.clients import WALK_NAME as CLIENT_WALK_NAME
 from collector.snmp.executor import WALK_NAME
+from collector.snmp.neighbors import WALK_NAME as NEIGHBOR_WALK_NAME
+from collector.snmp.routes import WALK_NAME as ROUTE_WALK_NAME
 from tests.conftest import sweep_job, walk_job
 
 
@@ -85,8 +87,8 @@ async def test_a_fingerprint_job_and_a_sweep_job_reach_different_walks() -> None
 async def test_a_walk_this_build_does_not_have_is_refused_with_the_reason() -> None:
     executor = DiscoverExecutor([_StubWalk(SWEEP_NAME)])
 
-    with pytest.raises(DiscoveryJobError, match="lldp"):
-        await executor.execute(sweep_job(parameters={"walk": "lldp"}))
+    with pytest.raises(DiscoveryJobError, match="netconf"):
+        await executor.execute(sweep_job(parameters={"walk": "netconf"}))
 
 
 async def test_a_job_with_no_parameters_is_refused() -> None:
@@ -116,14 +118,15 @@ def test_registering_a_walk_twice_is_a_mistake_rather_than_a_merge() -> None:
 
 
 def test_the_entry_point_registers_every_walk_a_discover_can_be() -> None:
-    # Three now: the fingerprint of a device, the sweep of a range, and the read of a device's
-    # client tables. A walk the build does not register is reported as a failure naming the
-    # reason, which is a quiet way for a whole schedule to do nothing.
+    # Five now: the fingerprint of a device, the sweep of a range, the read of a device's client
+    # tables, the read of its neighbour protocols, and the read of its routing table. A walk the
+    # build does not register is reported as a failure naming the reason, which is a quiet way
+    # for a whole schedule to do nothing.
     executors, _ = build_registries()
     discover = executors.for_kind(JobKind.DISCOVER)
 
     assert isinstance(discover, DiscoverExecutor)
-    assert len(discover) == 3
+    assert len(discover) == 5
 
 
 async def test_a_client_walk_reaches_the_client_walk_and_not_the_others() -> None:
@@ -137,6 +140,23 @@ async def test_a_client_walk_reaches_the_client_walk_and_not_the_others() -> Non
     assert len(clients.jobs) == 1
     assert sweep.jobs == []
     assert snmp.jobs == []
+
+
+@pytest.mark.parametrize("walk", [NEIGHBOR_WALK_NAME, ROUTE_WALK_NAME])
+async def test_each_topology_walk_reaches_its_own_walk_and_not_the_others(walk: str) -> None:
+    # WP-2.1 splits topology across two walks on purpose: a routing table that never answers must
+    # not discard the LLDP and CDP edges a different job already established. That separation is
+    # only real if the dispatcher keeps them apart, which is what this pins.
+    walks = {
+        name: _StubWalk(name)
+        for name in (SWEEP_NAME, WALK_NAME, CLIENT_WALK_NAME, NEIGHBOR_WALK_NAME, ROUTE_WALK_NAME)
+    }
+    executor = DiscoverExecutor(list(walks.values()))
+
+    await executor.execute(sweep_job(parameters={"walk": walk}))
+
+    assert len(walks[walk].jobs) == 1
+    assert [name for name, stub in walks.items() if stub.jobs] == [walk]
 
 
 # --- The sweep walk ----------------------------------------------------------------------------

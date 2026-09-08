@@ -33,6 +33,17 @@ labelled reduced feature set. It is named here so the registry's fallback is a c
 than a string repeated at each call site.
 """
 
+LLDP: str = "Lldp"
+"""IEEE 802.1AB. Every platform SPEC.md §4 names implements it, so every adapter declares it."""
+
+CDP: str = "Cdp"
+"""Cisco Discovery Protocol, read from CISCO-CDP-MIB. Declared by the two Cisco adapters alone.
+
+Reading a vendor's private MIB from another vendor's device costs a round trip to learn nothing,
+and asking every device for it would be exactly the guess the vendor seam exists to prevent.
+Spelled as the API's ``NeighborSource`` spells it, and pinned to it by ``VendorParityTests``.
+"""
+
 
 @runtime_checkable
 class VendorAdapter(Protocol):
@@ -47,6 +58,16 @@ class VendorAdapter(Protocol):
 
     Generic SNMP supports fewer than the rest, which is exactly the "reduced feature set"
     SPEC.md §4 requires the platform to be able to say out loud.
+    """
+
+    neighbor_protocols: ClassVar[frozenset[str]]
+    """
+    Which neighbour-discovery protocols this vendor is worth asking for.
+
+    WP-2.1 adds this, in the shape WP-1.3 established for ``supported_kinds``: a statement about
+    what the *vendor* speaks, made once by the vendor's own module. It is what keeps the neighbour
+    walk free of the ``if`` chain CONVENTIONS.md §5 forbids — shared code asks the adapter which
+    protocols to read and never learns a vendor's name.
     """
 
     reduced_capability: ClassVar[bool]
@@ -93,6 +114,7 @@ class SnmpVendorAdapter:
 
     vendor: ClassVar[str] = GENERIC_SNMP
     supported_kinds: ClassVar[frozenset[JobKind]] = frozenset({JobKind.DISCOVER})
+    neighbor_protocols: ClassVar[frozenset[str]] = frozenset({LLDP})
     reduced_capability: ClassVar[bool] = False
     system_object_id_prefixes: ClassVar[tuple[str, ...]] = ()
     system_description_markers: ClassVar[tuple[str, ...]] = ()

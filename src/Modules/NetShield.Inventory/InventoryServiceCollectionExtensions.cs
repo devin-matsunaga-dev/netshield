@@ -22,6 +22,8 @@ using NetShield.Inventory.Endpoints;
 using NetShield.Inventory.Reachability;
 using NetShield.Inventory.Reachability.Handlers;
 using NetShield.Inventory.Resolution;
+using NetShield.Inventory.Topology;
+using NetShield.Inventory.Topology.Handlers;
 
 using NetShield.Platform;
 using NetShield.Platform.Authentication;
@@ -78,6 +80,11 @@ public static class InventoryServiceCollectionExtensions
 
         builder.Services.AddOptions<ClientOptions>()
             .Bind(builder.Configuration.GetSection(ClientOptions.SectionName))
+            .ValidateDataAnnotations()
+            .ValidateOnStart();
+
+        builder.Services.AddOptions<TopologyOptions>()
+            .Bind(builder.Configuration.GetSection(TopologyOptions.SectionName))
             .ValidateDataAnnotations()
             .ValidateOnStart();
 
@@ -165,6 +172,24 @@ public static class InventoryServiceCollectionExtensions
         builder.Services.AddScoped<IIntegrationEventHandler<CollectorJobCompleted>,
             RecordClientWalkResultHandler>();
 
+        // Topology: the schedule that reads the estate's neighbour protocols and routing tables,
+        // the two CollectorJobCompleted subscribers that fold what they said into edges, and the
+        // resolver that turns "something called core-sw-1" into a device NetShield already has.
+        // Two subscribers rather than one because they are two walks — a routing table that
+        // times out must not discard the edges the neighbour walk established. The loop that
+        // drives the schedule is the separate opt-in below, for the reason the other three are.
+        builder.Services.TryAddScoped<TopologySchedulePass>();
+        builder.Services.TryAddScoped<TopologyResolver>();
+        builder.Services.TryAddScoped<NeighborObservationApplier>();
+        builder.Services.TryAddScoped<TopologyWalkResultReader>();
+        builder.Services.TryAddScoped<QueueTopologyWalkHandler>();
+        builder.Services.TryAddScoped<GetDeviceAdjacencyListHandler>();
+        builder.Services.TryAddScoped<GetDeviceTopologyScanHandler>();
+        builder.Services.AddScoped<IIntegrationEventHandler<CollectorJobCompleted>,
+            RecordNeighborWalkResultHandler>();
+        builder.Services.AddScoped<IIntegrationEventHandler<CollectorJobCompleted>,
+            RecordRouteWalkResultHandler>();
+
         // ResolveAssetAt. Internal to the module, the way the credential resolver is: nothing
         // outside NetShield.Inventory can name the type to ask for one, and its read surface is
         // GET /api/v1/clients/resolve.
@@ -221,6 +246,7 @@ public static class InventoryServiceCollectionExtensions
         builder.Services.AddIntegrationEvent<DiscoveryRunStarted>();
         builder.Services.AddIntegrationEvent<DiscoveryRunCompleted>();
         builder.Services.AddIntegrationEvent<ClientDiscovered>();
+        builder.Services.AddIntegrationEvent<DeviceAdjacencyChanged>();
 
         builder.Services.ConfigureHttpJsonOptions(json =>
         {
@@ -294,6 +320,26 @@ public static class InventoryServiceCollectionExtensions
         ArgumentNullException.ThrowIfNull(builder);
 
         builder.Services.AddHostedService<ClientScheduler>();
+
+        return builder;
+    }
+
+    /// <summary>
+    /// Starts the topology schedule: the loop that reads each device's neighbour protocols and
+    /// routing table so that the adjacency graph stays current.
+    /// </summary>
+    /// <remarks>
+    /// Separate from <see cref="AddNetShieldInventory{TBuilder}"/> for the reason the other three
+    /// schedulers are separate: exactly one process should decide what the estate is asked to do,
+    /// and the schema step registers the module on its way past without becoming a fourth thing
+    /// walking five hundred devices.
+    /// </remarks>
+    public static TBuilder AddNetShieldTopologyScheduler<TBuilder>(this TBuilder builder)
+        where TBuilder : IHostApplicationBuilder
+    {
+        ArgumentNullException.ThrowIfNull(builder);
+
+        builder.Services.AddHostedService<TopologyScheduler>();
 
         return builder;
     }

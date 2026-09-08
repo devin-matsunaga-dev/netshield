@@ -865,6 +865,259 @@
         }
       }
     },
+    "/api/v1/devices/{id}/adjacencies": {
+      "get": {
+        "tags": [
+          "Devices"
+        ],
+        "operationId": "ListDeviceAdjacencies",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CursorPageOfDeviceAdjacencySummary"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpValidationProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/devices/{id}/topology-scan": {
+      "get": {
+        "tags": [
+          "Devices"
+        ],
+        "operationId": "GetDeviceTopologyScan",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeviceTopologyScanDetail"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/devices/{id}/neighbor-walk": {
+      "post": {
+        "tags": [
+          "Devices"
+        ],
+        "operationId": "QueueDeviceNeighborWalk",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Accepted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NeighborWalkQueued"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/devices/{id}/route-walk": {
+      "post": {
+        "tags": [
+          "Devices"
+        ],
+        "operationId": "QueueDeviceRouteWalk",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Accepted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NeighborWalkQueued"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/discovery/seeds": {
       "get": {
         "tags": [
@@ -2760,6 +3013,87 @@
   },
   "components": {
     "schemas": {
+      "AdjacencyConfidence": {
+        "enum": [
+          "Confirmed",
+          "Probable",
+          "Possible"
+        ]
+      },
+      "AdjacencyEvidence": {
+        "required": [
+          "observedByDeviceId",
+          "source",
+          "localIfIndex",
+          "remoteChassisId",
+          "remoteChassisIdKind",
+          "remotePortId",
+          "remoteSystemName",
+          "remoteManagementAddress",
+          "evidenceCount",
+          "firstDiscoveredAt",
+          "lastSeenAt"
+        ],
+        "type": "object",
+        "properties": {
+          "observedByDeviceId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "source": {
+            "$ref": "#/components/schemas/NeighborSource"
+          },
+          "localIfIndex": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "remoteChassisId": {
+            "type": "string"
+          },
+          "remoteChassisIdKind": {
+            "$ref": "#/components/schemas/NeighborIdKind"
+          },
+          "remotePortId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "remoteSystemName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "remoteManagementAddress": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "evidenceCount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "firstDiscoveredAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "lastSeenAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
       "AssetKind": {
         "enum": [
           "Unresolved",
@@ -3678,6 +4012,36 @@
           }
         }
       },
+      "CursorPageOfDeviceAdjacencySummary": {
+        "required": [
+          "items",
+          "nextCursor"
+        ],
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DeviceAdjacencySummary"
+            }
+          },
+          "nextCursor": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "totalCount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          }
+        }
+      },
       "CursorPageOfDeviceInterfaceSummary": {
         "required": [
           "items",
@@ -3885,6 +4249,132 @@
               "string"
             ],
             "format": "int64"
+          }
+        }
+      },
+      "DeviceAdjacencySummary": {
+        "required": [
+          "id",
+          "aDeviceId",
+          "aDeviceHostname",
+          "aIfIndex",
+          "aInterfaceName",
+          "bDeviceId",
+          "bDeviceHostname",
+          "bIfIndex",
+          "bInterfaceName",
+          "bChassisId",
+          "bChassisIdKind",
+          "bPortId",
+          "bSystemName",
+          "sources",
+          "confidence",
+          "bidirectional",
+          "firstDiscoveredAt",
+          "lastSeenAt",
+          "evidence"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "aDeviceId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "aDeviceHostname": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "aIfIndex": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "aInterfaceName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "bDeviceId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "bDeviceHostname": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "bIfIndex": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "bInterfaceName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "bChassisId": {
+            "type": "string"
+          },
+          "bChassisIdKind": {
+            "$ref": "#/components/schemas/NeighborIdKind"
+          },
+          "bPortId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "bSystemName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "sources": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/NeighborSource"
+            }
+          },
+          "confidence": {
+            "$ref": "#/components/schemas/AdjacencyConfidence"
+          },
+          "bidirectional": {
+            "type": "boolean"
+          },
+          "firstDiscoveredAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "lastSeenAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "evidence": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AdjacencyEvidence"
+            }
           }
         }
       },
@@ -4364,6 +4854,126 @@
           "updatedAt": {
             "type": "string",
             "format": "date-time"
+          }
+        }
+      },
+      "DeviceTopologyScanDetail": {
+        "required": [
+          "deviceId",
+          "nextNeighborWalkAt",
+          "lastNeighborWalkAt",
+          "lldpSupported",
+          "cdpSupported",
+          "lastLldpCount",
+          "lastCdpCount",
+          "lastNeighborError",
+          "nextRouteWalkAt",
+          "lastRouteWalkAt",
+          "routingSupported",
+          "routeTable",
+          "lastRouteCount",
+          "lastNextHopCount",
+          "lastRouteError"
+        ],
+        "type": "object",
+        "properties": {
+          "deviceId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nextNeighborWalkAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "lastNeighborWalkAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "lldpSupported": {
+            "type": [
+              "null",
+              "boolean"
+            ]
+          },
+          "cdpSupported": {
+            "type": [
+              "null",
+              "boolean"
+            ]
+          },
+          "lastLldpCount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "lastCdpCount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "lastNeighborError": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "nextRouteWalkAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "lastRouteWalkAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "routingSupported": {
+            "type": [
+              "null",
+              "boolean"
+            ]
+          },
+          "routeTable": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "lastRouteCount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "lastNextHopCount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "lastRouteError": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -5054,6 +5664,53 @@
           }
         }
       },
+      "NeighborIdKind": {
+        "enum": [
+          "Unknown",
+          "ChassisComponent",
+          "InterfaceAlias",
+          "PortComponent",
+          "MacAddress",
+          "NetworkAddress",
+          "InterfaceName",
+          "AgentCircuitId",
+          "Local",
+          "DeviceId"
+        ]
+      },
+      "NeighborSource": {
+        "enum": [
+          "Lldp",
+          "Cdp",
+          "Routing"
+        ]
+      },
+      "NeighborWalkQueued": {
+        "required": [
+          "jobId",
+          "deviceId",
+          "walk",
+          "queuedAt"
+        ],
+        "type": "object",
+        "properties": {
+          "jobId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "deviceId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "walk": {
+            "$ref": "#/components/schemas/TopologyWalkKind"
+          },
+          "queuedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
       "Permission": {
         "enum": [
           "InventoryRead",
@@ -5217,6 +5874,12 @@
           "Aes192",
           "Aes256",
           null
+        ]
+      },
+      "TopologyWalkKind": {
+        "enum": [
+          "Neighbors",
+          "Routes"
         ]
       },
       "UpdateCredentialProfileRequest": {

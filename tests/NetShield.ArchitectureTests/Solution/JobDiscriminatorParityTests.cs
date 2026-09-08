@@ -14,9 +14,10 @@ namespace NetShield.ArchitectureTests.Solution;
 /// <para>
 /// WP-1.4 settled that a <c>Poll</c> carries a <c>probe</c> naming which probe to run, and WP-1.5
 /// that a <c>Discover</c> carries a <c>walk</c>. WP-1.6 is the package that made the second one
-/// matter and WP-1.8 added a third: a fingerprint walk, a range sweep and a client-table read are
-/// all <c>Discover</c> jobs, they sit in the same table looking identical, and the only thing
-/// telling them apart is a string this repository writes and <c>netshield-collector</c> reads.
+/// matter, WP-1.8 added a third and WP-2.1 a fourth and fifth: a fingerprint walk, a range sweep,
+/// a client-table read, a neighbour-protocol read and a routing-table read are all <c>Discover</c>
+/// jobs, they sit in the same table looking identical, and the only thing telling them apart is a
+/// string this repository writes and <c>netshield-collector</c> reads.
 /// </para>
 /// <para>
 /// There is no generator between the two — the collector contract is deliberately absent from
@@ -56,6 +57,22 @@ public sealed class JobDiscriminatorParityTests
     }
 
     [Fact]
+    public void TheNeighborWalkDiscriminator_IsTheSameOnBothSides()
+    {
+        Constant("snmp/neighbors.py", "WALK_NAME").Should().Be(
+            ApiConstant("Topology/NeighborWalkParameters.cs", "WalkName"),
+            "a Discover job naming this walk is what the LLDP and CDP executor answers for");
+    }
+
+    [Fact]
+    public void TheRouteWalkDiscriminator_IsTheSameOnBothSides()
+    {
+        Constant("snmp/routes.py", "WALK_NAME").Should().Be(
+            ApiConstant("Topology/RouteWalkParameters.cs", "WalkName"),
+            "a Discover job naming this walk is what the routing-table executor answers for");
+    }
+
+    [Fact]
     public void TheIcmpProbeDiscriminator_IsTheSameOnBothSides()
     {
         Constant("icmp/executor.py", "PROBE_NAME").Should().Be(
@@ -74,7 +91,9 @@ public sealed class JobDiscriminatorParityTests
         [
             Constant("snmp/executor.py", "WALK_NAME"),
             Constant("discovery/executor.py", "SWEEP_NAME"),
-            Constant("snmp/clients.py", "WALK_NAME")
+            Constant("snmp/clients.py", "WALK_NAME"),
+            Constant("snmp/neighbors.py", "WALK_NAME"),
+            Constant("snmp/routes.py", "WALK_NAME")
         ];
 
         walks.Should().OnlyHaveUniqueItems();

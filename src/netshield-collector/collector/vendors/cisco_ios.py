@@ -9,7 +9,7 @@ from typing import ClassVar, Final
 from collector.models import JobKind
 from collector.snmp.facts import PhysicalEntity, SystemGroup, VendorFacts
 from collector.snmp.tables import text
-from collector.vendors.base import SnmpVendorAdapter
+from collector.vendors.base import CDP, LLDP, SnmpVendorAdapter
 
 CHASSIS_ID: Final = "1.3.6.1.4.1.9.3.6.3.0"
 """OLD-CISCO-CHASSIS-MIB ``chassisId``. Carries the serial on platforms with no ENTITY-MIB."""
@@ -26,6 +26,10 @@ class CiscoIosAdapter(SnmpVendorAdapter):
     supported_kinds: ClassVar[frozenset[JobKind]] = frozenset(
         {JobKind.DISCOVER, JobKind.POLL, JobKind.CONFIG_FETCH}
     )
+
+    # CDP is Cisco's own protocol and CISCO-CDP-MIB is Cisco's own MIB. Declaring it here is
+    # what makes the neighbour walk ask for it on this platform and on no other.
+    neighbor_protocols: ClassVar[frozenset[str]] = frozenset({LLDP, CDP})
 
     # ciscoProducts. NX-OS sits under 1.3.6.1.4.1.9.12.3.1.3 instead, which is why this arc is
     # the narrow 9.1 rather than all of enterprise 9 — see cisco_nxos.py.
