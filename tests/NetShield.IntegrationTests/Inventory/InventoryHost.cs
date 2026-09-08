@@ -201,12 +201,23 @@ internal sealed class InventoryHost(
         builder.Logging.SetMinimumLevel(LogLevel.Trace);
         builder.Services.AddSingleton<ILoggerProvider>(logs);
 
+        // `EnableRetryOnFailure` mirrors what `AddNpgsqlDbContext` configures in the composition
+        // root. It is not here for the retries — a Testcontainers database on loopback has no
+        // transient faults worth retrying — but because a retrying execution strategy *refuses*
+        // an explicit transaction it did not open, and a handler that opens one therefore fails
+        // in the running system while passing every test. That is exactly how the collector's
+        // lease endpoint came to answer 500 to every call in `aspire run` with a green suite
+        // behind it. The test host has to be wrong in the same ways production is, or it is
+        // testing a system nobody runs.
         builder.Services.AddDbContext<PlatformDbContext>(options =>
-            options.UseNpgsql(connectionString).UseNetShieldConventions());
+            options.UseNpgsql(connectionString, npgsql => npgsql.EnableRetryOnFailure())
+                .UseNetShieldConventions());
         builder.Services.AddDbContext<IdentityDbContext>(options =>
-            options.UseNpgsql(connectionString).UseIdentityConventions());
+            options.UseNpgsql(connectionString, npgsql => npgsql.EnableRetryOnFailure())
+                .UseIdentityConventions());
         builder.Services.AddDbContext<InventoryDbContext>(options =>
-            options.UseNpgsql(connectionString).UseInventoryConventions());
+            options.UseNpgsql(connectionString, npgsql => npgsql.EnableRetryOnFailure())
+                .UseInventoryConventions());
 
         builder.AddNetShieldPlatform();
         builder.Services.AddNetShieldProblemDetails();

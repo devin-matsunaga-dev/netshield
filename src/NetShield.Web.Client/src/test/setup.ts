@@ -6,6 +6,7 @@ import { afterAll, afterEach, beforeAll, beforeEach, vi } from 'vitest';
 import { resetSilentRefresh } from '@/features/session/api/silentRefresh';
 import { resetApi } from '@/test/msw/handlers';
 import { server } from '@/test/msw/server';
+import { installLayout } from '@/test/layout';
 import { installMatchMedia } from '@/test/viewport';
 
 beforeAll(() => {
@@ -17,6 +18,10 @@ beforeAll(() => {
 beforeEach(() => {
   // jsdom implements neither, and the shell asks for both.
   installMatchMedia();
+
+  // jsdom performs no layout, so a virtualized table would compute a window of zero rows and
+  // render an empty table in every test while working in a browser.
+  installLayout();
 
   // A signed-in administrator, and no refresh left half-finished by the last test. The single
   // -flight latch in silentRefresh is module state, and module state outlives a test.

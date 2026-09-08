@@ -18,7 +18,6 @@ import { Route as AppAlertsRouteImport } from './routes/_app.alerts'
 import { Route as AppClientsRouteImport } from './routes/_app.clients'
 import { Route as AppComplianceRouteImport } from './routes/_app.compliance'
 import { Route as AppDashboardRouteImport } from './routes/_app.dashboard'
-import { Route as AppDevicesRouteImport } from './routes/_app.devices'
 import { Route as AppLogsRouteImport } from './routes/_app.logs'
 import { Route as AppNetworkRouteImport } from './routes/_app.network'
 import { Route as AppOverviewRouteImport } from './routes/_app.overview'
@@ -32,6 +31,9 @@ import { Route as AppAdministrationLicenseRouteImport } from './routes/_app.admi
 import { Route as AppAdministrationRolesRouteImport } from './routes/_app.administration.roles'
 import { Route as AppAdministrationSystemHealthRouteImport } from './routes/_app.administration.system-health'
 import { Route as AppAdministrationUsersRouteImport } from './routes/_app.administration.users'
+import { Route as AppDevicesIndexRouteImport } from './routes/_app.devices.index'
+import { Route as AppDevicesDeviceIdRouteImport } from './routes/_app.devices.$deviceId'
+import { Route as AppDevicesNewRouteImport } from './routes/_app.devices.new'
 import { Route as AppReportsIndexRouteImport } from './routes/_app.reports.index'
 import { Route as AppReportsAlertActivityRouteImport } from './routes/_app.reports.alert-activity'
 import { Route as AppReportsAvailabilityRouteImport } from './routes/_app.reports.availability'
@@ -42,6 +44,8 @@ import { Route as AppReportsVulnerabilityRouteImport } from './routes/_app.repor
 import { Route as AppSecurityIndexRouteImport } from './routes/_app.security.index'
 import { Route as AppSecurityFindingsRouteImport } from './routes/_app.security.findings'
 import { Route as AppSecurityPostureRouteImport } from './routes/_app.security.posture'
+import { Route as AppDevicesDiscoveryIndexRouteImport } from './routes/_app.devices.discovery.index'
+import { Route as AppDevicesDiscoveryRunsRunIdRouteImport } from './routes/_app.devices.discovery.runs.$runId'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -85,11 +89,6 @@ const AppComplianceRoute = AppComplianceRouteImport.update({
 const AppDashboardRoute = AppDashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppDevicesRoute = AppDevicesRouteImport.update({
-  id: '/devices',
-  path: '/devices',
   getParentRoute: () => AppRoute,
 } as any)
 const AppLogsRoute = AppLogsRouteImport.update({
@@ -161,6 +160,21 @@ const AppAdministrationUsersRoute = AppAdministrationUsersRouteImport.update({
   path: '/administration/users',
   getParentRoute: () => AppRoute,
 } as any)
+const AppDevicesIndexRoute = AppDevicesIndexRouteImport.update({
+  id: '/devices/',
+  path: '/devices/',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppDevicesDeviceIdRoute = AppDevicesDeviceIdRouteImport.update({
+  id: '/devices/$deviceId',
+  path: '/devices/$deviceId',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppDevicesNewRoute = AppDevicesNewRouteImport.update({
+  id: '/devices/new',
+  path: '/devices/new',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppReportsIndexRoute = AppReportsIndexRouteImport.update({
   id: '/reports/',
   path: '/reports/',
@@ -211,6 +225,18 @@ const AppSecurityPostureRoute = AppSecurityPostureRouteImport.update({
   path: '/security/posture',
   getParentRoute: () => AppRoute,
 } as any)
+const AppDevicesDiscoveryIndexRoute =
+  AppDevicesDiscoveryIndexRouteImport.update({
+    id: '/devices/discovery/',
+    path: '/devices/discovery/',
+    getParentRoute: () => AppRoute,
+  } as any)
+const AppDevicesDiscoveryRunsRunIdRoute =
+  AppDevicesDiscoveryRunsRunIdRouteImport.update({
+    id: '/devices/discovery/runs/$runId',
+    path: '/devices/discovery/runs/$runId',
+    getParentRoute: () => AppRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -221,7 +247,6 @@ export interface FileRoutesByFullPath {
   '/clients': typeof AppClientsRoute
   '/compliance': typeof AppComplianceRoute
   '/dashboard': typeof AppDashboardRoute
-  '/devices': typeof AppDevicesRoute
   '/logs': typeof AppLogsRoute
   '/network': typeof AppNetworkRoute
   '/overview': typeof AppOverviewRoute
@@ -234,6 +259,8 @@ export interface FileRoutesByFullPath {
   '/administration/roles': typeof AppAdministrationRolesRoute
   '/administration/system-health': typeof AppAdministrationSystemHealthRoute
   '/administration/users': typeof AppAdministrationUsersRoute
+  '/devices/$deviceId': typeof AppDevicesDeviceIdRoute
+  '/devices/new': typeof AppDevicesNewRoute
   '/reports/alert-activity': typeof AppReportsAlertActivityRoute
   '/reports/availability': typeof AppReportsAvailabilityRoute
   '/reports/bandwidth': typeof AppReportsBandwidthRoute
@@ -243,8 +270,11 @@ export interface FileRoutesByFullPath {
   '/security/findings': typeof AppSecurityFindingsRoute
   '/security/posture': typeof AppSecurityPostureRoute
   '/administration/': typeof AppAdministrationIndexRoute
+  '/devices/': typeof AppDevicesIndexRoute
   '/reports/': typeof AppReportsIndexRoute
   '/security/': typeof AppSecurityIndexRoute
+  '/devices/discovery/': typeof AppDevicesDiscoveryIndexRoute
+  '/devices/discovery/runs/$runId': typeof AppDevicesDiscoveryRunsRunIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -255,7 +285,6 @@ export interface FileRoutesByTo {
   '/clients': typeof AppClientsRoute
   '/compliance': typeof AppComplianceRoute
   '/dashboard': typeof AppDashboardRoute
-  '/devices': typeof AppDevicesRoute
   '/logs': typeof AppLogsRoute
   '/network': typeof AppNetworkRoute
   '/overview': typeof AppOverviewRoute
@@ -268,6 +297,8 @@ export interface FileRoutesByTo {
   '/administration/roles': typeof AppAdministrationRolesRoute
   '/administration/system-health': typeof AppAdministrationSystemHealthRoute
   '/administration/users': typeof AppAdministrationUsersRoute
+  '/devices/$deviceId': typeof AppDevicesDeviceIdRoute
+  '/devices/new': typeof AppDevicesNewRoute
   '/reports/alert-activity': typeof AppReportsAlertActivityRoute
   '/reports/availability': typeof AppReportsAvailabilityRoute
   '/reports/bandwidth': typeof AppReportsBandwidthRoute
@@ -277,8 +308,11 @@ export interface FileRoutesByTo {
   '/security/findings': typeof AppSecurityFindingsRoute
   '/security/posture': typeof AppSecurityPostureRoute
   '/administration': typeof AppAdministrationIndexRoute
+  '/devices': typeof AppDevicesIndexRoute
   '/reports': typeof AppReportsIndexRoute
   '/security': typeof AppSecurityIndexRoute
+  '/devices/discovery': typeof AppDevicesDiscoveryIndexRoute
+  '/devices/discovery/runs/$runId': typeof AppDevicesDiscoveryRunsRunIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -291,7 +325,6 @@ export interface FileRoutesById {
   '/_app/clients': typeof AppClientsRoute
   '/_app/compliance': typeof AppComplianceRoute
   '/_app/dashboard': typeof AppDashboardRoute
-  '/_app/devices': typeof AppDevicesRoute
   '/_app/logs': typeof AppLogsRoute
   '/_app/network': typeof AppNetworkRoute
   '/_app/overview': typeof AppOverviewRoute
@@ -304,6 +337,8 @@ export interface FileRoutesById {
   '/_app/administration/roles': typeof AppAdministrationRolesRoute
   '/_app/administration/system-health': typeof AppAdministrationSystemHealthRoute
   '/_app/administration/users': typeof AppAdministrationUsersRoute
+  '/_app/devices/$deviceId': typeof AppDevicesDeviceIdRoute
+  '/_app/devices/new': typeof AppDevicesNewRoute
   '/_app/reports/alert-activity': typeof AppReportsAlertActivityRoute
   '/_app/reports/availability': typeof AppReportsAvailabilityRoute
   '/_app/reports/bandwidth': typeof AppReportsBandwidthRoute
@@ -313,8 +348,11 @@ export interface FileRoutesById {
   '/_app/security/findings': typeof AppSecurityFindingsRoute
   '/_app/security/posture': typeof AppSecurityPostureRoute
   '/_app/administration/': typeof AppAdministrationIndexRoute
+  '/_app/devices/': typeof AppDevicesIndexRoute
   '/_app/reports/': typeof AppReportsIndexRoute
   '/_app/security/': typeof AppSecurityIndexRoute
+  '/_app/devices/discovery/': typeof AppDevicesDiscoveryIndexRoute
+  '/_app/devices/discovery/runs/$runId': typeof AppDevicesDiscoveryRunsRunIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -327,7 +365,6 @@ export interface FileRouteTypes {
     | '/clients'
     | '/compliance'
     | '/dashboard'
-    | '/devices'
     | '/logs'
     | '/network'
     | '/overview'
@@ -340,6 +377,8 @@ export interface FileRouteTypes {
     | '/administration/roles'
     | '/administration/system-health'
     | '/administration/users'
+    | '/devices/$deviceId'
+    | '/devices/new'
     | '/reports/alert-activity'
     | '/reports/availability'
     | '/reports/bandwidth'
@@ -349,8 +388,11 @@ export interface FileRouteTypes {
     | '/security/findings'
     | '/security/posture'
     | '/administration/'
+    | '/devices/'
     | '/reports/'
     | '/security/'
+    | '/devices/discovery/'
+    | '/devices/discovery/runs/$runId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -361,7 +403,6 @@ export interface FileRouteTypes {
     | '/clients'
     | '/compliance'
     | '/dashboard'
-    | '/devices'
     | '/logs'
     | '/network'
     | '/overview'
@@ -374,6 +415,8 @@ export interface FileRouteTypes {
     | '/administration/roles'
     | '/administration/system-health'
     | '/administration/users'
+    | '/devices/$deviceId'
+    | '/devices/new'
     | '/reports/alert-activity'
     | '/reports/availability'
     | '/reports/bandwidth'
@@ -383,8 +426,11 @@ export interface FileRouteTypes {
     | '/security/findings'
     | '/security/posture'
     | '/administration'
+    | '/devices'
     | '/reports'
     | '/security'
+    | '/devices/discovery'
+    | '/devices/discovery/runs/$runId'
   id:
     | '__root__'
     | '/'
@@ -396,7 +442,6 @@ export interface FileRouteTypes {
     | '/_app/clients'
     | '/_app/compliance'
     | '/_app/dashboard'
-    | '/_app/devices'
     | '/_app/logs'
     | '/_app/network'
     | '/_app/overview'
@@ -409,6 +454,8 @@ export interface FileRouteTypes {
     | '/_app/administration/roles'
     | '/_app/administration/system-health'
     | '/_app/administration/users'
+    | '/_app/devices/$deviceId'
+    | '/_app/devices/new'
     | '/_app/reports/alert-activity'
     | '/_app/reports/availability'
     | '/_app/reports/bandwidth'
@@ -418,8 +465,11 @@ export interface FileRouteTypes {
     | '/_app/security/findings'
     | '/_app/security/posture'
     | '/_app/administration/'
+    | '/_app/devices/'
     | '/_app/reports/'
     | '/_app/security/'
+    | '/_app/devices/discovery/'
+    | '/_app/devices/discovery/runs/$runId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -492,13 +542,6 @@ declare module '@tanstack/react-router' {
       path: '/dashboard'
       fullPath: '/dashboard'
       preLoaderRoute: typeof AppDashboardRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/devices': {
-      id: '/_app/devices'
-      path: '/devices'
-      fullPath: '/devices'
-      preLoaderRoute: typeof AppDevicesRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/logs': {
@@ -592,6 +635,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppAdministrationUsersRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/devices/': {
+      id: '/_app/devices/'
+      path: '/devices'
+      fullPath: '/devices/'
+      preLoaderRoute: typeof AppDevicesIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/devices/$deviceId': {
+      id: '/_app/devices/$deviceId'
+      path: '/devices/$deviceId'
+      fullPath: '/devices/$deviceId'
+      preLoaderRoute: typeof AppDevicesDeviceIdRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/devices/new': {
+      id: '/_app/devices/new'
+      path: '/devices/new'
+      fullPath: '/devices/new'
+      preLoaderRoute: typeof AppDevicesNewRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/reports/': {
       id: '/_app/reports/'
       path: '/reports'
@@ -662,6 +726,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppSecurityPostureRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/devices/discovery/': {
+      id: '/_app/devices/discovery/'
+      path: '/devices/discovery'
+      fullPath: '/devices/discovery/'
+      preLoaderRoute: typeof AppDevicesDiscoveryIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/devices/discovery/runs/$runId': {
+      id: '/_app/devices/discovery/runs/$runId'
+      path: '/devices/discovery/runs/$runId'
+      fullPath: '/devices/discovery/runs/$runId'
+      preLoaderRoute: typeof AppDevicesDiscoveryRunsRunIdRouteImport
+      parentRoute: typeof AppRoute
+    }
   }
 }
 
@@ -671,7 +749,6 @@ interface AppRouteChildren {
   AppClientsRoute: typeof AppClientsRoute
   AppComplianceRoute: typeof AppComplianceRoute
   AppDashboardRoute: typeof AppDashboardRoute
-  AppDevicesRoute: typeof AppDevicesRoute
   AppLogsRoute: typeof AppLogsRoute
   AppNetworkRoute: typeof AppNetworkRoute
   AppOverviewRoute: typeof AppOverviewRoute
@@ -684,6 +761,8 @@ interface AppRouteChildren {
   AppAdministrationRolesRoute: typeof AppAdministrationRolesRoute
   AppAdministrationSystemHealthRoute: typeof AppAdministrationSystemHealthRoute
   AppAdministrationUsersRoute: typeof AppAdministrationUsersRoute
+  AppDevicesDeviceIdRoute: typeof AppDevicesDeviceIdRoute
+  AppDevicesNewRoute: typeof AppDevicesNewRoute
   AppReportsAlertActivityRoute: typeof AppReportsAlertActivityRoute
   AppReportsAvailabilityRoute: typeof AppReportsAvailabilityRoute
   AppReportsBandwidthRoute: typeof AppReportsBandwidthRoute
@@ -693,8 +772,11 @@ interface AppRouteChildren {
   AppSecurityFindingsRoute: typeof AppSecurityFindingsRoute
   AppSecurityPostureRoute: typeof AppSecurityPostureRoute
   AppAdministrationIndexRoute: typeof AppAdministrationIndexRoute
+  AppDevicesIndexRoute: typeof AppDevicesIndexRoute
   AppReportsIndexRoute: typeof AppReportsIndexRoute
   AppSecurityIndexRoute: typeof AppSecurityIndexRoute
+  AppDevicesDiscoveryIndexRoute: typeof AppDevicesDiscoveryIndexRoute
+  AppDevicesDiscoveryRunsRunIdRoute: typeof AppDevicesDiscoveryRunsRunIdRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
@@ -703,7 +785,6 @@ const AppRouteChildren: AppRouteChildren = {
   AppClientsRoute: AppClientsRoute,
   AppComplianceRoute: AppComplianceRoute,
   AppDashboardRoute: AppDashboardRoute,
-  AppDevicesRoute: AppDevicesRoute,
   AppLogsRoute: AppLogsRoute,
   AppNetworkRoute: AppNetworkRoute,
   AppOverviewRoute: AppOverviewRoute,
@@ -716,6 +797,8 @@ const AppRouteChildren: AppRouteChildren = {
   AppAdministrationRolesRoute: AppAdministrationRolesRoute,
   AppAdministrationSystemHealthRoute: AppAdministrationSystemHealthRoute,
   AppAdministrationUsersRoute: AppAdministrationUsersRoute,
+  AppDevicesDeviceIdRoute: AppDevicesDeviceIdRoute,
+  AppDevicesNewRoute: AppDevicesNewRoute,
   AppReportsAlertActivityRoute: AppReportsAlertActivityRoute,
   AppReportsAvailabilityRoute: AppReportsAvailabilityRoute,
   AppReportsBandwidthRoute: AppReportsBandwidthRoute,
@@ -725,8 +808,11 @@ const AppRouteChildren: AppRouteChildren = {
   AppSecurityFindingsRoute: AppSecurityFindingsRoute,
   AppSecurityPostureRoute: AppSecurityPostureRoute,
   AppAdministrationIndexRoute: AppAdministrationIndexRoute,
+  AppDevicesIndexRoute: AppDevicesIndexRoute,
   AppReportsIndexRoute: AppReportsIndexRoute,
   AppSecurityIndexRoute: AppSecurityIndexRoute,
+  AppDevicesDiscoveryIndexRoute: AppDevicesDiscoveryIndexRoute,
+  AppDevicesDiscoveryRunsRunIdRoute: AppDevicesDiscoveryRunsRunIdRoute,
 }
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)

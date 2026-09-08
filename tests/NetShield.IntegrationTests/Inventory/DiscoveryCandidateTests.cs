@@ -36,11 +36,11 @@ public sealed class DiscoveryCandidateTests(PostgresFixture postgres) : IClassFi
         // A sweep established neither what it is nor whether it is answering: one echo reply is
         // not the two consecutive observations WP-1.4 wants before it calls a device online.
         //
-        // Both are read as ordinals because that is what the API writes today: the five WP-1.1
-        // inventory enums carry no type-level converter, which STATUS.md records as a WP-1.1
-        // defect for WP-1.7 to fix. This assertion changes shape when it is.
-        promoted.Json.GetProperty("vendor").GetInt32().Should().Be((int)DeviceVendor.Unknown);
-        promoted.Json.GetProperty("state").GetInt32().Should().Be((int)DeviceState.Unknown);
+        // Read as names, which is the shape WP-1.6 predicted this assertion would take: the five
+        // WP-1.1 inventory enums now carry the type-level converter WP-1.7 added, so the wire
+        // says "Unknown" rather than 0 and inserting a member can no longer renumber it.
+        promoted.Json.GetProperty("vendor").GetString().Should().Be(nameof(DeviceVendor.Unknown));
+        promoted.Json.GetProperty("state").GetString().Should().Be(nameof(DeviceState.Unknown));
 
         JsonElement candidate = await CandidateByIdAsync(host, candidateId, Cancellation);
 

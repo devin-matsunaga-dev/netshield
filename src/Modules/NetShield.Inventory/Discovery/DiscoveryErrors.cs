@@ -15,6 +15,9 @@ internal static class DiscoveryErrors
     /// <summary>The code a caller sees when the device already has a walk queued or running.</summary>
     internal const string WalkOutstandingCode = "discovery.walk-outstanding";
 
+    /// <summary>The code a caller sees when a device has never been walked.</summary>
+    internal const string FingerprintNotFoundCode = "discovery.fingerprint-not-found";
+
     /// <summary>
     /// A device with no SNMPv2c or SNMPv3 profile assigned cannot be walked.
     /// </summary>
@@ -128,4 +131,14 @@ internal static class DiscoveryErrors
     /// <summary>A run does not exist.</summary>
     internal static Error RunNotFound(Guid runId) =>
         Error.NotFound("discovery.run-not-found", $"Discovery run {runId} was not found.");
+
+    /// <summary>The device exists and no walk has ever reached it.</summary>
+    /// <remarks>
+    /// Distinct from <see cref="DeviceErrors.NotFound"/>: this one is a device an operator can
+    /// do something about, and the something is to walk it.
+    /// </remarks>
+    internal static Error FingerprintNotFound(Guid deviceId) =>
+        Error.NotFound(
+            FingerprintNotFoundCode,
+            $"Device {deviceId} has not been fingerprinted yet.");
 }

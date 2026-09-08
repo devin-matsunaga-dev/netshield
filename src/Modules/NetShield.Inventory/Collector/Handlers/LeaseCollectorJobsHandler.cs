@@ -83,79 +83,99 @@ internal sealed class LeaseCollectorJobsHandler(
         List<CollectorJobLease> leases = [];
         List<CredentialRelease> released = [];
 
-        await using IDbContextTransaction transaction =
-            await context.Database.BeginTransactionAsync(cancellationToken);
-
-        IReadOnlyList<CollectorJob> claimed = await ClaimAsync(now, take, cancellationToken);
-
-        if (claimed.Count > 0)
+        // The claim runs inside an explicit transaction, and the composition root configures a
+        // retrying execution strategy, which refuses a transaction it did not open itself:
+        // "The configured execution strategy 'NpgsqlRetryingExecutionStrategy' does not support
+        // user-initiated transactions." Handing the whole transaction to the strategy is how the
+        // two are combined, and both are wanted — a transient connection fault is worth retrying,
+        // and `SELECT ... FOR UPDATE SKIP LOCKED` only means anything inside a transaction that
+        // holds its locks, which is what makes a second collector's call return different rows
+        // rather than wait (WP-1.3).
+        //
+        // The delegate is re-run from the top on a retry, so it owns everything it produces. The
+        // two lists are emptied and the change tracker is cleared on entry: without that, a
+        // second attempt would report the first attempt's leases alongside its own and try to
+        // save entities the failed attempt had already mutated.
+        await context.Database.CreateExecutionStrategy().ExecuteAsync(async () =>
         {
-            Dictionary<Guid, Device> devices = await LoadDevicesAsync(claimed, cancellationToken);
+            leases.Clear();
+            released.Clear();
+            context.ChangeTracker.Clear();
 
-            foreach (CollectorJob job in claimed)
+            await using IDbContextTransaction transaction =
+                await context.Database.BeginTransactionAsync(cancellationToken);
+
+            IReadOnlyList<CollectorJob> claimed = await ClaimAsync(now, take, cancellationToken);
+
+            if (claimed.Count > 0)
             {
-                if (job.Attempts >= job.MaxAttempts)
-                {
-                    Abandon(job, now);
-                    continue;
-                }
+                Dictionary<Guid, Device> devices = await LoadDevicesAsync(claimed, cancellationToken);
 
-                CollectorJobDevice? device = null;
-
-                if (job.DeviceId is { } deviceId)
+                foreach (CollectorJob job in claimed)
                 {
-                    if (!devices.TryGetValue(deviceId, out Device? found))
+                    if (job.Attempts >= job.MaxAttempts)
                     {
-                        Fail(job, now, "The device this job names is no longer in the inventory.");
+                        Abandon(job, now);
                         continue;
                     }
 
-                    device = new CollectorJobDevice(
-                        found.Id,
-                        found.Hostname,
-                        found.PrimaryIpAddress.ToString(),
-                        found.Vendor);
-                }
+                    CollectorJobDevice? device = null;
 
-                CollectorJobCredential? credential = null;
-
-                if (job.CredentialProfileId is { } profileId)
-                {
-                    Result<ResolvedCredential> resolved =
-                        await credentials.ResolveAsync(profileId, cancellationToken);
-
-                    if (!resolved.IsSuccess)
+                    if (job.DeviceId is { } deviceId)
                     {
-                        Fail(job, now, "The credential profile this job names is no longer available.");
-                        continue;
+                        if (!devices.TryGetValue(deviceId, out Device? found))
+                        {
+                            Fail(job, now, "The device this job names is no longer in the inventory.");
+                            continue;
+                        }
+
+                        device = new CollectorJobDevice(
+                            found.Id,
+                            found.Hostname,
+                            found.PrimaryIpAddress.ToString(),
+                            found.Vendor);
                     }
 
-                    credential = CollectorMapping.ToCredential(resolved.Value);
-                    released.Add(new CredentialRelease(job.Id, job.DeviceId, profileId, resolved.Value.Kind));
+                    CollectorJobCredential? credential = null;
+
+                    if (job.CredentialProfileId is { } profileId)
+                    {
+                        Result<ResolvedCredential> resolved =
+                            await credentials.ResolveAsync(profileId, cancellationToken);
+
+                        if (!resolved.IsSuccess)
+                        {
+                            Fail(job, now, "The credential profile this job names is no longer available.");
+                            continue;
+                        }
+
+                        credential = CollectorMapping.ToCredential(resolved.Value);
+                        released.Add(new CredentialRelease(job.Id, job.DeviceId, profileId, resolved.Value.Kind));
+                    }
+
+                    job.Status = CollectorJobStatus.Leased;
+                    job.Attempts++;
+                    job.LeaseToken = NewLeaseToken();
+                    job.LeasedBy = caller.Name;
+                    job.LeasedUntil = expiresAt;
+                    job.UpdatedAt = now;
+
+                    leases.Add(new CollectorJobLease(
+                        job.Id,
+                        job.Kind,
+                        job.LeaseToken,
+                        expiresAt,
+                        job.Attempts,
+                        device,
+                        ParseParameters(job.Parameters),
+                        credential));
                 }
 
-                job.Status = CollectorJobStatus.Leased;
-                job.Attempts++;
-                job.LeaseToken = NewLeaseToken();
-                job.LeasedBy = caller.Name;
-                job.LeasedUntil = expiresAt;
-                job.UpdatedAt = now;
-
-                leases.Add(new CollectorJobLease(
-                    job.Id,
-                    job.Kind,
-                    job.LeaseToken,
-                    expiresAt,
-                    job.Attempts,
-                    device,
-                    ParseParameters(job.Parameters),
-                    credential));
+                await context.SaveChangesAsync(cancellationToken);
             }
 
-            await context.SaveChangesAsync(cancellationToken);
-        }
-
-        await transaction.CommitAsync(cancellationToken);
+            await transaction.CommitAsync(cancellationToken);
+        });
 
         // After the commit, for the reason WP-0.5 records an audit row after the endpoint: the
         // credential is released when the response is written, and a row for a lease that was

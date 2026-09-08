@@ -11,8 +11,16 @@ namespace NetShield.Inventory.Endpoints;
 /// <remarks>
 /// <para>
 /// It lists the request and response shapes and nothing else. The entity is absent because it is
-/// internal and has no path to a response; every enum is written as its name rather than its
-/// ordinal, so inserting a member cannot change what a stored response already means.
+/// internal and has no path to a response.
+/// </para>
+/// <para>
+/// It names no enum converter. It used to name eight, and they never took effect: a converter in
+/// <c>JsonSourceGenerationOptions</c> applies while that context is the resolver, and this one is
+/// one resolver among several on the host's JSON options — so five inventory enums travelled as
+/// integers for six packages while this list said otherwise. Each enum now carries
+/// <c>[JsonConverter]</c> on the type, which is the only placement that holds wherever the type
+/// is serialised, and <c>ContractEnumTests</c> fails the build if a contract enum is ever added
+/// without one.
 /// </para>
 /// <para>
 /// <c>CredentialMaterial</c> is here because it is on two requests. Its counterpart at rest,
@@ -22,22 +30,17 @@ namespace NetShield.Inventory.Endpoints;
 /// write one.
 /// </para>
 /// </remarks>
-[JsonSourceGenerationOptions(
-    PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase,
-    Converters = [typeof(JsonStringEnumConverter<DeviceVendor>),
-        typeof(JsonStringEnumConverter<DeviceRole>),
-        typeof(JsonStringEnumConverter<DeviceState>),
-        typeof(JsonStringEnumConverter<CriticalityTier>),
-        typeof(JsonStringEnumConverter<DeviceEnvironment>),
-        typeof(JsonStringEnumConverter<CredentialKind>),
-        typeof(JsonStringEnumConverter<SnmpAuthAlgorithm>),
-        typeof(JsonStringEnumConverter<SnmpPrivacyAlgorithm>)])]
+[JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase)]
 [JsonSerializable(typeof(CreateDeviceRequest))]
 [JsonSerializable(typeof(UpdateDeviceRequest))]
 [JsonSerializable(typeof(DeviceDetail))]
 [JsonSerializable(typeof(DeviceSummary))]
 [JsonSerializable(typeof(DeviceWalkQueued))]
 [JsonSerializable(typeof(CursorPage<DeviceSummary>))]
+[JsonSerializable(typeof(DeviceFingerprintDetail))]
+[JsonSerializable(typeof(DeviceInterfaceSummary))]
+[JsonSerializable(typeof(CursorPage<DeviceInterfaceSummary>))]
+[JsonSerializable(typeof(DeviceReachabilityDetail))]
 [JsonSerializable(typeof(CreateCredentialProfileRequest))]
 [JsonSerializable(typeof(UpdateCredentialProfileRequest))]
 [JsonSerializable(typeof(ReplaceCredentialMaterialRequest))]

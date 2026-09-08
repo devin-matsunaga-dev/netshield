@@ -622,6 +622,188 @@
         }
       }
     },
+    "/api/v1/devices/{id}/fingerprint": {
+      "get": {
+        "tags": [
+          "Devices"
+        ],
+        "operationId": "GetDeviceFingerprint",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeviceFingerprintDetail"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/devices/{id}/interfaces": {
+      "get": {
+        "tags": [
+          "Devices"
+        ],
+        "operationId": "ListDeviceInterfaces",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CursorPageOfDeviceInterfaceSummary"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpValidationProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/devices/{id}/reachability": {
+      "get": {
+        "tags": [
+          "Devices"
+        ],
+        "operationId": "GetDeviceReachability",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeviceReachabilityDetail"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/discovery/seeds": {
       "get": {
         "tags": [
@@ -2561,7 +2743,12 @@
         }
       },
       "CriticalityTier": {
-        "type": "integer"
+        "enum": [
+          "Low",
+          "Medium",
+          "High",
+          "Critical"
+        ]
       },
       "CursorPageOfCredentialProfileSummary": {
         "required": [
@@ -2574,6 +2761,36 @@
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/CredentialProfileSummary"
+            }
+          },
+          "nextCursor": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "totalCount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          }
+        }
+      },
+      "CursorPageOfDeviceInterfaceSummary": {
+        "required": [
+          "items",
+          "nextCursor"
+        ],
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DeviceInterfaceSummary"
             }
           },
           "nextCursor": {
@@ -2873,13 +3090,318 @@
         }
       },
       "DeviceEnvironment": {
-        "type": "integer"
+        "enum": [
+          "Production",
+          "Staging",
+          "Development",
+          "Lab"
+        ]
+      },
+      "DeviceFingerprintDetail": {
+        "required": [
+          "deviceId",
+          "vendor",
+          "reducedCapability",
+          "sysObjectId",
+          "sysDescr",
+          "sysName",
+          "sysContact",
+          "sysLocation",
+          "uptimeSeconds",
+          "model",
+          "osVersion",
+          "serialNumber",
+          "interfaceCount",
+          "interfacesTruncated",
+          "overriddenFields",
+          "lastWalkAt",
+          "lastError",
+          "updatedAt"
+        ],
+        "type": "object",
+        "properties": {
+          "deviceId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "vendor": {
+            "$ref": "#/components/schemas/DeviceVendor"
+          },
+          "reducedCapability": {
+            "type": "boolean"
+          },
+          "sysObjectId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "sysDescr": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "sysName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "sysContact": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "sysLocation": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "uptimeSeconds": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?(?:[eE][+-]?\\d+)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "model": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "osVersion": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "serialNumber": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "interfaceCount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "interfacesTruncated": {
+            "type": "boolean"
+          },
+          "overriddenFields": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "lastWalkAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "lastError": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "DeviceInterfaceSummary": {
+        "required": [
+          "id",
+          "ifIndex",
+          "name",
+          "description",
+          "alias",
+          "interfaceType",
+          "mtu",
+          "speedBitsPerSecond",
+          "physicalAddress",
+          "adminStatus",
+          "operStatus",
+          "firstSeenAt",
+          "lastSeenAt"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "ifIndex": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "name": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "description": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "alias": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "interfaceType": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "mtu": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "speedBitsPerSecond": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "physicalAddress": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "adminStatus": {
+            "$ref": "#/components/schemas/InterfaceStatus"
+          },
+          "operStatus": {
+            "$ref": "#/components/schemas/InterfaceStatus"
+          },
+          "firstSeenAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "lastSeenAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "DeviceReachabilityDetail": {
+        "required": [
+          "deviceId",
+          "state",
+          "lastRttMilliseconds",
+          "lastLossPercent",
+          "lastProbeAt",
+          "lastChangedAt",
+          "nextProbeAt",
+          "lastError"
+        ],
+        "type": "object",
+        "properties": {
+          "deviceId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "state": {
+            "$ref": "#/components/schemas/DeviceState"
+          },
+          "lastRttMilliseconds": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?(?:[eE][+-]?\\d+)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "lastLossPercent": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?(?:[eE][+-]?\\d+)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "lastProbeAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "lastChangedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "nextProbeAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "lastError": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
       },
       "DeviceRole": {
-        "type": "integer"
+        "enum": [
+          "Other",
+          "Router",
+          "Switch",
+          "Firewall",
+          "AccessPoint",
+          "LoadBalancer",
+          "Server"
+        ]
       },
       "DeviceState": {
-        "type": "integer"
+        "enum": [
+          "Unknown",
+          "Online",
+          "Warning",
+          "Offline"
+        ]
       },
       "DeviceSummary": {
         "required": [
@@ -2948,7 +3470,16 @@
         }
       },
       "DeviceVendor": {
-        "type": "integer"
+        "enum": [
+          "Unknown",
+          "CiscoIos",
+          "CiscoNxOs",
+          "JuniperJunOs",
+          "AristaEos",
+          "FortinetFortiOs",
+          "MikroTikRouterOs",
+          "GenericSnmp"
+        ]
       },
       "DeviceWalkQueued": {
         "required": [
@@ -3598,6 +4129,17 @@
             }
           }
         }
+      },
+      "InterfaceStatus": {
+        "enum": [
+          "Unknown",
+          "Up",
+          "Down",
+          "Testing",
+          "Dormant",
+          "NotPresent",
+          "LowerLayerDown"
+        ]
       },
       "LoginRequest": {
         "required": [

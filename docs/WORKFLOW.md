@@ -115,7 +115,7 @@ For anything large or `[SENSITIVE]`, enter **plan mode** first — `Shift+Tab` u
 
 **7. Verify (15–45 min — your actual job, never skipped).**
 - Run the regression command it gave you. Red → step 8.
-- `aspire run`, then walk its manual checklist personally in your Windows browser. Click the things. Try the failure cases, not just the happy path.
+- Start the stack (see *Running the stack* — plain `aspire run` brings it up half-broken), then walk its manual checklist personally in your Windows browser. Click the things. Try the failure cases, not just the happy path.
 - `git diff main` in VS Code — skim normally; **line by line if the package is `[SENSITIVE]`**.
 - Read the `STATUS.md` and `DECISIONS.md` updates for accuracy. A wrong `STATUS.md` breaks the next session.
 
@@ -163,9 +163,25 @@ You cannot build this against production kit, and you should not try. Before Pha
 
 Record fixtures from these once and commit them under `tests/fixtures/`. Never commit a capture or config from your real network — see `CONVENTIONS.md` §9.
 
+## Running the stack — the DCP workaround
+
+`aspire run` on its own brings `web-host` up **unhealthy** roughly half the time, and when it does, `web-client` and `collector` never start at all: both `WaitFor(webHost)`, and both take `NETSHIELD_API_URL` from that resource's endpoint. Start it like this instead:
+
+```bash
+env "DcpPublisher__CliPath=$HOME/.nuget/packages/aspire.hosting.orchestration.linux-x64/13.4.6/tools/dcp" aspire run
+```
+
+**Why.** DCP — Aspire's orchestrator — proxies every resource endpoint, and the build shipped with Aspire 13.5.3 (DCP `0.25.13`) intermittently never wires an upstream to that proxy: it accepts the TCP connection and never dials the API, which is answering `200 Healthy` on its own port throughout. It picks a different endpoint to break on each run. DCP ships as the NuGet package `Aspire.Hosting.Orchestration.linux-x64` and its path is plain configuration, so the variable above runs the identical AppHost against 13.4.6's DCP `0.24.3`, which does not have the bug. Nothing in the repository changes; `AppHost.cs` is untouched.
+
+If the package is not in your NuGet cache, `dotnet restore` a checkout pinned to 13.4.6 once, or adjust the path to any `Aspire.Hosting.Orchestration.linux-x64` version below 13.5.3.
+
+**Do not** try to fix this in `AppHost.cs`. Three ways were tried and all three failed — pinning the health check to the http endpoint (the stall is not scheme-specific), restarting (works about half the time, which reads as a fix from one run and is not), and `WithEndpoint("http", e => e.IsProxied = false)`, which is actively worse: DCP binds the proxy port anyway and then hands the same port to the API, which dies at startup with `address already in use`. `STATUS.md` carries the full diagnosis and the evidence for an upstream report.
+
+Drop the variable once Aspire ships a DCP newer than `0.25.13` with the fix, and check by starting once without it.
+
 ## Phase gates
 
-After a phase's final package, run the 🏁 gate from `ROADMAP.md`, plus the dependency-health pass: `aspire update`, review Dependabot, confirm nothing in the version table has crossed EOL. Then:
+After a phase's final package, run the 🏁 gate from `ROADMAP.md`, plus the dependency-health pass: `aspire update`, review Dependabot, confirm nothing in the version table has crossed EOL. `aspire update` is also the moment to retest without the `DcpPublisher__CliPath` variable above — a new Aspire brings a new DCP, and that workaround should be dropped the release it stops being needed. Then:
 ```bash
 git tag v0.N-phaseN && git push --tags
 ```
@@ -183,3 +199,4 @@ git tag v0.N-phaseN && git push --tags
 | A manual check fails | Same session: state the expected and actual, ask for the fix |
 | Diff contains a device write path | Do not merge. The package crossed a hard line. |
 | Phase finished | Run the ROADMAP gate, `aspire update`, tag |
+| `web-host` unhealthy, collector and SPA never start | Restart with the `DcpPublisher__CliPath` variable — see *Running the stack* |

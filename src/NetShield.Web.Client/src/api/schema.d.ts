@@ -132,6 +132,54 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/devices/{id}/fingerprint": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetDeviceFingerprint"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/devices/{id}/interfaces": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ListDeviceInterfaces"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/devices/{id}/reachability": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetDeviceReachability"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/discovery/seeds": {
         parameters: {
             query?: never;
@@ -451,9 +499,16 @@ export interface components {
             /** Format: date-time */
             updatedAt: string;
         };
-        CriticalityTier: number;
+        /** @enum {unknown} */
+        CriticalityTier: "Low" | "Medium" | "High" | "Critical";
         CursorPageOfCredentialProfileSummary: {
             items: components["schemas"]["CredentialProfileSummary"][];
+            nextCursor: null | string;
+            /** Format: int64 */
+            totalCount?: null | number | string;
+        };
+        CursorPageOfDeviceInterfaceSummary: {
+            items: components["schemas"]["DeviceInterfaceSummary"][];
             nextCursor: null | string;
             /** Format: int64 */
             totalCount?: null | number | string;
@@ -516,9 +571,75 @@ export interface components {
             /** Format: date-time */
             updatedAt: string;
         };
-        DeviceEnvironment: number;
-        DeviceRole: number;
-        DeviceState: number;
+        /** @enum {unknown} */
+        DeviceEnvironment: "Production" | "Staging" | "Development" | "Lab";
+        DeviceFingerprintDetail: {
+            /** Format: uuid */
+            deviceId: string;
+            vendor: components["schemas"]["DeviceVendor"];
+            reducedCapability: boolean;
+            sysObjectId: null | string;
+            sysDescr: null | string;
+            sysName: null | string;
+            sysContact: null | string;
+            sysLocation: null | string;
+            /** Format: double */
+            uptimeSeconds: null | number | string;
+            model: null | string;
+            osVersion: null | string;
+            serialNumber: null | string;
+            /** Format: int32 */
+            interfaceCount: number | string;
+            interfacesTruncated: boolean;
+            overriddenFields: string[];
+            /** Format: date-time */
+            lastWalkAt: null | string;
+            lastError: null | string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        DeviceInterfaceSummary: {
+            /** Format: uuid */
+            id: string;
+            /** Format: int32 */
+            ifIndex: number | string;
+            name: null | string;
+            description: null | string;
+            alias: null | string;
+            /** Format: int32 */
+            interfaceType: null | number | string;
+            /** Format: int32 */
+            mtu: null | number | string;
+            /** Format: int64 */
+            speedBitsPerSecond: null | number | string;
+            physicalAddress: null | string;
+            adminStatus: components["schemas"]["InterfaceStatus"];
+            operStatus: components["schemas"]["InterfaceStatus"];
+            /** Format: date-time */
+            firstSeenAt: string;
+            /** Format: date-time */
+            lastSeenAt: string;
+        };
+        DeviceReachabilityDetail: {
+            /** Format: uuid */
+            deviceId: string;
+            state: components["schemas"]["DeviceState"];
+            /** Format: double */
+            lastRttMilliseconds: null | number | string;
+            /** Format: double */
+            lastLossPercent: null | number | string;
+            /** Format: date-time */
+            lastProbeAt: null | string;
+            /** Format: date-time */
+            lastChangedAt: null | string;
+            /** Format: date-time */
+            nextProbeAt: string;
+            lastError: null | string;
+        };
+        /** @enum {unknown} */
+        DeviceRole: "Other" | "Router" | "Switch" | "Firewall" | "AccessPoint" | "LoadBalancer" | "Server";
+        /** @enum {unknown} */
+        DeviceState: "Unknown" | "Online" | "Warning" | "Offline";
         DeviceSummary: {
             /** Format: uuid */
             id: string;
@@ -535,7 +656,8 @@ export interface components {
             /** Format: date-time */
             updatedAt: string;
         };
-        DeviceVendor: number;
+        /** @enum {unknown} */
+        DeviceVendor: "Unknown" | "CiscoIos" | "CiscoNxOs" | "JuniperJunOs" | "AristaEos" | "FortinetFortiOs" | "MikroTikRouterOs" | "GenericSnmp";
         DeviceWalkQueued: {
             /** Format: uuid */
             jobId: string;
@@ -710,6 +832,8 @@ export interface components {
                 [key: string]: string[];
             };
         };
+        /** @enum {unknown} */
+        InterfaceStatus: "Unknown" | "Up" | "Down" | "Testing" | "Dormant" | "NotPresent" | "LowerLayerDown";
         LoginRequest: {
             username: string;
             password: string;
@@ -1246,6 +1370,138 @@ export interface operations {
             };
             /** @description Conflict */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    GetDeviceFingerprint: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeviceFingerprintDetail"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    ListDeviceInterfaces: {
+        parameters: {
+            query?: {
+                cursor?: string;
+                limit?: number | string;
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CursorPageOfDeviceInterfaceSummary"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    GetDeviceReachability: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeviceReachabilityDetail"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

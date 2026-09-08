@@ -78,6 +78,9 @@ public static class InventoryServiceCollectionExtensions
         builder.Services.TryAddScoped<CreateDeviceHandler>();
         builder.Services.TryAddScoped<UpdateDeviceHandler>();
         builder.Services.TryAddScoped<DeleteDeviceHandler>();
+        builder.Services.TryAddScoped<GetDeviceFingerprintHandler>();
+        builder.Services.TryAddScoped<GetDeviceInterfaceListHandler>();
+        builder.Services.TryAddScoped<GetDeviceReachabilityHandler>();
 
         builder.Services.TryAddScoped<CredentialMaterialProtector>();
         builder.Services.TryAddScoped<GetCredentialProfileListHandler>();
