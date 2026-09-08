@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 
 import type { Schemas } from '@/api/types';
-import { inventory, setInventory } from '@/test/msw/handlers';
+import { inventory, setCredentials, setInventory } from '@/test/msw/handlers';
 import { makeDetail, makeDevice } from '@/test/msw/inventoryApi';
 import { renderApp } from '@/test/renderApp';
 
@@ -30,10 +30,13 @@ const ssh: Schemas['CredentialProfileSummary'] = {
 };
 
 function aDeviceWithProfiles(assigned: Schemas['CredentialProfileSummary'][]) {
+  // Which profiles *exist* belongs to the credentials state; which are *assigned to a device*
+  // belongs to the inventory. WP-1.9 split the two so that one route has one handler.
+  setCredentials({ profiles: [snmp, ssh] });
+
   return setInventory({
     devices: [makeDevice({ id: deviceId })],
     detail: new Map([[deviceId, makeDetail({ id: deviceId })]]),
-    profiles: [snmp, ssh],
     deviceProfiles: new Map([[deviceId, assigned]]),
   });
 }
@@ -131,10 +134,10 @@ describe('assigning credential profiles to a device', () => {
   });
 
   it('says what to do when no profile exists to assign', async () => {
+    setCredentials({ profiles: [] });
     setInventory({
       devices: [makeDevice({ id: deviceId })],
       detail: new Map([[deviceId, makeDetail({ id: deviceId })]]),
-      profiles: [],
     });
 
     renderApp(`/devices/${deviceId}?tab=credentials`);

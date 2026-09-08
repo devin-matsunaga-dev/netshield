@@ -78,6 +78,16 @@ export function DeviceListPage({ filters }: DeviceListPageProps) {
             <Button variant="secondary">Discovery</Button>
           </Link>
           {/*
+            Behind CredentialsManage, which is Administrator-only: WP-1.2 settled that even the
+            list of profile names is, because it says which accounts NetShield holds passwords
+            for. The API refuses the routes regardless — hiding is presentation.
+          */}
+          <RequirePermission permission="CredentialsManage">
+            <Link to="/devices/credentials">
+              <Button variant="secondary">Credentials</Button>
+            </Link>
+          </RequirePermission>
+          {/*
             Hidden for a session that cannot write, and refused by the API either way — hiding is
             presentation and never the boundary (ARCHITECTURE.md §8).
           */}

@@ -34,6 +34,7 @@ import { Route as AppClientsIndexRouteImport } from './routes/_app.clients.index
 import { Route as AppClientsClientIdRouteImport } from './routes/_app.clients.$clientId'
 import { Route as AppDevicesIndexRouteImport } from './routes/_app.devices.index'
 import { Route as AppDevicesDeviceIdRouteImport } from './routes/_app.devices.$deviceId'
+import { Route as AppDevicesCredentialsRouteImport } from './routes/_app.devices.credentials'
 import { Route as AppDevicesNewRouteImport } from './routes/_app.devices.new'
 import { Route as AppReportsIndexRouteImport } from './routes/_app.reports.index'
 import { Route as AppReportsAlertActivityRouteImport } from './routes/_app.reports.alert-activity'
@@ -176,6 +177,11 @@ const AppDevicesDeviceIdRoute = AppDevicesDeviceIdRouteImport.update({
   path: '/devices/$deviceId',
   getParentRoute: () => AppRoute,
 } as any)
+const AppDevicesCredentialsRoute = AppDevicesCredentialsRouteImport.update({
+  id: '/devices/credentials',
+  path: '/devices/credentials',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppDevicesNewRoute = AppDevicesNewRouteImport.update({
   id: '/devices/new',
   path: '/devices/new',
@@ -266,6 +272,7 @@ export interface FileRoutesByFullPath {
   '/administration/users': typeof AppAdministrationUsersRoute
   '/clients/$clientId': typeof AppClientsClientIdRoute
   '/devices/$deviceId': typeof AppDevicesDeviceIdRoute
+  '/devices/credentials': typeof AppDevicesCredentialsRoute
   '/devices/new': typeof AppDevicesNewRoute
   '/reports/alert-activity': typeof AppReportsAlertActivityRoute
   '/reports/availability': typeof AppReportsAvailabilityRoute
@@ -305,6 +312,7 @@ export interface FileRoutesByTo {
   '/administration/users': typeof AppAdministrationUsersRoute
   '/clients/$clientId': typeof AppClientsClientIdRoute
   '/devices/$deviceId': typeof AppDevicesDeviceIdRoute
+  '/devices/credentials': typeof AppDevicesCredentialsRoute
   '/devices/new': typeof AppDevicesNewRoute
   '/reports/alert-activity': typeof AppReportsAlertActivityRoute
   '/reports/availability': typeof AppReportsAvailabilityRoute
@@ -346,6 +354,7 @@ export interface FileRoutesById {
   '/_app/administration/users': typeof AppAdministrationUsersRoute
   '/_app/clients/$clientId': typeof AppClientsClientIdRoute
   '/_app/devices/$deviceId': typeof AppDevicesDeviceIdRoute
+  '/_app/devices/credentials': typeof AppDevicesCredentialsRoute
   '/_app/devices/new': typeof AppDevicesNewRoute
   '/_app/reports/alert-activity': typeof AppReportsAlertActivityRoute
   '/_app/reports/availability': typeof AppReportsAvailabilityRoute
@@ -387,6 +396,7 @@ export interface FileRouteTypes {
     | '/administration/users'
     | '/clients/$clientId'
     | '/devices/$deviceId'
+    | '/devices/credentials'
     | '/devices/new'
     | '/reports/alert-activity'
     | '/reports/availability'
@@ -426,6 +436,7 @@ export interface FileRouteTypes {
     | '/administration/users'
     | '/clients/$clientId'
     | '/devices/$deviceId'
+    | '/devices/credentials'
     | '/devices/new'
     | '/reports/alert-activity'
     | '/reports/availability'
@@ -466,6 +477,7 @@ export interface FileRouteTypes {
     | '/_app/administration/users'
     | '/_app/clients/$clientId'
     | '/_app/devices/$deviceId'
+    | '/_app/devices/credentials'
     | '/_app/devices/new'
     | '/_app/reports/alert-activity'
     | '/_app/reports/availability'
@@ -668,6 +680,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppDevicesDeviceIdRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/devices/credentials': {
+      id: '/_app/devices/credentials'
+      path: '/devices/credentials'
+      fullPath: '/devices/credentials'
+      preLoaderRoute: typeof AppDevicesCredentialsRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/devices/new': {
       id: '/_app/devices/new'
       path: '/devices/new'
@@ -781,6 +800,7 @@ interface AppRouteChildren {
   AppAdministrationUsersRoute: typeof AppAdministrationUsersRoute
   AppClientsClientIdRoute: typeof AppClientsClientIdRoute
   AppDevicesDeviceIdRoute: typeof AppDevicesDeviceIdRoute
+  AppDevicesCredentialsRoute: typeof AppDevicesCredentialsRoute
   AppDevicesNewRoute: typeof AppDevicesNewRoute
   AppReportsAlertActivityRoute: typeof AppReportsAlertActivityRoute
   AppReportsAvailabilityRoute: typeof AppReportsAvailabilityRoute
@@ -818,6 +838,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppAdministrationUsersRoute: AppAdministrationUsersRoute,
   AppClientsClientIdRoute: AppClientsClientIdRoute,
   AppDevicesDeviceIdRoute: AppDevicesDeviceIdRoute,
+  AppDevicesCredentialsRoute: AppDevicesCredentialsRoute,
   AppDevicesNewRoute: AppDevicesNewRoute,
   AppReportsAlertActivityRoute: AppReportsAlertActivityRoute,
   AppReportsAvailabilityRoute: AppReportsAvailabilityRoute,

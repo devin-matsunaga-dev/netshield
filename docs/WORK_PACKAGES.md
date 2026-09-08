@@ -91,6 +91,10 @@ Devices list (virtualized table, filters for state/vendor/site/criticality, heal
 Client entity from ARP tables, MAC address tables, DHCP leases, and wireless associations. History of IP and port assignment as closed time intervals. The `ResolveAssetAt(ip, timestamp)` service backing all downstream enrichment, cached in Redis and invalidated on inventory change.
 **Done when:** an IP reassigned between two hosts resolves to the correct host for a timestamp on either side of the handover, resolution is under 1 ms warm at 5,000 clients, and a cold cache rebuilds from PostgreSQL without a gap.
 
+### WP-1.9 — Credential profile UI `[SENSITIVE]`
+The screen for the credential profile lifecycle WP-1.2 built the API for and nothing exposed: list with the kind and how many devices use each profile, create, edit, rotate the secret, and delete with a typed confirmation. Behind `CredentialsManage`, at `/devices/credentials` with no sidebar entry, reached from the device list and from the device Credentials tab's empty state — which until now said "create one" and offered no way to. Calls only endpoints that already exist: no API change, no new endpoint, no RBAC change, no touch to the encryption envelope.
+**Done when:** an administrator can create an SNMPv2c profile, assign it to a device and have a walk queue without touching the API by hand; a non-administrator reaches neither the screen nor the endpoints; the kind cannot be changed after creation; rotating a secret needs no knowledge of the old one; and no secret value appears in the DOM, a query key, a URL or a cache entry at any point.
+
 ---
 
 # Phase 2 — Topology

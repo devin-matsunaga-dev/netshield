@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import { Link } from '@tanstack/react-router';
 import { useState } from 'react';
 
 import type { Schemas } from '@/api/types';
@@ -91,8 +92,12 @@ export function DeviceCredentialsTab({ deviceId }: { readonly deviceId: string }
       <Card title="Credential profiles">
         <EmptyState
           title="No credential profiles exist yet."
-          action="Create one before assigning it to a device. NetShield needs a credential to walk or poll anything."
-        />
+          action="NetShield needs a credential to walk or poll anything. Create one, then come back and assign it."
+        >
+          <Link to="/devices/credentials">
+            <Button>Add a credential profile</Button>
+          </Link>
+        </EmptyState>
       </Card>
     );
   }

@@ -1,5 +1,10 @@
 import { clientHandlers, createClientsApi, type ClientsApiState } from '@/test/msw/clientsApi';
 import {
+  createCredentialsApi,
+  credentialHandlers,
+  type CredentialsApiState,
+} from '@/test/msw/credentialsApi';
+import {
   createInventoryApi,
   inventoryHandlers,
   type InventoryApiState,
@@ -25,11 +30,15 @@ export let inventory: InventoryApiState = createInventoryApi();
  */
 export let clients: ClientsApiState = createClientsApi();
 
+/** The credential profiles the SPA sees. Its own state, for the reason the clients have theirs. */
+export let credentials: CredentialsApiState = createCredentialsApi();
+
 /** Resets the API to a signed-in administrator, optionally with something changed. */
 export function resetApi(overrides: Partial<TestApiState> = {}): TestApiState {
   api = createTestApi(overrides);
   inventory = createInventoryApi();
   clients = createClientsApi();
+  credentials = createCredentialsApi();
 
   return api;
 }
@@ -53,9 +62,22 @@ export function setClients(overrides: Partial<ClientsApiState> = {}): ClientsApi
   return clients;
 }
 
+/** Replaces the credential profiles a test sees. Called after `resetApi`, which empties them. */
+export function setCredentials(overrides: Partial<CredentialsApiState> = {}): CredentialsApiState {
+  credentials = createCredentialsApi(overrides);
+
+  return credentials;
+}
+
 export const handlers = [
   ...authHandlers(() => api),
-  ...inventoryHandlers(() => inventory),
+  // Before the inventory handlers: `/api/v1/credential-profiles` is claimed by both files
+  // otherwise, and the inventory one only lists.
+  ...credentialHandlers(() => credentials),
+  ...inventoryHandlers(
+    () => inventory,
+    () => credentials.profiles,
+  ),
   ...clientHandlers(() => clients),
 ];
 

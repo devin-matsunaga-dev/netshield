@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { describe, it } from 'vitest';
 
 import { expectNoAccessibilityViolations } from '@/test/axe';
-import { setInventory } from '@/test/msw/handlers';
+import { setCredentials, setInventory } from '@/test/msw/handlers';
 import {
   makeCandidate,
   makeDetail,
@@ -20,6 +20,22 @@ import { renderApp } from '@/test/renderApp';
 const deviceId = 'device-1';
 
 function anEstate() {
+  // Which profiles exist is the credentials state's; the device's assignment of them is the
+  // inventory's (WP-1.9).
+  setCredentials({
+    profiles: [
+      {
+        id: 'profile-1',
+        name: 'Core SNMP',
+        kind: 'SnmpV3',
+        username: 'netshield-ro',
+        deviceCount: 1,
+        materialUpdatedAt: '2026-09-08T09:00:00.000Z',
+        updatedAt: '2026-09-08T09:00:00.000Z',
+      },
+    ],
+  });
+
   return setInventory({
     devices: [makeDevice({ id: deviceId })],
     detail: new Map([[deviceId, makeDetail({ id: deviceId })]]),
@@ -48,17 +64,6 @@ function anEstate() {
     ]),
     seeds: [makeSeed()],
     ignores: [],
-    profiles: [
-      {
-        id: 'profile-1',
-        name: 'Core SNMP',
-        kind: 'SnmpV3',
-        username: 'netshield-ro',
-        deviceCount: 1,
-        materialUpdatedAt: '2026-09-08T09:00:00.000Z',
-        updatedAt: '2026-09-08T09:00:00.000Z',
-      },
-    ],
     deviceProfiles: new Map([[deviceId, []]]),
   });
 }

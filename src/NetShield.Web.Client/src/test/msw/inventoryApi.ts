@@ -18,6 +18,11 @@ type CredentialProfileSummary = Schemas['CredentialProfileSummary'];
 /**
  * The inventory API a test sees.
  *
+ * `GET /api/v1/credential-profiles` is deliberately *not* here: WP-1.9 gave that resource a
+ * module of its own, and two handler files claiming one route means whichever is registered
+ * first silently wins. What is here is the device's *assignment* of profiles, which is an
+ * inventory concern.
+ *
  * Every shape here is the generated one, so a fixture that drifts from the contract fails to
  * type-check rather than passing a test that lies about what the API sends. The numeric members
  * are written as plain numbers, which is what the API actually writes — the contract's
@@ -30,7 +35,6 @@ export interface InventoryApiState {
   interfaces: Map<string, DeviceInterfaceSummary[]>;
   reachability: Map<string, DeviceReachabilityDetail>;
   deviceProfiles: Map<string, CredentialProfileSummary[]>;
-  profiles: CredentialProfileSummary[];
   candidates: DiscoveryCandidateSummary[];
   runs: DiscoveryRunSummary[];
   runDetail: Map<string, DiscoveryRunDetail>;
@@ -231,7 +235,6 @@ export function createInventoryApi(overrides: Partial<InventoryApiState> = {}): 
     interfaces: new Map(),
     reachability: new Map(),
     deviceProfiles: new Map(),
-    profiles: [],
     candidates: [],
     runs: [],
     runDetail: new Map(),
@@ -251,7 +254,17 @@ export function createInventoryApi(overrides: Partial<InventoryApiState> = {}): 
  * The device list applies the filters it is given, because "filters compose and survive a
  * refresh" is a WP-1.7 criterion and a handler that ignored them would let a broken filter pass.
  */
-export function inventoryHandlers(current: () => InventoryApiState): RequestHandler[] {
+export function inventoryHandlers(
+  current: () => InventoryApiState,
+  /**
+   * Which credential profiles exist, which the credentials module owns.
+   *
+   * Passed in rather than duplicated, because a device's *assignment* is an inventory fact while
+   * the profiles it assigns are not — and two copies of the same list is how a fixture comes to
+   * assign a profile the profile list has never heard of.
+   */
+  profiles: () => readonly CredentialProfileSummary[],
+): RequestHandler[] {
   return [
     http.get('/api/v1/devices', ({ request }) => {
       const state = current();
@@ -328,19 +341,11 @@ export function inventoryHandlers(current: () => InventoryApiState): RequestHand
 
       state.deviceProfiles.set(
         String(params['deviceId']),
-        state.profiles.filter((profile) => ids.includes(profile.id)),
+        profiles().filter((profile) => ids.includes(profile.id)),
       );
 
       return HttpResponse.json(state.deviceProfiles.get(String(params['deviceId'])) ?? []);
     }),
-
-    http.get('/api/v1/credential-profiles', () =>
-      HttpResponse.json({
-        items: current().profiles,
-        nextCursor: null,
-        totalCount: current().profiles.length,
-      }),
-    ),
 
     http.post('/api/v1/devices', async ({ request }) => {
       const state = current();
