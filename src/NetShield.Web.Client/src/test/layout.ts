@@ -20,19 +20,71 @@ export const testViewportWidth = 1280;
  * supply one — would be production code shaped by the test environment.
  */
 export function installLayout(): void {
+  /*
+    The viewport's scale, which React Flow divides a measured node by so that a tile measured on
+    a zoomed canvas still reports its unzoomed size. jsdom implements no `DOMMatrixReadOnly` at
+    all, and the exception is thrown inside a ResizeObserver callback where nothing can catch it
+    — so the whole measurement pass dies and no edge is ever positioned.
+
+    Identity is the honest answer here: jsdom computes no transform, so there is no zoom to
+    undo. Only `m22` is read.
+  */
+  vi.stubGlobal(
+    'DOMMatrixReadOnly',
+    class {
+      public readonly m11 = 1;
+
+      public readonly m22 = 1;
+    },
+  );
+
   vi.stubGlobal(
     'ResizeObserver',
     class {
-      public observe(): void {
-        // Nothing resizes in jsdom; the initial measurement below is the only one there is.
+      private readonly targets = new Set<Element>();
+
+      public constructor(private readonly callback: ResizeObserverCallback) {}
+
+      /**
+       * Announces the element's size once, on the next microtask.
+       *
+       * jsdom never resizes anything, so a stub that only recorded the element would hand React
+       * Flow a node it had never measured — and React Flow positions an edge from the *handle*
+       * bounds it takes during that measurement, so every tile would draw and not one link
+       * between them would. Reporting once is the whole of what a browser does here: one initial
+       * observation, and then nothing, because nothing moves.
+       */
+      public observe(target: Element): void {
+        this.targets.add(target);
+
+        queueMicrotask(() => {
+          if (!this.targets.has(target)) {
+            return;
+          }
+
+          const box = { inlineSize: testViewportWidth, blockSize: testViewportHeight };
+
+          this.callback(
+            [
+              {
+                target,
+                contentRect: target.getBoundingClientRect(),
+                borderBoxSize: [box],
+                contentBoxSize: [box],
+                devicePixelContentBoxSize: [box],
+              },
+            ],
+            this,
+          );
+        });
       }
 
-      public unobserve(): void {
-        // Same.
+      public unobserve(target: Element): void {
+        this.targets.delete(target);
       }
 
       public disconnect(): void {
-        // Same.
+        this.targets.clear();
       }
     },
   );

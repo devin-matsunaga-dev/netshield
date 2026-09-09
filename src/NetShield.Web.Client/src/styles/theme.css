@@ -1,6 +1,18 @@
 @import 'tailwindcss';
 @import '@fontsource-variable/inter';
 
+/*
+  React Flow's own stylesheet, which the topology canvas needs to position and transform its
+  panes at all (WP-2.4). Pulled into the `base` layer rather than left unlayered, because an
+  unlayered rule outranks every layered one in the CSS cascade — React Flow would otherwise beat
+  a Tailwind utility on any element it also has a selector for, which is the opposite of how
+  every other component in this application is styled.
+
+  Its palette is overridden below onto the DESIGN.md §3 tokens. Nothing in `src/` sees a value
+  from it.
+*/
+@import '@xyflow/react/dist/style.css' layer(base);
+
 @config '../../tailwind.config.ts';
 
 /*
@@ -49,6 +61,25 @@
   --ns-chart-3: #22c55e;
   --ns-chart-4: #38bdf8;
   --ns-chart-5: #64748b;
+
+  /*
+    React Flow, dressed in the tokens above (DESIGN.md §6's topology canvas).
+
+    Every one of these is a NetShield token or a dimension DESIGN.md fixes — the canvas surface
+    is the card's, so the pane itself is transparent; the dot grid is `border-subtle` at 20px;
+    an edge is 1.5px `border-strong`; and there is no shadow anywhere, because separation comes
+    from borders (DESIGN.md §9.4). Setting the un-suffixed property rather than the `-default`
+    one is what makes these win over React Flow's own light and dark palettes both.
+  */
+  --xy-background-color: transparent;
+  --xy-background-pattern-color: var(--ns-border-subtle);
+  --xy-edge-stroke: var(--ns-border-strong);
+  --xy-edge-stroke-selected: var(--ns-accent);
+  --xy-edge-stroke-width: 1.5;
+  --xy-node-boxshadow-hover: none;
+  --xy-node-boxshadow-selected: none;
+  --xy-selection-background-color: var(--ns-accent-tint);
+  --xy-selection-border: 1px solid var(--ns-accent);
 }
 
 /*
@@ -92,6 +123,17 @@
   /* Tabular numerals on every metric value, table number column and chart axis. */
   .tabular {
     font-variant-numeric: tabular-nums;
+  }
+
+  /*
+    The topology canvas is read-only — SPEC.md §6 says NetShield reads and correlates, and a
+    hand-drawn link would be a claim about cabling with no evidence behind it. A React Flow
+    handle exists here only to anchor an edge to a side of a tile, so it is neither seen nor
+    reachable.
+  */
+  .react-flow__handle {
+    opacity: 0;
+    pointer-events: none;
   }
 }
 

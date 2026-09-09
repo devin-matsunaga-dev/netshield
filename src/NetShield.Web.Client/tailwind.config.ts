@@ -84,6 +84,9 @@ const config: Config = {
         brand: ['15px', { lineHeight: '20px', fontWeight: '600' }],
         'brand-caption': ['11px', { lineHeight: '16px', fontWeight: '400' }],
         'nav-child': ['13px', { lineHeight: '18px', fontWeight: '500' }],
+        // A topology node's label and sub-label (DESIGN.md §6).
+        'node-label': ['12px', { lineHeight: '16px', fontWeight: '500' }],
+        'node-sublabel': ['10px', { lineHeight: '14px', fontWeight: '400' }],
       },
 
       // DESIGN.md §5 and §6 geometry.
@@ -96,6 +99,9 @@ const config: Config = {
         'nav-child-indent': '32px',
         control: '36px',
         'icon-tile': '40px',
+        // DESIGN.md §6's topology canvas: a 48px node tile, and 32px controls stacked top-left.
+        'node-tile': '48px',
+        'canvas-control': '32px',
         'row-menu': '40px',
         row: '44px',
         content: '24px',
