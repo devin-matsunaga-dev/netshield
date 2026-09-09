@@ -50,4 +50,35 @@ internal static class TopologyLimits
 
     /// <summary>The highest. <c>VlanIndex</c> in Q-BRIDGE-MIB is <c>1..4094</c>.</summary>
     internal const int MaxVlanId = 4_094;
+
+    /// <summary>
+    /// How many hops from a root the graph walks when the caller names a root and no depth.
+    /// </summary>
+    /// <remarks>
+    /// Three is the access-distribution-core shape of the estate <c>SPEC.md</c> §1 describes,
+    /// read from either end: from a core switch it reaches the access layer, and from an access
+    /// switch it reaches the core and back down one level.
+    /// </remarks>
+    internal const int DefaultGraphDepth = 3;
+
+    /// <summary>
+    /// The furthest from a root the graph will walk.
+    /// </summary>
+    /// <remarks>
+    /// A bound rather than a diameter: the walk exists to choose what to draw, and a caller
+    /// asking for fifty hops is asking for the whole estate, which is what leaving the root off
+    /// already does. It is also half of what keeps this a rendering traversal — the other half
+    /// is <see cref="MaxGraphNodes"/>.
+    /// </remarks>
+    internal const int MaxGraphDepth = 10;
+
+    /// <summary>
+    /// The most nodes one graph will hold, however the filters are set.
+    /// </summary>
+    /// <remarks>
+    /// Four times <c>SPEC.md</c> §1's 500 monitored devices, so it is never reached at the scale
+    /// V1 is designed for and is always reached before an unbounded read could be. A graph cut by
+    /// it says so on <c>truncated</c> rather than quietly returning less than was asked for.
+    /// </remarks>
+    internal const int MaxGraphNodes = 2_000;
 }

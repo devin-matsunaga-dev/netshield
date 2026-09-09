@@ -45,6 +45,38 @@ internal static class TopologyMapping
             edge.LastSeenAt,
             evidence);
 
+    /// <summary>
+    /// An edge as the graph draws it: both endpoints, what supports it, and which of them the
+    /// page carries.
+    /// </summary>
+    /// <remarks>
+    /// Narrower than <see cref="ToSummary"/> on purpose. The device route's shape answers "why
+    /// does NetShield think these two are connected" and carries the per-protocol evidence to
+    /// prove it; this one is drawn beside five hundred others, and the evidence is one request
+    /// away on <see cref="DeviceAdjacencySummary"/>. Only an edge whose far end resolved to a
+    /// device reaches here, which is why <c>BDeviceId</c> is not nullable on the graph shape.
+    /// </remarks>
+    internal static TopologyGraphEdge ToGraphEdge(
+        this DeviceAdjacency edge,
+        int componentIndex,
+        bool aIncluded,
+        bool bIncluded) =>
+        new(
+            edge.Id,
+            edge.ADeviceId,
+            edge.AIfIndex,
+            edge.AInterfaceName,
+            edge.BDeviceId!.Value,
+            edge.BIfIndex,
+            edge.BInterfaceName,
+            Sources(edge),
+            edge.Confidence,
+            edge.ObservedFromA && edge.ObservedFromB,
+            componentIndex,
+            aIncluded,
+            bIncluded,
+            edge.LastSeenAt);
+
     internal static AdjacencyEvidence ToEvidence(this DeviceNeighbor row) =>
         new(
             row.DeviceId,

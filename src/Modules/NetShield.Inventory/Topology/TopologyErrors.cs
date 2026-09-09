@@ -76,6 +76,63 @@ internal static class TopologyErrors
             $"{vlanId} is not a VLAN id. A VLAN id is between {TopologyLimits.MinVlanId} "
             + $"and {TopologyLimits.MaxVlanId}.");
 
+    /// <summary>The code a caller sees when the graph's depth argument is not usable.</summary>
+    internal const string GraphDepthInvalidCode = "topology.graph-depth-invalid";
+
+    /// <summary>
+    /// A depth was asked for outside the range the graph walks.
+    /// </summary>
+    /// <remarks>
+    /// The bound is deliberate rather than defensive. The walk over <c>device_adjacencies</c>
+    /// exists to choose what to draw, and an unbounded one would be the multi-hop traversal
+    /// <c>ARCHITECTURE.md</c> §1 rules out.
+    /// </remarks>
+    internal static Error GraphDepthOutOfRange(int depth) =>
+        Error.Validation(
+            GraphDepthInvalidCode,
+            $"depth must be between 0 and {TopologyLimits.MaxGraphDepth}.",
+            new Dictionary<string, string[]>
+            {
+                ["depth"] =
+                [
+                    $"Must be between 0 and {TopologyLimits.MaxGraphDepth}. "
+                    + $"The default when a root is given is {TopologyLimits.DefaultGraphDepth}."
+                ]
+            });
+
+    /// <summary>
+    /// A depth was given with no root to measure it from.
+    /// </summary>
+    /// <remarks>
+    /// Refused rather than ignored. A caller who sends <c>depth=2</c> and no root has asked for
+    /// a bounded neighbourhood; silently answering with the whole estate would be the largest
+    /// possible answer to a request for a small one.
+    /// </remarks>
+    internal static Error GraphDepthWithoutRoot() =>
+        Error.Validation(
+            GraphDepthInvalidCode,
+            "depth is measured from a root, so rootDeviceId is required with it.",
+            new Dictionary<string, string[]>
+            {
+                ["depth"] = ["Send rootDeviceId as well, or leave depth off to read the whole estate."]
+            });
+
+    /// <summary>The code a caller sees when the graph root is not a device.</summary>
+    internal const string GraphRootNotFoundCode = "topology.graph-root-not-found";
+
+    /// <summary>
+    /// The device to centre the graph on does not exist, or has been removed.
+    /// </summary>
+    /// <remarks>
+    /// A 404 rather than an empty graph, because a caller who asked to centre on a device and got
+    /// nothing back cannot tell "that device has no links" from "that device is not there", and
+    /// only one of the two is worth acting on.
+    /// </remarks>
+    internal static Error GraphRootNotFound(Guid deviceId) =>
+        Error.NotFound(
+            GraphRootNotFoundCode,
+            $"Device {deviceId} is not a device the graph can be centred on.");
+
     private static string Describe(TopologyWalkKind walk) => walk switch
     {
         TopologyWalkKind.Routes => "routing-table read",

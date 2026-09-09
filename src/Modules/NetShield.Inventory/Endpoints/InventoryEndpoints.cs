@@ -43,6 +43,7 @@ public static class InventoryEndpoints
         endpoints.MapDiscoveryIgnoreEndpoints();
         endpoints.MapClientEndpoints();
         endpoints.MapVlanEndpoints();
+        endpoints.MapTopologyGraphEndpoints();
         endpoints.MapCredentialProfileEndpoints();
         endpoints.MapDeviceCredentialProfileEndpoints();
         endpoints.MapCollectorEndpoints();

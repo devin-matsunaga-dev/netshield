@@ -564,6 +564,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/topology/graph": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetTopologyGraph"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/credential-profiles": {
         parameters: {
             query?: never;
@@ -1340,6 +1356,86 @@ export interface components {
         SnmpAuthAlgorithm: "Md5" | "Sha1" | "Sha224" | "Sha256" | "Sha384" | "Sha512" | null;
         /** @enum {unknown} */
         SnmpPrivacyAlgorithm: "None" | "Des" | "Aes128" | "Aes192" | "Aes256" | null;
+        TopologyGraph: {
+            nodes: components["schemas"]["TopologyGraphNode"][];
+            edges: components["schemas"]["TopologyGraphEdge"][];
+            components: components["schemas"]["TopologyGraphComponent"][];
+            layout: components["schemas"]["TopologyGraphLayout"];
+            nextCursor: null | string;
+            /** Format: int64 */
+            totalNodeCount: number | string;
+            /** Format: int64 */
+            totalEdgeCount: number | string;
+            truncated: boolean;
+        };
+        TopologyGraphComponent: {
+            /** Format: int32 */
+            index: number | string;
+            /** Format: uuid */
+            rootDeviceId: string;
+            /** Format: int32 */
+            nodeCount: number | string;
+            /** Format: int32 */
+            edgeCount: number | string;
+            /** Format: int32 */
+            depth: number | string;
+        };
+        TopologyGraphEdge: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            aDeviceId: string;
+            /** Format: int32 */
+            aIfIndex: number | string;
+            aInterfaceName: null | string;
+            /** Format: uuid */
+            bDeviceId: string;
+            /** Format: int32 */
+            bIfIndex: null | number | string;
+            bInterfaceName: null | string;
+            sources: components["schemas"]["NeighborSource"][];
+            confidence: components["schemas"]["AdjacencyConfidence"];
+            bidirectional: boolean;
+            /** Format: int32 */
+            componentIndex: number | string;
+            aDeviceIncluded: boolean;
+            bDeviceIncluded: boolean;
+            /** Format: date-time */
+            lastSeenAt: string;
+        };
+        TopologyGraphLayout: {
+            /** Format: double */
+            nodeWidth: number | string;
+            /** Format: double */
+            nodeHeight: number | string;
+            /** Format: double */
+            rankSeparation: number | string;
+            /** Format: double */
+            nodeSeparation: number | string;
+            /** Format: double */
+            componentSeparation: number | string;
+        };
+        TopologyGraphNode: {
+            /** Format: uuid */
+            deviceId: string;
+            hostname: string;
+            vendor: components["schemas"]["DeviceVendor"];
+            role: components["schemas"]["DeviceRole"];
+            site: null | string;
+            state: components["schemas"]["DeviceState"];
+            /** Format: int32 */
+            componentIndex: number | string;
+            /** Format: int32 */
+            rank: number | string;
+            /** Format: int32 */
+            degree: number | string;
+            /** Format: int32 */
+            externalEdgeCount: number | string;
+            /** Format: double */
+            x: number | string;
+            /** Format: double */
+            y: number | string;
+        };
         /** @enum {unknown} */
         TopologyWalkKind: "Neighbors" | "Routes" | "Vlans";
         UpdateCredentialProfileRequest: {
@@ -3389,6 +3485,60 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["VlanDetail"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    GetTopologyGraph: {
+        parameters: {
+            query?: {
+                cursor?: string;
+                limit?: number | string;
+                site?: string;
+                vlanId?: number | string;
+                rootDeviceId?: string;
+                depth?: number | string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TopologyGraph"];
                 };
             };
             /** @description Bad Request */

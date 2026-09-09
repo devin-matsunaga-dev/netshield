@@ -23,6 +23,13 @@ namespace NetShield.Inventory.Endpoints;
 /// without one.
 /// </para>
 /// <para>
+/// <c>TopologyGraph</c> names only itself: the generator reaches the node, edge, component and
+/// layout shapes through it, so listing them again would be four more lines saying the same thing.
+/// The shapes WP-2.1 and WP-2.2 added are meanwhile absent — see the note in <c>STATUS.md</c>;
+/// they serialise correctly through reflection today and this list is what <c>CONVENTIONS.md</c>
+/// §4 actually asks for.
+/// </para>
+/// <para>
 /// <c>CredentialMaterial</c> is here because it is on two requests. Its counterpart at rest,
 /// <c>CredentialMaterialPayload</c>, is deliberately absent — that type is what plaintext
 /// credentials are shaped as inside the sealed blob, it has a serialiser of its own that only the
@@ -58,4 +65,5 @@ namespace NetShield.Inventory.Endpoints;
 [JsonSerializable(typeof(CredentialProfileSummary))]
 [JsonSerializable(typeof(IReadOnlyList<CredentialProfileSummary>))]
 [JsonSerializable(typeof(CursorPage<CredentialProfileSummary>))]
+[JsonSerializable(typeof(TopologyGraph))]
 public sealed partial class InventorySerializerContext : JsonSerializerContext;

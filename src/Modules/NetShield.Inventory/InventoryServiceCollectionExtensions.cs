@@ -201,6 +201,12 @@ public static class InventoryServiceCollectionExtensions
         builder.Services.AddScoped<IIntegrationEventHandler<CollectorJobCompleted>,
             RecordVlanWalkResultHandler>();
 
+        // The graph the topology screen draws. A read over the two tables above and nothing of
+        // its own: no table, no schedule, no subscriber. The walk from a root is bounded by an
+        // explicit depth and an explicit node ceiling, and it selects what to draw and concludes
+        // nothing further (WP-2.3).
+        builder.Services.TryAddScoped<GetTopologyGraphHandler>();
+
         // ResolveAssetAt. Internal to the module, the way the credential resolver is: nothing
         // outside NetShield.Inventory can name the type to ask for one, and its read surface is
         // GET /api/v1/clients/resolve.

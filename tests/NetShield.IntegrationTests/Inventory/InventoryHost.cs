@@ -897,6 +897,108 @@ internal sealed class InventoryHost(
     }
 
     /// <summary>
+    /// Seeds an estate of devices cabled into a tree, for a test about scale.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// SPEC.md §1 targets 500 monitored devices, which is what the graph has to be returned at in
+    /// under half a second. Written in one batch rather than through the collector round trip, for
+    /// the reason <see cref="SeedClientsAsync"/> is: what is being measured is the read, and
+    /// building the edges through neighbour walks would spend minutes proving something
+    /// <see cref="NeighborCollectionTests"/> already proves.
+    /// </para>
+    /// <para>
+    /// The shape is a <paramref name="fanout"/>-ary tree, which is the access-distribution-core
+    /// shape of a real estate rather than a line or a mesh: it gives the layout several ranks with
+    /// real width, which is the case the barycentre passes cost something on.
+    /// </para>
+    /// </remarks>
+    /// <param name="count">How many devices to create.</param>
+    /// <param name="fanout">How many children each device has.</param>
+    /// <param name="site">The site to put them at, where the test filters on one.</param>
+    /// <param name="islands">How many separate trees to split them into.</param>
+    public async Task<IReadOnlyList<Guid>> SeedEstateAsync(
+        int count,
+        int fanout,
+        CancellationToken cancellationToken,
+        string? site = null,
+        int islands = 1)
+    {
+        await using AsyncServiceScope scope = application.Services.CreateAsyncScope();
+
+        InventoryDbContext context = scope.ServiceProvider.GetRequiredService<InventoryDbContext>();
+
+        DateTimeOffset now = DateTimeOffset.UtcNow.AddHours(-1);
+        List<Guid> ids = [];
+
+        for (int index = 0; index < count; index++)
+        {
+            Guid deviceId = Guid.CreateVersion7(now.AddMilliseconds(index));
+
+            context.Devices.Add(new NetShield.Inventory.Devices.Device
+            {
+                Id = deviceId,
+                Hostname = string.Create(CultureInfo.InvariantCulture, $"sw-{index:D4}"),
+                PrimaryIpAddress = System.Net.IPAddress.Parse(
+                    string.Create(
+                        CultureInfo.InvariantCulture,
+                        $"10.80.{(index / 254) & 0xFF}.{(index % 254) + 1}")),
+                Vendor = DeviceVendor.CiscoIos,
+                Role = DeviceRole.Switch,
+                Site = site,
+                State = DeviceState.Online,
+                CreatedAt = now,
+                UpdatedAt = now
+            });
+
+            ids.Add(deviceId);
+        }
+
+        int perIsland = (count + islands - 1) / islands;
+
+        for (int index = 0; index < count; index++)
+        {
+            int within = index % perIsland;
+
+            if (within == 0)
+            {
+                continue;
+            }
+
+            int parent = (index - within) + ((within - 1) / fanout);
+
+            context.DeviceAdjacencies.Add(new DeviceAdjacency
+            {
+                Id = Guid.CreateVersion7(now.AddMilliseconds(index)),
+                ADeviceId = ids[parent],
+                AIfIndex = within,
+                AInterfaceName = string.Create(CultureInfo.InvariantCulture, $"Gi0/{within}"),
+                BDeviceId = ids[index],
+                BIfIndex = 1,
+                BInterfaceName = "Gi0/0",
+                BChassisId = string.Create(CultureInfo.InvariantCulture, $"AA:BB:CC:00:{index >> 8:X2}:{index & 0xFF:X2}"),
+                BChassisIdKind = NeighborIdKind.MacAddress,
+                BPortId = "Gi0/0",
+                BSystemName = string.Create(CultureInfo.InvariantCulture, $"sw-{index:D4}"),
+                AdjacencyKey = string.Create(CultureInfo.InvariantCulture, $"device:{ids[index]}"),
+                SourcesA = [nameof(NeighborSource.Lldp)],
+                SourcesB = [nameof(NeighborSource.Lldp)],
+                Confidence = AdjacencyConfidence.Confirmed,
+                ObservedFromA = true,
+                ObservedFromB = true,
+                FirstDiscoveredAt = now,
+                LastSeenAt = now,
+                CreatedAt = now,
+                UpdatedAt = now
+            });
+        }
+
+        await context.SaveChangesAsync(cancellationToken);
+
+        return ids;
+    }
+
+    /// <summary>
     /// Delivers every pending outbox row, which is what makes a subscriber run.
     /// </summary>
     /// <remarks>
