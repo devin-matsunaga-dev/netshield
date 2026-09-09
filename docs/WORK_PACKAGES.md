@@ -119,6 +119,14 @@ React Flow canvas per `DESIGN.md` §6: dot grid, 48px node tiles with state-enco
 The device's collector queue on screen, the five on-demand walks behind buttons, and cancellation of a job that has not yet been leased. Adds `Cancelled` to `CollectorJobStatus` — the seam WP-1.3 named and deliberately left uncut — and no other change to the collector contract.
 **Done when:** a queued job is visible on the device screen with its walk named, a pending job can be cancelled and is then never leased, cancelling clears the outstanding-walk `409` so the next walk is accepted, and a leased job refuses cancellation.
 
+### WP-2.6 — Port occupancy
+What is connected to each switch port, joined from data three earlier packages already collect and nothing reads together: the topology edge where the far end is a managed device (WP-2.1), the LLDP or CDP neighbour where it is an unmanaged speaker, and the learned MAC addresses where it is a silent host (WP-1.8). Decodes the LLDP system-capabilities bitmap, which is the only authoritative statement of what an endpoint is. Distinguishes an access port from an uplink by the address count already recorded on the binding. No new collector work.
+**Done when:** a port with one host shows that host, a port facing another switch shows the topology edge, a port with an LLDP-speaking access point shows its name and its capability in words, an uplink says how many addresses it carries rather than listing them as occupants, and `git status` over `src/netshield-collector` is empty.
+
+### WP-2.7 — Client identity and edge-port resolution
+Fills `clients.hostname`, which has existed since WP-1.8 with nothing writing it, from reverse DNS against a configured internal resolver. Resolves `clients.oui` to a vendor name from an IEEE registry file **imported, never fetched** — `ARCHITECTURE.md` §1 admits no outbound call at runtime, and `SPEC.md` §5 designs for a network with no internet at all. Derives a client type from the LLDP capability where there is one and from vendor and VLAN where there is not. Uses the topology graph to decide which of several ports a client is genuinely on, closing the question WP-1.8 recorded as evidenced but unanswered.
+**Done when:** a client with a PTR record shows its hostname, an OUI resolves to a vendor with no outbound call, a client learned on three switches resolves to the access port rather than the core, and a client nothing can identify is shown as unidentified rather than guessed.
+
 ---
 
 # Phase 3 — Telemetry

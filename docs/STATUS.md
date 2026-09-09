@@ -4,21 +4,27 @@
 
 ## Current WP
 
-**WP-3.1 — Time-series schema**
-Branch: `feat/wp-3.1-timeseries-schema`
-Phase: 3 — Telemetry
-Sensitive: no. The first package of Phase 3, and the first hypertable in the build: `metric_samples` with its chunk interval, compression policy and retention policy declared in the migration that creates it (`CONVENTIONS.md` §3), plus the continuous aggregates `ARCHITECTURE.md` §3 says the dashboard reads instead of raw rows. `ROADMAP.md` names this one of the five places the build will hurt — compression and retention settings that are wrong at 30 days are painful to change at 300 — so load-testing the schema with synthetic data belongs in this package rather than in Phase 4.
+**WP-2.6 — Port occupancy**
+Branch: `feat/wp-2.6-port-occupancy`
+Phase: 2 — Topology
+Sensitive: no. What is connected to each switch port. Almost none of this is new collection — it is a join over data three earlier packages already write and nothing reads together, keyed on `(device_id, if_index)` in all three:
 
-**⚠️ Two packages are in flight and neither is committed.** `feat/wp-2.4-topology-ui` and `feat/wp-2.5-job-queue` are both uncommitted in one working tree — WP-2.5 was branched from WP-2.4 before the human had committed it, at the human's instruction to keep going. The file sets are near-disjoint (`src/features/topology/` against `src/features/devices/` and the `Collector` folder), so `git add` by path gives two clean commits; `src/api/schema.d.ts`, `openapi/v1.json` and `docs/` are the only files both touch, and only WP-2.5 changed the first two.
+- **A managed device on the far end** is `device_adjacencies` (WP-2.1) — the topology edge, already resolved and already drawn on the canvas.
+- **An unmanaged LLDP or CDP speaker** is `device_neighbors` (WP-2.1), which stores `RemoteSystemName`, `RemoteSystemDescription` and `Capabilities`. That last one is the IEEE system-capabilities bitmap and it is the only *authoritative* statement of what an endpoint is — it says Bridge, Router, WLAN Access Point, Telephone or Station in the endpoint's own words. Access points, IP phones and many cameras speak it. It is collected today, counted as `externalEdgeCount`, and otherwise unused.
+- **A silent end host** is `client_port_bindings` → `clients` (WP-1.8): MAC, IP, VLAN, OUI, first and last seen.
 
-**⚠️ Do not start WP-3.1 until two gates have been run.** Both are outstanding and one of them is now two phases behind:
+**The uplink is the hard part and the discriminator already exists.** A MAC is learned by every bridge on the path to it, so the uplink port carries every host beyond it. `ClientPortBinding.MacCountOnPort` is recorded on the binding it came from: one or two addresses is an access port with a host on it, two hundred is an uplink. The port view has to *say* "this is an uplink carrying 200 addresses" rather than listing them as occupants — a screen that got that wrong would be actively misleading about where things are plugged in.
+
+Deciding which of several ports a client is *genuinely* on is deliberately **not** in this package — it is WP-2.7's, and it is only now answerable because WP-2.3 exists: the edge port is the one whose far end is not another managed device.
+
+**⚠️ The 🏁 Phase 1 gate is still outstanding, and it is now two phases behind.** Phase 2 gained WP-2.6 and WP-2.7 at the human's instruction, so it no longer closes with WP-2.5 and **the 🏁 Phase 2 gate is not yet due** — it falls with WP-2.7 instead of WP-2.4. Phase 1's has been due since WP-1.9:
 
 - **🏁 Phase 1** (`ROADMAP.md`, `WORKFLOW.md` § Phase gates) has been due since WP-1.9 and WP-2.1 through WP-2.4 were all built ahead of it at the human's instruction. Four of its five criteria need a lab and a person at a browser: a discovery run over a lab /24 producing reviewable candidates, promotion creating devices, ICMP state transitions, and `ResolveAssetAt` correct on both sides of a simulated DHCP handover. The fifth — credentials unreadable in the database — is covered end to end by the automated suite. **The human has directed that this gate is run and resolved before WP-2.4 merges**, because a phase boundary is a hard stop and merging across an outstanding earlier gate would carry it further still.
-- **🏁 Phase 2** falls due with WP-2.4: *"the lab topology renders correctly on the canvas with accurate state colors, a removed link ages out, and 500 synthetic nodes pan at 60fps."* All three need the lab. The 60fps criterion in particular **has not been measured** — see the note below — and it is the one thing in WP-2.4 that no test in this repository can settle.
-
-**`aspire run` works on its own again.** The `DcpPublisher__CliPath` workaround is gone and `WORKFLOW.md` § *Running the stack* is rewritten: `web-host` and `web-client` declare their endpoints `isProxied: false`, which takes DCP's intermittently-dead proxy out of both the health-check path and the data path, and `web-host` takes `launchProfileName: null` with `ASPNETCORE_ENVIRONMENT` set explicitly from the AppHost's environment. Verified over three consecutive plain `aspire run` starts: all five processes up, `/health/ready` answering `Healthy` on the API's own port, `/api` resolving through the dev server, and the collector leasing and completing the backlog. The old note claiming 13.4.6's DCP "does not have the bug" was wrong and has been corrected — it has the same defect, and 13.5.3 is the newest orchestration package published.
+- **🏁 Phase 2** now falls due with WP-2.7: *"the lab topology renders correctly on the canvas with accurate state colors, a removed link ages out, and 500 synthetic nodes pan at 60fps."* All three need the lab, and the 60fps criterion **has still not been measured** — see the note below. Worth deciding when WP-2.7 lands whether that gate should also say something about port occupancy, since two packages joined the phase after it was written.
 
 The dependency-health pass and the `v0.1-phase1` / `v0.2-phase2` tags go with them, and that pass is also the moment to retest without the `DcpPublisher__CliPath` workaround. `npm audit` currently reports two high-severity advisories, both `js-yaml` reached through `openapi-typescript` → `@redocly/openapi-core`; they are development-only, predate WP-2.4, and belong to that pass rather than to a package.
+
+**`aspire run` works on its own again.** The `DcpPublisher__CliPath` workaround is gone and `WORKFLOW.md` § *Running the stack* is rewritten: `web-host` and `web-client` declare their endpoints `isProxied: false`, which takes DCP's intermittently-dead proxy out of both the health-check path and the data path, and `web-host` takes `launchProfileName: null` with `ASPNETCORE_ENVIRONMENT` set explicitly from the AppHost's environment. Verified over three consecutive plain `aspire run` starts: all five processes up, `/health/ready` answering `Healthy` on the API's own port, `/api` resolving through the dev server, and the collector leasing and completing the backlog. The old note claiming 13.4.6's DCP "does not have the bug" was wrong and has been corrected — it has the same defect, and 13.5.3 is the newest orchestration package published.
 
 **The lab is still not stood up.** WP-2.4 needed no new fixture on the device side — it reads what WP-2.3 concludes — so the four sets of hand-authored fixtures are unchanged rather than grown. What it did add is a *fixture estate* in the SPA's own mock API: five devices in the reference card's shape, and a 450-node graph for the paging test. Those are frontend fixtures, not device recordings, and they replace nothing the lab owes.
 
@@ -28,7 +34,7 @@ The dependency-health pass and the `v0.1-phase1` / `v0.2-phase2` tags go with th
 |---|---|---|---|
 | 0 — Foundation | 7 | 7 | Done |
 | 1 — Inventory & discovery | 9 | 9 | Done |
-| 2 — Topology | 5 | 5 | Built; 🏁 gate outstanding |
+| 2 — Topology | 7 | 5 | In progress |
 | 3 — Telemetry | 6 | 0 | Not started |
 | 4 — Flows | 5 | 0 | Not started |
 | 5 — Logs | 5 | 0 | Not started |
@@ -83,6 +89,8 @@ The dependency-health pass and the `v0.1-phase1` / `v0.2-phase2` tags go with th
 ## In flight / noticed
 
 Things spotted during a package that are out of its scope. Do not fix them in the current package — record them here and address them in a package of their own.
+
+**Four of the entries below now have an owner.** WP-2.6 and WP-2.7 were added to Phase 2 at the human's instruction and between them they close: *"`clients.hostname` exists and nothing writes it"*, *"the OUI is stored and no vendor name is resolved from it"*, *"which port a client is actually plugged into is not answered, only evidenced"*, and *"the client screen's 'which port is it really on' can now be answered, and still is not"*. They are left in place rather than deleted, because a gap is closed when the code lands and not when a package is written down.
 
 - **The one-outstanding-`Discover` rule is enforced on the route and not in the queue, so the schedulers walk straight past it.** Found while debugging a stalled estate: `DANDAN-MDF-4G-1` held three `Discover` jobs at once — `snmp`, `clients` and `neighbors` — which `QueueTopologyWalkHandler` would have refused with a `409`. That guard lives in the on-demand handlers; the reachability, discovery, client and topology schedulers call `ICollectorJobQueue.EnqueueAsync` directly and check nothing. So the rule holds when a person presses a button and not when the schedule fires, which is exactly backwards from the reason WP-2.1 gave for having it: two walks of one device applied in either order each withdraw what the other just established. WP-2.5 deliberately did not fix it — moving the guard into the queue is a change to queueing policy that affects four schedulers and belongs in its own package with its own tests. Until then, cancelling is at least a way out of the pile-up it causes.
 - **Nothing prunes `collector_jobs`, and the queue screen now makes that visible.** A device polled every sixty seconds gains a job a minute, for ever; the Jobs tab pages, so it stays usable, but the estate-wide retention gap that `audit_log`, the delivered outbox rows, the discovery tables, the client tables and the topology tables all share now has a screen that will make it obvious first. Cancelled rows join the pile rather than leaving it.
