@@ -14,6 +14,7 @@ type DiscoveryRunHostResult = Schemas['DiscoveryRunHostResult'];
 type DiscoverySeedSummary = Schemas['DiscoverySeedSummary'];
 type DiscoveryIgnoreEntry = Schemas['DiscoveryIgnoreEntry'];
 type CredentialProfileSummary = Schemas['CredentialProfileSummary'];
+type CollectorJobSummary = Schemas['CollectorJobSummary'];
 
 /**
  * The inventory API a test sees.
@@ -35,6 +36,12 @@ export interface InventoryApiState {
   interfaces: Map<string, DeviceInterfaceSummary[]>;
   reachability: Map<string, DeviceReachabilityDetail>;
   deviceProfiles: Map<string, CredentialProfileSummary[]>;
+  /** What each device has queued, newest first — the order the API returns them in. */
+  jobs: Map<string, CollectorJobSummary[]>;
+  /** Refuse a walk the way the API does when the device already has a `Discover` outstanding. */
+  walkOutstanding: boolean;
+  /** Turn the queue read into a 500, to reach the error state (DESIGN.md §8). */
+  failJobList: boolean;
   candidates: DiscoveryCandidateSummary[];
   runs: DiscoveryRunSummary[];
   runDetail: Map<string, DiscoveryRunDetail>;
@@ -227,6 +234,26 @@ export function makeSeed(overrides: Partial<DiscoverySeedSummary> = {}): Discove
   };
 }
 
+/** One queued job, with everything defaulted so a test names only what it is about. */
+export function makeJob(overrides: Partial<CollectorJobSummary> = {}): CollectorJobSummary {
+  return {
+    id: '019226b4-6000-7000-8000-000000000001',
+    kind: 'Discover',
+    walk: 'neighbors',
+    status: 'Pending',
+    attempts: 0,
+    maxAttempts: 4,
+    dueAt: at,
+    leasedBy: null,
+    leasedUntil: null,
+    completedAt: null,
+    detail: null,
+    cancellable: true,
+    createdAt: at,
+    ...overrides,
+  };
+}
+
 export function createInventoryApi(overrides: Partial<InventoryApiState> = {}): InventoryApiState {
   return {
     devices: [],
@@ -235,6 +262,9 @@ export function createInventoryApi(overrides: Partial<InventoryApiState> = {}): 
     interfaces: new Map(),
     reachability: new Map(),
     deviceProfiles: new Map(),
+    jobs: new Map(),
+    walkOutstanding: false,
+    failJobList: false,
     candidates: [],
     runs: [],
     runDetail: new Map(),
@@ -429,6 +459,97 @@ export function inventoryHandlers(
         },
         { status: 202 },
       );
+    }),
+
+    // The four walks WP-2.5 gave buttons to. One handler each, because they are one route each.
+    ...(['neighbor-walk', 'route-walk', 'vlan-walk', 'client-walk'] as const).map((route) =>
+      http.post(`/api/v1/devices/:id/${route}`, ({ params }) => {
+        const state = current();
+        const id = String(params['id']);
+
+        state.writes.push({ method: 'POST', path: `/devices/${id}/${route}`, body: null });
+
+        if (state.walkOutstanding) {
+          // The rule the real API applies: one outstanding `Discover` per device.
+          return HttpResponse.json(
+            {
+              status: 409,
+              title: 'Conflict',
+              code: 'topology.walk-outstanding',
+              detail: `A walk of device ${id} is already queued.`,
+            },
+            { status: 409 },
+          );
+        }
+
+        return HttpResponse.json(
+          { deviceId: id, jobId: '019226b4-6000-7000-8000-000000000009', queuedAt: at },
+          { status: 202 },
+        );
+      }),
+    ),
+
+    http.get('/api/v1/devices/:id/jobs', ({ params, request }) => {
+      const state = current();
+
+      if (state.failJobList) {
+        return HttpResponse.json({ status: 500, title: 'Server error' }, { status: 500 });
+      }
+
+      const status = new URL(request.url).searchParams.get('status');
+      const jobs = state.jobs.get(String(params['id'])) ?? [];
+      const matches = status === null ? jobs : jobs.filter((job) => job.status === status);
+
+      return HttpResponse.json({
+        items: matches,
+        nextCursor: null,
+        totalCount: matches.length,
+      });
+    }),
+
+    http.post('/api/v1/devices/:id/jobs/:jobId/cancel', ({ params }) => {
+      const state = current();
+      const id = String(params['id']);
+      const jobId = String(params['jobId']);
+      const jobs = state.jobs.get(id) ?? [];
+      const job = jobs.find((candidate) => candidate.id === jobId);
+
+      state.writes.push({
+        method: 'POST',
+        path: `/devices/${id}/jobs/${jobId}/cancel`,
+        body: null,
+      });
+
+      if (job === undefined) {
+        return HttpResponse.json(
+          { status: 404, title: 'Not found', code: 'collector.job-not-found' },
+          { status: 404 },
+        );
+      }
+
+      if (job.status !== 'Pending') {
+        return HttpResponse.json(
+          {
+            status: 409,
+            title: 'Conflict',
+            code: 'collector.job-not-cancellable',
+            detail: 'A collector has already started it.',
+          },
+          { status: 409 },
+        );
+      }
+
+      // Cancelled, not removed — the row stays, which is what the real API does.
+      state.jobs.set(
+        id,
+        jobs.map((candidate) =>
+          candidate.id === jobId
+            ? { ...candidate, status: 'Cancelled' as const, cancellable: false }
+            : candidate,
+        ),
+      );
+
+      return HttpResponse.json({ ...job, status: 'Cancelled', cancellable: false });
     }),
 
     http.get('/api/v1/discovery/candidates', ({ request }) => {

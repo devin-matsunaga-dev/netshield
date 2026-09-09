@@ -32,6 +32,7 @@ public static class InventoryEndpoints
         endpoints.MapDeviceDiscoveryEndpoints();
         endpoints.MapDeviceFingerprintEndpoints();
         endpoints.MapDeviceInterfaceEndpoints();
+        endpoints.MapDeviceJobEndpoints();
         endpoints.MapDeviceReachabilityEndpoints();
         endpoints.MapDeviceClientWalkEndpoints();
         endpoints.MapDeviceAdjacencyEndpoints();

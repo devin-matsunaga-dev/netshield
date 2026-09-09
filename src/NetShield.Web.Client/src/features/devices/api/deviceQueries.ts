@@ -207,3 +207,44 @@ function present<T extends object>(source: T): { [K in keyof T]?: Exclude<T[K], 
     [K in keyof T]?: Exclude<T[K], undefined>;
   };
 }
+
+export type CollectorJobSummary = Schemas['CollectorJobSummary'];
+export type CollectorJobStatus = Schemas['CollectorJobStatus'];
+
+/**
+ * A device's collector queue, newest first.
+ *
+ * Paged like every other list, and it matters here: a device polled every sixty seconds gains a
+ * job a minute for as long as `collector_jobs` keeps them, and nothing prunes them yet.
+ *
+ * `refetchInterval` rather than a manual refresh, because the whole reason this screen exists is
+ * to watch a job move — queued, leased, then finished. A screen you have to reload to see that
+ * on is one that answers "did anything happen?" with "press F5 and find out".
+ */
+export function deviceJobsQuery(id: string, status: CollectorJobStatus | undefined) {
+  return infiniteQueryOptions({
+    queryKey: deviceKeys.jobList(id, status),
+    queryFn: async ({ pageParam, signal }) => {
+      const { data, response } = await api.GET('/api/v1/devices/{id}/jobs', {
+        params: {
+          path: { id },
+          query: {
+            limit: pageSize,
+            ...(pageParam === undefined ? {} : { cursor: pageParam }),
+            ...(status === undefined ? {} : { status }),
+          },
+        },
+        signal,
+      });
+
+      if (!response.ok || data === undefined) {
+        throw new ApiError('Could not load the job queue.', response.status);
+      }
+
+      return data;
+    },
+    initialPageParam: undefined as string | undefined,
+    getNextPageParam: (last) => last.nextCursor ?? undefined,
+    refetchInterval: 5_000,
+  });
+}

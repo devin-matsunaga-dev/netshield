@@ -43,7 +43,7 @@ export function DeviceFingerprintTab({ device }: { readonly device: DeviceDetail
         variant="secondary"
         disabled={walk.isPending}
         onClick={() => {
-          walk.mutate(undefined, {
+          walk.mutate('fingerprint', {
             onSuccess: () => {
               toast.announce('Walk queued. The fingerprint updates when a collector reports back.');
             },

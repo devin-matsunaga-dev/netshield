@@ -1,5 +1,6 @@
 using System.Text.Json.Serialization;
 
+using NetShield.Contracts.Collector;
 using NetShield.Contracts.Inventory;
 using NetShield.Contracts.Paging;
 
@@ -47,6 +48,8 @@ namespace NetShield.Inventory.Endpoints;
 [JsonSerializable(typeof(DeviceFingerprintDetail))]
 [JsonSerializable(typeof(DeviceInterfaceSummary))]
 [JsonSerializable(typeof(CursorPage<DeviceInterfaceSummary>))]
+[JsonSerializable(typeof(CollectorJobSummary))]
+[JsonSerializable(typeof(CursorPage<CollectorJobSummary>))]
 [JsonSerializable(typeof(DeviceReachabilityDetail))]
 [JsonSerializable(typeof(ClientSummary))]
 [JsonSerializable(typeof(ClientDetail))]

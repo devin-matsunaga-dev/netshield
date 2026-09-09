@@ -19,4 +19,10 @@ export const deviceKeys = {
   interfaces: (id: string) => [...deviceKeys.detail(id), 'interfaces'] as const,
   reachability: (id: string) => [...deviceKeys.detail(id), 'reachability'] as const,
   credentialProfiles: (id: string) => [...deviceKeys.detail(id), 'credential-profiles'] as const,
+  // The status is part of the key because a filtered queue is a different question with a
+  // different answer, and `jobs()` above it is what a walk or a cancellation invalidates without
+  // having to know which filter the screen is currently on.
+  jobs: (id: string) => [...deviceKeys.detail(id), 'jobs'] as const,
+  jobList: (id: string, status: string | undefined) =>
+    [...deviceKeys.jobs(id), status ?? 'all'] as const,
 };

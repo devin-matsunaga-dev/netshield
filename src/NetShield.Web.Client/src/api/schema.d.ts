@@ -164,6 +164,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/devices/{id}/jobs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ListDeviceJobs"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/devices/{id}/jobs/{jobId}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["CancelDeviceJob"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/devices/{id}/reachability": {
         parameters: {
             query?: never;
@@ -779,6 +811,32 @@ export interface components {
             /** Format: date-time */
             queuedAt: string;
         };
+        /** @enum {unknown} */
+        CollectorJobKind: "Poll" | "Discover" | "ConfigFetch";
+        /** @enum {unknown} */
+        CollectorJobStatus: "Pending" | "Leased" | "Succeeded" | "Failed" | "Cancelled";
+        CollectorJobSummary: {
+            /** Format: uuid */
+            id: string;
+            kind: components["schemas"]["CollectorJobKind"];
+            walk: null | string;
+            status: components["schemas"]["CollectorJobStatus"];
+            /** Format: int32 */
+            attempts: number | string;
+            /** Format: int32 */
+            maxAttempts: number | string;
+            /** Format: date-time */
+            dueAt: string;
+            leasedBy: null | string;
+            /** Format: date-time */
+            leasedUntil: null | string;
+            /** Format: date-time */
+            completedAt: null | string;
+            detail: null | string;
+            cancellable: boolean;
+            /** Format: date-time */
+            createdAt: string;
+        };
         CreateCredentialProfileRequest: {
             name: string;
             kind: components["schemas"]["CredentialKind"];
@@ -873,6 +931,12 @@ export interface components {
         };
         CursorPageOfClientSummary: {
             items: components["schemas"]["ClientSummary"][];
+            nextCursor: null | string;
+            /** Format: int64 */
+            totalCount?: null | number | string;
+        };
+        CursorPageOfCollectorJobSummary: {
+            items: components["schemas"]["CollectorJobSummary"][];
             nextCursor: null | string;
             /** Format: int64 */
             totalCount?: null | number | string;
@@ -2087,6 +2151,109 @@ export interface operations {
             };
             /** @description Not Found */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    ListDeviceJobs: {
+        parameters: {
+            query?: {
+                status?: components["schemas"]["CollectorJobStatus"];
+                cursor?: string;
+                limit?: number | string;
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CursorPageOfCollectorJobSummary"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    CancelDeviceJob: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                jobId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CollectorJobSummary"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };

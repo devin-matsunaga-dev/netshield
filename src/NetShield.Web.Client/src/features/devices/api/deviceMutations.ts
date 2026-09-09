@@ -89,31 +89,6 @@ export function useDeleteDevice() {
 }
 
 /**
- * Asks the collector to fingerprint a device now. Answers 202 with a job id — nothing has been
- * walked when it returns, because ARCHITECTURE.md §7 puts device contact on the collector.
- */
-export function useQueueDeviceWalk(id: string) {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async () => {
-      const { data, error, response } = await api.POST('/api/v1/devices/{id}/walk', {
-        params: { path: { id } },
-      });
-
-      if (!response.ok || data === undefined) {
-        throw toRequestError(error, 'The walk could not be queued.');
-      }
-
-      return data;
-    },
-    // Nothing to invalidate yet: the result arrives when a collector has leased the job, run it
-    // and reported back, which is minutes rather than milliseconds. The reader refreshes the tab.
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: deviceKeys.fingerprint(id) }),
-  });
-}
-
-/**
  * Replaces the whole set of profiles assigned to a device.
  *
  * Whole-set replacement rather than add and remove, which is what the API offers and why: the
@@ -156,4 +131,88 @@ function toRequestError(error: unknown, fallback: string): DeviceRequestError {
     { detail?: string; code?: string; errors?: Record<string, string[]> } | undefined;
 
   return new DeviceRequestError(problem?.detail ?? fallback, problem?.code, problem?.errors ?? {});
+}
+
+/**
+ * The on-demand reads a person can ask for on one device, and the routes behind them.
+ *
+ * Five walks, five routes, one shape. They are separate routes rather than one with a parameter
+ * because they are separate jobs with separate schedules and separate failure modes — a routing
+ * table is nothing like a neighbour table, and an operator who wants their edges refreshed
+ * should not be made to wait on, or be failed by, either of the others.
+ */
+export const deviceWalks = {
+  fingerprint: '/api/v1/devices/{id}/walk',
+  neighbors: '/api/v1/devices/{id}/neighbor-walk',
+  routes: '/api/v1/devices/{id}/route-walk',
+  vlans: '/api/v1/devices/{id}/vlan-walk',
+  clients: '/api/v1/devices/{id}/client-walk',
+} as const;
+
+export type DeviceWalk = keyof typeof deviceWalks;
+
+/**
+ * Queues one walk of one device.
+ *
+ * It supersedes WP-1.5's fingerprint-only mutation rather than sitting beside it: that one did
+ * the same thing for one of the five routes, and two hooks for one action is how the fingerprint
+ * tab and the queue come to disagree about what a walk invalidates.
+ *
+ * A `409` is the API saying this device already has a `Discover` queued or running, which is a
+ * real rule rather than a transient failure: two walks of one device applied in whichever order
+ * they came back would have each withdrawing what the other had just established. It is carried
+ * through as a `DeviceRequestError` so the screen can say so and point at the queue, where the
+ * job that is in the way can now be cancelled.
+ */
+export function useQueueDeviceWalk(id: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (walk: DeviceWalk) => {
+      const { data, error, response } = await api.POST(deviceWalks[walk], {
+        params: { path: { id } },
+      });
+
+      if (!response.ok || data === undefined) {
+        throw toRequestError(error, 'The walk could not be queued.');
+      }
+
+      return data;
+    },
+    onSuccess: async () => {
+      // The queue, always — a walk is a job and the job list is now wrong. The fingerprint too,
+      // because WP-1.5's tab reads it and a fingerprint walk is the one that rewrites it.
+      await queryClient.invalidateQueries({ queryKey: deviceKeys.jobs(id) });
+      await queryClient.invalidateQueries({ queryKey: deviceKeys.fingerprint(id) });
+    },
+  });
+}
+
+/**
+ * Takes a queued job back out of the queue.
+ *
+ * Only a `Pending` job can be cancelled and the server is the one that says so — the row carries
+ * `cancellable`, so the screen never offers a control the API would refuse. A `409` here means
+ * a collector claimed the job between the page rendering and the button being pressed, which is
+ * ordinary rather than exceptional on a screen that refetches every five seconds.
+ */
+export function useCancelDeviceJob(id: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (jobId: string) => {
+      const { data, error, response } = await api.POST('/api/v1/devices/{id}/jobs/{jobId}/cancel', {
+        params: { path: { id, jobId } },
+      });
+
+      if (!response.ok || data === undefined) {
+        throw toRequestError(error, 'The job could not be cancelled.');
+      }
+
+      return data;
+    },
+    // Every status filter, not just the mounted one: a cancelled job leaves `Pending` and joins
+    // `Cancelled`, so both lists are now wrong and only the server knows what they should say.
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: deviceKeys.jobs(id) }),
+  });
 }

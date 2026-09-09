@@ -11,6 +11,7 @@ import { deviceQuery } from '@/features/devices/api/deviceQueries';
 import { DeviceCredentialsTab } from '@/features/devices/components/DeviceCredentialsTab';
 import { DeviceFingerprintTab } from '@/features/devices/components/DeviceFingerprintTab';
 import { DeviceInterfacesTab } from '@/features/devices/components/DeviceInterfacesTab';
+import { DeviceJobsTab } from '@/features/devices/components/DeviceJobsTab';
 import { DeviceOverviewTab } from '@/features/devices/components/DeviceOverviewTab';
 import { DeviceSettingsTab } from '@/features/devices/components/DeviceSettingsTab';
 import { DeviceStateBadge } from '@/features/devices/components/DeviceStateBadge';
@@ -43,6 +44,7 @@ export function DeviceDetailPage({ deviceId, tab }: DeviceDetailPageProps) {
     { id: 'overview', label: 'Overview' },
     { id: 'fingerprint', label: 'Fingerprint' },
     { id: 'interfaces', label: 'Interfaces' },
+    { id: 'jobs', label: 'Jobs' },
     ...(holds('CredentialsManage') ? [{ id: 'credentials', label: 'Credentials' }] : []),
     ...(holds('InventoryWrite') ? [{ id: 'settings', label: 'Settings' }] : []),
   ];
@@ -118,6 +120,7 @@ export function DeviceDetailPage({ deviceId, tab }: DeviceDetailPageProps) {
         {active === 'overview' && <DeviceOverviewTab device={detail} />}
         {active === 'fingerprint' && <DeviceFingerprintTab device={detail} />}
         {active === 'interfaces' && <DeviceInterfacesTab deviceId={deviceId} />}
+        {active === 'jobs' && <DeviceJobsTab deviceId={deviceId} />}
         {active === 'credentials' && <DeviceCredentialsTab deviceId={deviceId} />}
         {active === 'settings' && <DeviceSettingsTab device={detail} />}
       </div>

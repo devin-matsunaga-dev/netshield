@@ -115,6 +115,10 @@ Graph endpoint returning nodes and edges with state, filterable by site, VLAN, a
 React Flow canvas per `DESIGN.md` §6: dot grid, 48px node tiles with state-encoded borders, zoom/fit controls stacked top-left, legend in the card header, node click opening device detail.
 **Done when:** the canvas visually matches the reference topology card, 500 nodes pan and zoom at 60fps, and the canvas is keyboard navigable with a table fallback.
 
+### WP-2.5 — Job queue visibility and walk controls
+The device's collector queue on screen, the five on-demand walks behind buttons, and cancellation of a job that has not yet been leased. Adds `Cancelled` to `CollectorJobStatus` — the seam WP-1.3 named and deliberately left uncut — and no other change to the collector contract.
+**Done when:** a queued job is visible on the device screen with its walk named, a pending job can be cancelled and is then never leased, cancelling clears the outstanding-walk `409` so the next walk is accepted, and a leased job refuses cancellation.
+
 ---
 
 # Phase 3 — Telemetry

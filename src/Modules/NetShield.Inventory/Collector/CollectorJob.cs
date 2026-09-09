@@ -14,8 +14,10 @@ namespace NetShield.Inventory.Collector;
 /// <para>
 /// There is no <c>deleted_at</c>. CONVENTIONS.md §3 puts soft delete on inventory tables, and a
 /// job is not inventory — it is a record of work, kept for as long as the retention policy says
-/// and then removed by it. Nothing in the system asks for a job that was cancelled, either;
-/// there is no cancellation path in V1 and so no state for one.
+/// and then removed by it. Cancelling one is a state and not a deletion, for the same reason:
+/// what was queued and then withdrawn is part of the record of what happened, and an operator
+/// asking "why did this device never get walked" is owed the answer that somebody took it back
+/// out (WP-2.5).
 /// </para>
 /// <para>
 /// The lease is the whole of the concurrency model. A collector claims a job by writing its own
@@ -104,7 +106,18 @@ internal sealed class CollectorJob
     /// <summary>When the row last changed. UTC.</summary>
     public DateTimeOffset UpdatedAt { get; set; }
 
-    /// <summary>Whether a result has already been recorded for this job.</summary>
+    /// <summary>
+    /// Whether the job has reached a state it will not leave.
+    /// </summary>
+    /// <remarks>
+    /// <see cref="CollectorJobStatus.Cancelled"/> counts, though nothing should ever submit a
+    /// result for one: cancelling is permitted only from <see cref="CollectorJobStatus.Pending"/>,
+    /// and a pending job has no lease token for a result to match. It is included because this
+    /// asks whether the row is finished with, and a cancelled one is — so a result that reached
+    /// here anyway is ignored rather than applied over a withdrawal.
+    /// </remarks>
     public bool IsComplete =>
-        Status is CollectorJobStatus.Succeeded or CollectorJobStatus.Failed;
+        Status is CollectorJobStatus.Succeeded
+            or CollectorJobStatus.Failed
+            or CollectorJobStatus.Cancelled;
 }

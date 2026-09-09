@@ -10,6 +10,9 @@ export const deviceTabs = [
   'overview',
   'fingerprint',
   'interfaces',
+  // Between what the device is and who may reach it: the queue is about what NetShield has
+  // asked of the device, which is the question somebody has after pressing a walk button.
+  'jobs',
   'credentials',
   'settings',
 ] as const;

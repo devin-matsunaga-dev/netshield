@@ -10,6 +10,7 @@ import {
   makeDevice,
   makeFingerprint,
   makeInterface,
+  makeJob,
   makeReachability,
   makeRun,
   makeRunDetail,
@@ -65,6 +66,7 @@ function anEstate() {
     seeds: [makeSeed()],
     ignores: [],
     deviceProfiles: new Map([[deviceId, []]]),
+    jobs: new Map([[deviceId, [makeJob()]]]),
   });
 }
 
@@ -114,6 +116,28 @@ describe('the inventory screens', () => {
 
     const { container } = renderApp(`/devices/${deviceId}?tab=interfaces`);
     await screen.findByRole('table', { name: 'Interfaces' });
+
+    await expectNoAccessibilityViolations(container);
+  });
+
+  it('has no accessibility violation on the jobs tab', async () => {
+    anEstate();
+
+    const { container } = renderApp(`/devices/${deviceId}?tab=jobs`);
+    await screen.findByRole('table', { name: 'Collector jobs' });
+
+    await expectNoAccessibilityViolations(container);
+  });
+
+  it('has no accessibility violation on an empty jobs tab', async () => {
+    anEstate();
+    setInventory({
+      devices: [makeDevice({ id: deviceId })],
+      detail: new Map([[deviceId, makeDetail({ id: deviceId })]]),
+    });
+
+    const { container } = renderApp(`/devices/${deviceId}?tab=jobs`);
+    await screen.findByText('Nothing has been asked of this device yet.');
 
     await expectNoAccessibilityViolations(container);
   });
