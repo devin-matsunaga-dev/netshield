@@ -39,6 +39,9 @@ CLIENT_WALKS = WALKS / "clients"
 TOPOLOGY_WALKS = WALKS / "topology"
 """Where the recorded neighbour and route walks live."""
 
+VLAN_WALKS = WALKS / "vlans"
+"""Where the recorded VLAN walks live."""
+
 # Recognisably not a real secret, and long enough to satisfy the API's own floor.
 SHARED_SECRET = "test-shared-secret-0000000000000000000000000000"
 
@@ -126,6 +129,21 @@ def topology_walk_fixture(name: str) -> dict[str, str]:
 def topology_walk_session(name: str) -> FixtureSession:
     """A session replaying one recorded neighbour or route walk."""
     return FixtureSession(topology_walk_fixture(name))
+
+
+def vlan_walk_fixture(name: str) -> dict[str, str]:
+    """One recorded VLAN walk's values, by file stem."""
+    document = json.loads((VLAN_WALKS / f"{name}.json").read_text())
+    values = document["values"]
+
+    assert isinstance(values, dict)
+
+    return {str(oid): str(value) for oid, value in values.items()}
+
+
+def vlan_walk_session(name: str) -> FixtureSession:
+    """A session replaying one recorded VLAN walk."""
+    return FixtureSession(vlan_walk_fixture(name))
 
 
 def snmp_credential(
@@ -339,6 +357,45 @@ def route_job(
             "maxRepetitions": 25,
             "maxRows": 20000,
             "maxNextHops": 500,
+        },
+        credential=credential if credential is not None else snmp_credential(),
+    )
+
+
+def vlan_job(
+    *,
+    parameters: dict[str, object] | None = None,
+    credential: JobCredential | None = None,
+    device: JobDevice | None = None,
+    vendor: str = "CiscoIos",
+    address: str = "192.0.2.10",
+) -> LeasedJob:
+    """A leased Discover job carrying the VLAN walk's parameters."""
+    return LeasedJob(
+        job_id=uuid4(),
+        kind=JobKind.DISCOVER,
+        lease_token="lease-token",
+        lease_expires_at=datetime.now(UTC),
+        attempt=1,
+        device=device
+        if device is not None
+        else JobDevice.model_validate(
+            {
+                "deviceId": str(uuid4()),
+                "hostname": "lab-sw-01",
+                "ipAddress": address,
+                "vendor": vendor,
+            }
+        ),
+        parameters=parameters
+        if parameters is not None
+        else {
+            "walk": "vlans",
+            "timeoutSeconds": 2.0,
+            "retries": 1,
+            "maxRepetitions": 25,
+            "maxRows": 5000,
+            "maxVlans": 512,
         },
         credential=credential if credential is not None else snmp_credential(),
     )

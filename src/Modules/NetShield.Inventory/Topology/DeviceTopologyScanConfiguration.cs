@@ -17,6 +17,9 @@ internal sealed class DeviceTopologyScanConfiguration : IEntityTypeConfiguration
     /// <summary>The index the route schedule sorts by.</summary>
     internal const string NextRouteIndexName = "ix_device_topology_scans_next_route_walk_at";
 
+    /// <summary>The index the VLAN schedule sorts by.</summary>
+    internal const string NextVlanIndexName = "ix_device_topology_scans_next_vlan_walk_at";
+
     public void Configure(EntityTypeBuilder<DeviceTopologyScan> builder)
     {
         ArgumentNullException.ThrowIfNull(builder);
@@ -28,9 +31,12 @@ internal sealed class DeviceTopologyScanConfiguration : IEntityTypeConfiguration
         builder.Property(scan => scan.DeviceId).IsRequired();
         builder.Property(scan => scan.NextNeighborWalkAt).IsRequired();
         builder.Property(scan => scan.NextRouteWalkAt).IsRequired();
+        builder.Property(scan => scan.NextVlanWalkAt).IsRequired();
         builder.Property(scan => scan.RouteTable).HasMaxLength(TopologyLimits.TableNameLength);
         builder.Property(scan => scan.LastNeighborError).HasMaxLength(TopologyLimits.ErrorLength);
         builder.Property(scan => scan.LastRouteError).HasMaxLength(TopologyLimits.ErrorLength);
+        builder.Property(scan => scan.VlanTable).HasMaxLength(TopologyLimits.TableNameLength);
+        builder.Property(scan => scan.LastVlanError).HasMaxLength(TopologyLimits.ErrorLength);
         builder.Property(scan => scan.CreatedAt).IsRequired();
         builder.Property(scan => scan.UpdatedAt).IsRequired();
 
@@ -40,5 +46,6 @@ internal sealed class DeviceTopologyScanConfiguration : IEntityTypeConfiguration
 
         builder.HasIndex(scan => scan.NextNeighborWalkAt).HasDatabaseName(NextNeighborIndexName);
         builder.HasIndex(scan => scan.NextRouteWalkAt).HasDatabaseName(NextRouteIndexName);
+        builder.HasIndex(scan => scan.NextVlanWalkAt).HasDatabaseName(NextVlanIndexName);
     }
 }

@@ -228,6 +228,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/devices/{id}/vlans": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ListDeviceVlans"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/devices/{id}/neighbor-walk": {
         parameters: {
             query?: never;
@@ -254,6 +270,22 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["QueueDeviceRouteWalk"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/devices/{id}/vlan-walk": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["QueueDeviceVlanWalk"];
         delete?: never;
         options?: never;
         head?: never;
@@ -492,6 +524,38 @@ export interface paths {
             cookie?: never;
         };
         get: operations["ListClientPortHistory"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/vlans": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ListVlans"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/vlans/{vlanId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetVlan"];
         put?: never;
         post?: never;
         delete?: never;
@@ -821,6 +885,12 @@ export interface components {
             /** Format: int64 */
             totalCount?: null | number | string;
         };
+        CursorPageOfDeviceVlanSummary: {
+            items: components["schemas"]["DeviceVlanSummary"][];
+            nextCursor: null | string;
+            /** Format: int64 */
+            totalCount?: null | number | string;
+        };
         CursorPageOfDiscoveryCandidateSummary: {
             items: components["schemas"]["DiscoveryCandidateSummary"][];
             nextCursor: null | string;
@@ -847,6 +917,12 @@ export interface components {
         };
         CursorPageOfDiscoverySeedSummary: {
             items: components["schemas"]["DiscoverySeedSummary"][];
+            nextCursor: null | string;
+            /** Format: int64 */
+            totalCount?: null | number | string;
+        };
+        CursorPageOfVlanSummary: {
+            items: components["schemas"]["VlanSummary"][];
             nextCursor: null | string;
             /** Format: int64 */
             totalCount?: null | number | string;
@@ -1011,9 +1087,36 @@ export interface components {
             /** Format: int32 */
             lastNextHopCount: null | number | string;
             lastRouteError: null | string;
+            /** Format: date-time */
+            nextVlanWalkAt: string;
+            /** Format: date-time */
+            lastVlanWalkAt: null | string;
+            vlansSupported: null | boolean;
+            vlanTable: null | string;
+            /** Format: int32 */
+            lastVlanCount: null | number | string;
+            lastVlanError: null | string;
         };
         /** @enum {unknown} */
         DeviceVendor: "Unknown" | "CiscoIos" | "CiscoNxOs" | "JuniperJunOs" | "AristaEos" | "FortinetFortiOs" | "MikroTikRouterOs" | "GenericSnmp";
+        DeviceVlanSummary: {
+            /** Format: uuid */
+            deviceId: string;
+            /** Format: int32 */
+            vlanId: number | string;
+            name: null | string;
+            ports: components["schemas"]["VlanPortMembership"][];
+            /** Format: int32 */
+            portCount: number | string;
+            /** Format: int32 */
+            unresolvedPortCount: number | string;
+            /** Format: int32 */
+            clientCount: number | string;
+            /** Format: date-time */
+            firstDiscoveredAt: string;
+            /** Format: date-time */
+            lastSeenAt: string;
+        };
         DeviceWalkQueued: {
             /** Format: uuid */
             jobId: string;
@@ -1238,7 +1341,7 @@ export interface components {
         /** @enum {unknown} */
         SnmpPrivacyAlgorithm: "None" | "Des" | "Aes128" | "Aes192" | "Aes256" | null;
         /** @enum {unknown} */
-        TopologyWalkKind: "Neighbors" | "Routes";
+        TopologyWalkKind: "Neighbors" | "Routes" | "Vlans";
         UpdateCredentialProfileRequest: {
             name: string;
             description?: null | string;
@@ -1272,6 +1375,61 @@ export interface components {
         };
         /** @enum {unknown} */
         UserRole: "Administrator" | "Operator" | "Analyst" | "ReadOnly";
+        VlanDetail: {
+            /** Format: int32 */
+            vlanId: number | string;
+            name: null | string;
+            nameDisputed: boolean;
+            names: string[];
+            /** Format: int32 */
+            deviceCount: number | string;
+            /** Format: int32 */
+            clientCount: number | string;
+            /** Format: int32 */
+            portCount: number | string;
+            /** Format: date-time */
+            firstDiscoveredAt: string;
+            /** Format: date-time */
+            lastSeenAt: string;
+            devices: components["schemas"]["VlanDeviceMembership"][];
+        };
+        VlanDeviceMembership: {
+            /** Format: uuid */
+            deviceId: string;
+            hostname: string;
+            name: null | string;
+            ports: components["schemas"]["VlanPortMembership"][];
+            /** Format: int32 */
+            portCount: number | string;
+            /** Format: int32 */
+            clientCount: number | string;
+            /** Format: date-time */
+            firstDiscoveredAt: string;
+            /** Format: date-time */
+            lastSeenAt: string;
+        };
+        VlanPortMembership: {
+            /** Format: int32 */
+            ifIndex: number | string;
+            interfaceName: null | string;
+            untagged: boolean;
+        };
+        VlanSummary: {
+            /** Format: int32 */
+            vlanId: number | string;
+            name: null | string;
+            nameDisputed: boolean;
+            /** Format: int32 */
+            deviceCount: number | string;
+            /** Format: int32 */
+            clientCount: number | string;
+            /** Format: int32 */
+            portCount: number | string;
+            /** Format: date-time */
+            firstDiscoveredAt: string;
+            /** Format: date-time */
+            lastSeenAt: string;
+        };
     };
     responses: never;
     parameters: never;
@@ -2023,6 +2181,58 @@ export interface operations {
             };
         };
     };
+    ListDeviceVlans: {
+        parameters: {
+            query?: {
+                cursor?: string;
+                limit?: number | string;
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CursorPageOfDeviceVlanSummary"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
     QueueDeviceNeighborWalk: {
         parameters: {
             query?: never;
@@ -2073,6 +2283,55 @@ export interface operations {
         };
     };
     QueueDeviceRouteWalk: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Accepted */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NeighborWalkQueued"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    QueueDeviceVlanWalk: {
         parameters: {
             query?: never;
             header?: never;
@@ -3040,6 +3299,96 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CursorPageOfClientPortBindingSummary"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    ListVlans: {
+        parameters: {
+            query?: {
+                cursor?: string;
+                limit?: number | string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CursorPageOfVlanSummary"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    GetVlan: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                vlanId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VlanDetail"];
                 };
             };
             /** @description Bad Request */

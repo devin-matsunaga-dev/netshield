@@ -35,12 +35,14 @@ public static class InventoryEndpoints
         endpoints.MapDeviceReachabilityEndpoints();
         endpoints.MapDeviceClientWalkEndpoints();
         endpoints.MapDeviceAdjacencyEndpoints();
+        endpoints.MapDeviceVlanEndpoints();
         endpoints.MapDeviceTopologyWalkEndpoints();
         endpoints.MapDiscoverySeedEndpoints();
         endpoints.MapDiscoveryRunEndpoints();
         endpoints.MapDiscoveryCandidateEndpoints();
         endpoints.MapDiscoveryIgnoreEndpoints();
         endpoints.MapClientEndpoints();
+        endpoints.MapVlanEndpoints();
         endpoints.MapCredentialProfileEndpoints();
         endpoints.MapDeviceCredentialProfileEndpoints();
         endpoints.MapCollectorEndpoints();

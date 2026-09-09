@@ -34,4 +34,20 @@ internal static class TopologyLimits
 
     /// <summary>The value stored when a device advertised no port identifier at all.</summary>
     internal const string UnknownPort = "";
+
+    /// <summary>
+    /// The most member ports one VLAN row will hold.
+    /// </summary>
+    /// <remarks>
+    /// A chassis switch can carry a VLAN on several hundred ports; a list far past that is an
+    /// agent contradicting itself, and it is cut rather than the walk failed — the rule at the
+    /// top of this file.
+    /// </remarks>
+    internal const int MaxPortsPerVlan = 1_024;
+
+    /// <summary>The lowest VLAN id IEEE 802.1Q admits.</summary>
+    internal const int MinVlanId = 1;
+
+    /// <summary>The highest. <c>VlanIndex</c> in Q-BRIDGE-MIB is <c>1..4094</c>.</summary>
+    internal const int MaxVlanId = 4_094;
 }

@@ -5,7 +5,7 @@ namespace NetShield.Inventory.Topology;
 /// <summary>
 /// Turns the topology entities into the shapes that leave the module. The one place the boundary
 /// in ARCHITECTURE.md §4 is crossed for this feature, and the reason nothing outside it needs to
-/// see <see cref="DeviceAdjacency"/>, <see cref="DeviceNeighbor"/> or
+/// see <see cref="DeviceAdjacency"/>, <see cref="DeviceNeighbor"/>, <see cref="DeviceVlan"/> or
 /// <see cref="DeviceTopologyScan"/>.
 /// </summary>
 internal static class TopologyMapping
@@ -75,7 +75,13 @@ internal static class TopologyMapping
             scan.RouteTable,
             scan.LastRouteCount,
             scan.LastNextHopCount,
-            scan.LastRouteError);
+            scan.LastRouteError,
+            scan.NextVlanWalkAt,
+            scan.LastVlanWalkAt,
+            scan.VlansSupported,
+            scan.VlanTable,
+            scan.LastVlanCount,
+            scan.LastVlanError);
 
     /// <summary>Every protocol supporting the edge, from either end, in declaration order.</summary>
     private static IReadOnlyList<NeighborSource> Sources(DeviceAdjacency edge)

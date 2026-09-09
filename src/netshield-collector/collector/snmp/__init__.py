@@ -8,12 +8,12 @@ Read only. This package sends ``get`` and ``getbulk`` and nothing else; the SNMP
 appears nowhere in NetShield and is forbidden by ARCHITECTURE.md §1 rather than merely
 unimplemented.
 
-This package supplies four of the five walks a ``Discover`` job can name — the fingerprint walk,
-the client-table walk, the neighbour walk and the route walk — and ``collector.discovery``
-supplies the fifth, the range sweep. All five are reached through ``DiscoverExecutor`` rather
-than being registered for the kind itself, and this package imports nothing from that one: the
-dispatcher's contract is structural, so the two protocol packages stay independent and
-``__main__`` is the only place that knows both exist.
+This package supplies five of the six walks a ``Discover`` job can name — the fingerprint walk,
+the client-table walk, the neighbour walk, the route walk and the VLAN walk — and
+``collector.discovery`` supplies the sixth, the range sweep. All six are reached through
+``DiscoverExecutor`` rather than being registered for the kind itself, and this package imports
+nothing from that one: the dispatcher's contract is structural, so the two protocol packages stay
+independent and ``__main__`` is the only place that knows both exist.
 """
 
 from collector.snmp.clients import ClientWalkExecutor, ClientWalkJobError
@@ -21,6 +21,7 @@ from collector.snmp.executor import WALK_NAME, SnmpJobError, SnmpWalkExecutor
 from collector.snmp.neighbors import NeighborWalkExecutor, NeighborWalkJobError
 from collector.snmp.routes import RouteWalkExecutor, RouteWalkJobError
 from collector.snmp.session import PySnmpSession, SnmpError, SnmpSession
+from collector.snmp.vlans import VlanWalkExecutor, VlanWalkJobError
 
 __all__ = [
     "WALK_NAME",
@@ -35,4 +36,6 @@ __all__ = [
     "SnmpJobError",
     "SnmpSession",
     "SnmpWalkExecutor",
+    "VlanWalkExecutor",
+    "VlanWalkJobError",
 ]

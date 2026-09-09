@@ -12,11 +12,11 @@ namespace NetShield.Inventory.Topology;
 /// performed needs somewhere to say so that is not the adjacency table itself.
 /// </para>
 /// <para>
-/// <strong>One row, two walks.</strong> The neighbour read and the route read are separate jobs
-/// with separate schedules and separate failure modes, and each has its own due time, its own
-/// last-applied job and its own error here. They share a row because they share a device and
-/// because the question an operator asks — "why does this switch show no edges?" — is answered by
-/// both halves at once.
+/// <strong>One row, three walks.</strong> The neighbour read, the route read and the VLAN read
+/// are separate jobs with separate schedules and separate failure modes, and each has its own due
+/// time, its own last-applied job and its own error here. They share a row because they share a
+/// device and because the question an operator asks — "why does this switch show no edges and no
+/// VLANs?" — is answered by all three at once.
 /// </para>
 /// </remarks>
 internal sealed class DeviceTopologyScan
@@ -78,6 +78,29 @@ internal sealed class DeviceTopologyScan
 
     /// <summary>Why the last route walk could not be performed, where it could not.</summary>
     public string? LastRouteError { get; set; }
+
+    // --- The VLAN walk: the Q-BRIDGE half, on the slowest clock of the three. ---
+
+    /// <summary>The earliest the next VLAN walk should be queued. UTC.</summary>
+    public DateTimeOffset NextVlanWalkAt { get; set; }
+
+    /// <summary>When a VLAN walk last reported, successfully or not. UTC.</summary>
+    public DateTimeOffset? LastVlanWalkAt { get; set; }
+
+    /// <summary>The VLAN walk whose result was last applied to this device's VLAN rows.</summary>
+    public Guid? LastVlanJobId { get; set; }
+
+    /// <summary>Whether the device answered a Q-BRIDGE VLAN table at all.</summary>
+    public bool? VlansSupported { get; set; }
+
+    /// <summary>Which of the two tables answered, where one did.</summary>
+    public string? VlanTable { get; set; }
+
+    /// <summary>How many VLANs the last walk read.</summary>
+    public int? LastVlanCount { get; set; }
+
+    /// <summary>Why the last VLAN walk could not be performed, where it could not.</summary>
+    public string? LastVlanError { get; set; }
 
     /// <summary>UTC.</summary>
     public DateTimeOffset CreatedAt { get; init; }

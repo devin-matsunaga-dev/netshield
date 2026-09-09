@@ -1664,6 +1664,23 @@ namespace NetShield.Inventory.Persistence.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("last_route_walk_at");
 
+                    b.Property<int?>("LastVlanCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("last_vlan_count");
+
+                    b.Property<string>("LastVlanError")
+                        .HasMaxLength(1024)
+                        .HasColumnType("character varying(1024)")
+                        .HasColumnName("last_vlan_error");
+
+                    b.Property<Guid?>("LastVlanJobId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("last_vlan_job_id");
+
+                    b.Property<DateTimeOffset?>("LastVlanWalkAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_vlan_walk_at");
+
                     b.Property<bool?>("LldpSupported")
                         .HasColumnType("boolean")
                         .HasColumnName("lldp_supported");
@@ -1675,6 +1692,10 @@ namespace NetShield.Inventory.Persistence.Migrations
                     b.Property<DateTimeOffset>("NextRouteWalkAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("next_route_walk_at");
+
+                    b.Property<DateTimeOffset>("NextVlanWalkAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("next_vlan_walk_at");
 
                     b.Property<string>("RouteTable")
                         .HasMaxLength(64)
@@ -1689,6 +1710,15 @@ namespace NetShield.Inventory.Persistence.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("updated_at");
 
+                    b.Property<string>("VlanTable")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("vlan_table");
+
+                    b.Property<bool?>("VlansSupported")
+                        .HasColumnType("boolean")
+                        .HasColumnName("vlans_supported");
+
                     b.HasKey("Id")
                         .HasName("pk_device_topology_scans");
 
@@ -1702,7 +1732,90 @@ namespace NetShield.Inventory.Persistence.Migrations
                     b.HasIndex("NextRouteWalkAt")
                         .HasDatabaseName("ix_device_topology_scans_next_route_walk_at");
 
+                    b.HasIndex("NextVlanWalkAt")
+                        .HasDatabaseName("ix_device_topology_scans_next_vlan_walk_at");
+
                     b.ToTable("device_topology_scans", (string)null);
+                });
+
+            modelBuilder.Entity("NetShield.Inventory.Topology.DeviceVlan", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid>("DeviceId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("device_id");
+
+                    b.Property<DateTimeOffset>("FirstDiscoveredAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("first_discovered_at");
+
+                    b.PrimitiveCollection<int[]>("IfIndexes")
+                        .IsRequired()
+                        .HasColumnType("integer[]")
+                        .HasColumnName("if_indexes");
+
+                    b.Property<DateTimeOffset>("LastSeenAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_seen_at");
+
+                    b.Property<string>("Name")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
+                        .HasColumnName("name");
+
+                    b.Property<int>("PortCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("port_count");
+
+                    b.Property<string>("Source")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("source");
+
+                    b.Property<int>("UnresolvedPortCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("unresolved_port_count");
+
+                    b.PrimitiveCollection<int[]>("UntaggedIfIndexes")
+                        .IsRequired()
+                        .HasColumnType("integer[]")
+                        .HasColumnName("untagged_if_indexes");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<int>("VlanId")
+                        .HasColumnType("integer")
+                        .HasColumnName("vlan_id");
+
+                    b.Property<DateTimeOffset?>("WithdrawnAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("withdrawn_at");
+
+                    b.HasKey("Id")
+                        .HasName("pk_device_vlans");
+
+                    b.HasIndex("DeviceId", "VlanId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_device_vlans_open")
+                        .HasFilter("withdrawn_at IS NULL");
+
+                    b.HasIndex("DeviceId", "WithdrawnAt")
+                        .HasDatabaseName("ix_device_vlans_device_id_live");
+
+                    b.HasIndex("VlanId", "WithdrawnAt")
+                        .HasDatabaseName("ix_device_vlans_vlan_id_live");
+
+                    b.ToTable("device_vlans", (string)null);
                 });
 
             modelBuilder.Entity("NetShield.Platform.Messaging.OutboxMessage", b =>

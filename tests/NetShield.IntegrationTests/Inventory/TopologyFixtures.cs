@@ -35,6 +35,13 @@ internal static class TopologyFixtures
         CancellationToken cancellationToken) =>
         host.Client.PostAsync($"/api/v1/devices/{deviceId}/route-walk", new { }, cancellationToken);
 
+    /// <summary>Asks for a read of a device's VLAN tables.</summary>
+    public static Task<ApiResponse> RequestVlanWalkAsync(
+        InventoryHost host,
+        Guid deviceId,
+        CancellationToken cancellationToken) =>
+        host.Client.PostAsync($"/api/v1/devices/{deviceId}/vlan-walk", new { }, cancellationToken);
+
     /// <summary>Asks for a neighbour walk, reports a result, and delivers the outbox.</summary>
     public static async Task NeighborWalkAsync(
         InventoryHost host,
@@ -55,6 +62,28 @@ internal static class TopologyFixtures
     {
         await QueueAsync(await RequestRouteWalkAsync(host, deviceId, cancellationToken));
         await CompleteAsync(host, data, outcome: "Succeeded", cancellationToken);
+    }
+
+    /// <summary>Asks for a VLAN walk, reports a result, and delivers the outbox.</summary>
+    public static async Task VlanWalkAsync(
+        InventoryHost host,
+        Guid deviceId,
+        string data,
+        CancellationToken cancellationToken)
+    {
+        await QueueAsync(await RequestVlanWalkAsync(host, deviceId, cancellationToken));
+        await CompleteAsync(host, data, outcome: "Succeeded", cancellationToken);
+    }
+
+    /// <summary>Asks for a VLAN walk and reports that the collector could not perform it.</summary>
+    public static async Task FailVlanWalkAsync(
+        InventoryHost host,
+        Guid deviceId,
+        string detail,
+        CancellationToken cancellationToken)
+    {
+        await QueueAsync(await RequestVlanWalkAsync(host, deviceId, cancellationToken));
+        await CompleteAsync(host, data: null, outcome: "Failed", cancellationToken, detail);
     }
 
     /// <summary>Asks for a neighbour walk and reports that the collector could not perform it.</summary>
@@ -190,6 +219,53 @@ internal static class TopologyFixtures
                    "nextHopCount": {{Number(hops.Count)}},
                    "nextHopsTruncated": {{Bool(truncated)}},
                    "nextHops": [{{string.Join(",", hops)}}]
+                 }
+                 """;
+    }
+
+    /// <summary>One VLAN of one device, as the collector reports it.</summary>
+    public static string Vlan(
+        int vlanId,
+        string? name = null,
+        IReadOnlyList<int>? ifIndexes = null,
+        IReadOnlyList<int>? untaggedIfIndexes = null,
+        int? portCount = null,
+        int unresolvedPortCount = 0)
+    {
+        IReadOnlyList<int> members = ifIndexes ?? [];
+        IReadOnlyList<int> untagged = untaggedIfIndexes ?? [];
+
+        return $$"""
+                 {
+                   "vlanId": {{Number(vlanId)}},
+                   "name": {{Text(name)}},
+                   "ifIndexes": [{{string.Join(",", members.Select(Number))}}],
+                   "untaggedIfIndexes": [{{string.Join(",", untagged.Select(Number))}}],
+                   "portCount": {{Number(portCount ?? members.Count + unresolvedPortCount)}},
+                   "unresolvedPortCount": {{Number(unresolvedPortCount)}}
+                 }
+                 """;
+    }
+
+    /// <summary>The payload <c>collector/snmp/vlans.py</c> produces.</summary>
+    public static string VlanResult(
+        IReadOnlyList<string>? vlans = null,
+        bool? vlansSupported = null,
+        bool truncated = false,
+        string? vlanTable = "dot1qVlanStatic",
+        int? vlanCount = null,
+        string walk = "vlans")
+    {
+        IReadOnlyList<string> rows = vlans ?? [];
+
+        return $$"""
+                 {
+                   "walk": {{Text(walk)}},
+                   "vlansSupported": {{Bool(vlansSupported ?? rows.Count > 0)}},
+                   "vlanTable": {{Text(vlanTable)}},
+                   "vlanCount": {{Number(vlanCount ?? rows.Count)}},
+                   "vlansTruncated": {{Bool(truncated)}},
+                   "vlans": [{{string.Join(",", rows)}}]
                  }
                  """;
     }

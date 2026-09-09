@@ -17,4 +17,6 @@ namespace NetShield.Inventory.Topology;
 [JsonSerializable(typeof(NeighborWalkResult))]
 [JsonSerializable(typeof(RouteWalkParameters))]
 [JsonSerializable(typeof(RouteWalkResult))]
+[JsonSerializable(typeof(VlanWalkParameters))]
+[JsonSerializable(typeof(VlanWalkResult))]
 internal sealed partial class TopologySerializerContext : JsonSerializerContext;

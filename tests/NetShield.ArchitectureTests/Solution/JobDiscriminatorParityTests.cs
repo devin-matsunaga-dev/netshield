@@ -73,6 +73,14 @@ public sealed class JobDiscriminatorParityTests
     }
 
     [Fact]
+    public void TheVlanWalkDiscriminator_IsTheSameOnBothSides()
+    {
+        Constant("snmp/vlans.py", "WALK_NAME").Should().Be(
+            ApiConstant("Topology/VlanWalkParameters.cs", "WalkName"),
+            "a Discover job naming this walk is what the VLAN-table executor answers for");
+    }
+
+    [Fact]
     public void TheIcmpProbeDiscriminator_IsTheSameOnBothSides()
     {
         Constant("icmp/executor.py", "PROBE_NAME").Should().Be(

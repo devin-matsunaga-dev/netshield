@@ -3,9 +3,9 @@ using System.ComponentModel.DataAnnotations;
 namespace NetShield.Inventory.Topology;
 
 /// <summary>
-/// How often NetShield reads the estate's neighbour protocols and routing tables, how much of
-/// each it will take, and how long an edge survives without being seen (ARCHITECTURE.md §7: the
-/// API owns scheduling).
+/// How often NetShield reads the estate's neighbour protocols, routing tables and VLAN tables,
+/// how much of each it will take, and how long an edge survives without being seen
+/// (ARCHITECTURE.md §7: the API owns scheduling).
 /// </summary>
 /// <remarks>
 /// <para>
@@ -14,13 +14,20 @@ namespace NetShield.Inventory.Topology;
 /// number the API also holds is one that can drift out of step with it.
 /// </para>
 /// <para>
-/// <strong>The two walks are configured separately because they are shaped differently.</strong>
+/// <strong>The three walks are configured separately because they are shaped differently.</strong>
 /// A neighbour table is one entry per cable, so tens of rows on a big switch; a routing table can
 /// be tens of thousands, and a route walk therefore gets a longer timeout, a far higher row
 /// ceiling and a much lower report ceiling — read a great many, report the handful of distinct
 /// gateways behind them. It also runs less often: what a device is cabled to changes when
 /// somebody re-cables it, and what it routes through changes when somebody re-designs the
 /// network.
+/// </para>
+/// <para>
+/// The VLAN read is bounded by the standard rather than by the estate — a bridge has at most
+/// 4,094 VLANs and almost always has a few dozen — so it needs no unusual ceilings. What it does
+/// need is the *longest* interval of the three: a VLAN is a design decision, and reading one every
+/// fifteen minutes would be five hundred devices' worth of SNMP to confirm something that changes
+/// a few times a year.
 /// </para>
 /// </remarks>
 public sealed class TopologyOptions
@@ -53,6 +60,17 @@ public sealed class TopologyOptions
     /// </remarks>
     [Range(0.1, 120)]
     public double RouteRequestTimeoutSeconds { get; set; } = 15;
+
+    /// <summary>
+    /// How long one request waits during a VLAN walk.
+    /// </summary>
+    /// <remarks>
+    /// Between the other two. A Q-BRIDGE table is small, but it is the table set an old or
+    /// half-implemented agent is likeliest to be slow on, and the neighbour walk's threshold
+    /// would fail those devices on every pass.
+    /// </remarks>
+    [Range(0.1, 120)]
+    public double VlanRequestTimeoutSeconds { get; set; } = 10;
 
     /// <summary>How many times a request is repeated before it is given up on.</summary>
     [Range(0, 10)]
@@ -87,6 +105,18 @@ public sealed class TopologyOptions
     [Range(1, 10_000)]
     public int MaxNextHops { get; set; } = 500;
 
+    /// <summary>
+    /// The most VLANs one result will carry.
+    /// </summary>
+    /// <remarks>
+    /// The ceiling is 4,094 because that is every VLAN IEEE 802.1Q admits, so a device cannot be
+    /// truncated by a limit lower than the standard's own unless an operator sets one. The
+    /// default is lower: a switch carrying more than five hundred VLANs is one an operator should
+    /// hear about rather than one NetShield should quietly page through.
+    /// </remarks>
+    [Range(1, 4_094)]
+    public int MaxVlans { get; set; } = 512;
+
     /// <summary>How often each device's neighbour protocols are read.</summary>
     [Range(60, 86_400)]
     public int NeighborWalkIntervalSeconds { get; set; } = 900;
@@ -101,11 +131,22 @@ public sealed class TopologyOptions
     [Range(60, 86_400)]
     public int RouteWalkIntervalSeconds { get; set; } = 3_600;
 
+    /// <summary>
+    /// How often each device's VLAN tables are read.
+    /// </summary>
+    /// <remarks>
+    /// An hour by default, matching the route walk and four times the neighbour interval. The
+    /// fact it establishes moves the most slowly of the three, and the human set this default
+    /// (WP-2.2).
+    /// </remarks>
+    [Range(60, 86_400)]
+    public int VlanWalkIntervalSeconds { get; set; } = 3_600;
+
     /// <summary>How often the scheduler looks for devices whose next walk has fallen due.</summary>
     [Range(1, 3_600)]
     public int ScanIntervalSeconds { get; set; } = 60;
 
-    /// <summary>The most walks one scan will queue, across both kinds.</summary>
+    /// <summary>The most walks one scan will queue, across all three kinds.</summary>
     [Range(1, 5_000)]
     public int MaxJobsPerScan { get; set; } = 100;
 }

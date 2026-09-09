@@ -172,12 +172,13 @@ public static class InventoryServiceCollectionExtensions
         builder.Services.AddScoped<IIntegrationEventHandler<CollectorJobCompleted>,
             RecordClientWalkResultHandler>();
 
-        // Topology: the schedule that reads the estate's neighbour protocols and routing tables,
-        // the two CollectorJobCompleted subscribers that fold what they said into edges, and the
-        // resolver that turns "something called core-sw-1" into a device NetShield already has.
-        // Two subscribers rather than one because they are two walks — a routing table that
-        // times out must not discard the edges the neighbour walk established. The loop that
-        // drives the schedule is the separate opt-in below, for the reason the other three are.
+        // Topology: the schedule that reads the estate's neighbour protocols, routing tables and
+        // VLAN tables, the three CollectorJobCompleted subscribers that fold what they said into
+        // edges and VLAN rows, and the resolver that turns "something called core-sw-1" into a
+        // device NetShield already has. Three subscribers rather than one because they are three
+        // walks — a routing table or a Q-BRIDGE table that times out must not discard the edges
+        // the neighbour walk established. The loop that drives the schedule is the separate
+        // opt-in below, for the reason the other three are.
         builder.Services.TryAddScoped<TopologySchedulePass>();
         builder.Services.TryAddScoped<TopologyResolver>();
         builder.Services.TryAddScoped<NeighborObservationApplier>();
@@ -189,6 +190,16 @@ public static class InventoryServiceCollectionExtensions
             RecordNeighborWalkResultHandler>();
         builder.Services.AddScoped<IIntegrationEventHandler<CollectorJobCompleted>,
             RecordRouteWalkResultHandler>();
+
+        // The VLAN inventory. One table and no conclusion table beside it: the estate-wide view is
+        // a grouping of the device rows plus two joins, all of it derived on read (WP-2.2).
+        builder.Services.TryAddScoped<VlanObservationApplier>();
+        builder.Services.TryAddScoped<VlanReadJoins>();
+        builder.Services.TryAddScoped<GetVlanListHandler>();
+        builder.Services.TryAddScoped<GetVlanHandler>();
+        builder.Services.TryAddScoped<GetDeviceVlanListHandler>();
+        builder.Services.AddScoped<IIntegrationEventHandler<CollectorJobCompleted>,
+            RecordVlanWalkResultHandler>();
 
         // ResolveAssetAt. Internal to the module, the way the credential resolver is: nothing
         // outside NetShield.Inventory can name the type to ask for one, and its read surface is
@@ -247,6 +258,7 @@ public static class InventoryServiceCollectionExtensions
         builder.Services.AddIntegrationEvent<DiscoveryRunCompleted>();
         builder.Services.AddIntegrationEvent<ClientDiscovered>();
         builder.Services.AddIntegrationEvent<DeviceAdjacencyChanged>();
+        builder.Services.AddIntegrationEvent<DeviceVlansChanged>();
 
         builder.Services.ConfigureHttpJsonOptions(json =>
         {

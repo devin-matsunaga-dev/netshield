@@ -19,7 +19,7 @@ namespace NetShield.Inventory.Topology.Handlers;
 /// </summary>
 /// <remarks>
 /// <para>
-/// Written once because there are two handlers and the alternative is the same forty lines in
+/// Written once because there are three handlers and the alternative is the same forty lines in
 /// each, differing in a discriminator. It deliberately does not try to unify the halves that are
 /// genuinely different — what a payload means, and which sources it may withdraw — because those
 /// are the two places the walks disagree and hiding that behind a shared abstraction is how one
@@ -80,9 +80,12 @@ internal sealed class TopologyWalkResultReader(InventoryDbContext context, ICloc
             .SingleOrDefaultAsync(row => row.DeviceId == deviceId, cancellationToken)
             ?? Create(deviceId, options, now);
 
-        Guid? applied = walk == TopologyWalkKind.Routes
-            ? scan.LastRouteJobId
-            : scan.LastNeighborJobId;
+        Guid? applied = walk switch
+        {
+            TopologyWalkKind.Routes => scan.LastRouteJobId,
+            TopologyWalkKind.Vlans => scan.LastVlanJobId,
+            _ => scan.LastNeighborJobId
+        };
 
         if (applied == integrationEvent.JobId)
         {
@@ -111,9 +114,12 @@ internal sealed class TopologyWalkResultReader(InventoryDbContext context, ICloc
             return false;
         }
 
-        string expected = walk == TopologyWalkKind.Routes
-            ? RouteWalkParameters.WalkName
-            : NeighborWalkParameters.WalkName;
+        string expected = walk switch
+        {
+            TopologyWalkKind.Routes => RouteWalkParameters.WalkName,
+            TopologyWalkKind.Vlans => VlanWalkParameters.WalkName,
+            _ => NeighborWalkParameters.WalkName
+        };
 
         try
         {
@@ -138,6 +144,7 @@ internal sealed class TopologyWalkResultReader(InventoryDbContext context, ICloc
             DeviceId = deviceId,
             NextNeighborWalkAt = now.AddSeconds(options.NeighborWalkIntervalSeconds),
             NextRouteWalkAt = now.AddSeconds(options.RouteWalkIntervalSeconds),
+            NextVlanWalkAt = now.AddSeconds(options.VlanWalkIntervalSeconds),
             CreatedAt = now,
             UpdatedAt = now
         };

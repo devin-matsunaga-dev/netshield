@@ -101,6 +101,13 @@ public sealed class InventoryDbContext(DbContextOptions<InventoryDbContext> opti
     /// <summary>What reading each device's topology established, one row per device.</summary>
     internal DbSet<DeviceTopologyScan> DeviceTopologyScans => Set<DeviceTopologyScan>();
 
+    /// <summary>
+    /// The VLANs each device is configured with — the observation WP-2.2 records, and the only
+    /// table behind the estate-wide VLAN inventory, which is a grouping of these rows rather than
+    /// a table of its own.
+    /// </summary>
+    internal DbSet<DeviceVlan> DeviceVlans => Set<DeviceVlan>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         ArgumentNullException.ThrowIfNull(modelBuilder);
@@ -126,6 +133,7 @@ public sealed class InventoryDbContext(DbContextOptions<InventoryDbContext> opti
         modelBuilder.ApplyConfiguration(new DeviceNeighborConfiguration());
         modelBuilder.ApplyConfiguration(new DeviceAdjacencyConfiguration());
         modelBuilder.ApplyConfiguration(new DeviceTopologyScanConfiguration());
+        modelBuilder.ApplyConfiguration(new DeviceVlanConfiguration());
 
         // outbox_messages, mapped here so a device write and the event describing it are one
         // transaction on one connection. NetShield.Platform owns the table and the migration

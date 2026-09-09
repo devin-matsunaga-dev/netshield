@@ -43,9 +43,43 @@ internal static class TopologyErrors
             ScanNotFoundCode,
             $"Device {deviceId} has not had its topology read yet.");
 
+    /// <summary>The code a caller sees when no device carries the VLAN they asked for.</summary>
+    internal const string VlanNotFoundCode = "topology.vlan-not-found";
+
+    /// <summary>
+    /// No live device is carrying that VLAN.
+    /// </summary>
+    /// <remarks>
+    /// A VLAN exists in NetShield because a device reported it, so "no device carries it" and
+    /// "there is no such VLAN" are the same statement. A VLAN every switch has stopped carrying
+    /// is gone from the inventory and its <c>device_vlans</c> rows survive as history.
+    /// </remarks>
+    internal static Error VlanNotFound(int vlanId) =>
+        Error.NotFound(
+            VlanNotFoundCode,
+            $"No device is carrying VLAN {vlanId}.");
+
+    /// <summary>The code a caller sees when a VLAN id is outside the range 802.1Q admits.</summary>
+    internal const string VlanIdOutOfRangeCode = "topology.vlan-id-out-of-range";
+
+    /// <summary>
+    /// The VLAN id is not one. 802.1Q's <c>VlanIndex</c> is 1 to 4094.
+    /// </summary>
+    /// <remarks>
+    /// A 400 rather than a 404, because a caller asking for VLAN 9000 has made a different kind
+    /// of mistake from one asking for a VLAN nothing carries, and only one of the two is worth
+    /// them retrying with a different number.
+    /// </remarks>
+    internal static Error VlanIdOutOfRange(int vlanId) =>
+        Error.Validation(
+            VlanIdOutOfRangeCode,
+            $"{vlanId} is not a VLAN id. A VLAN id is between {TopologyLimits.MinVlanId} "
+            + $"and {TopologyLimits.MaxVlanId}.");
+
     private static string Describe(TopologyWalkKind walk) => walk switch
     {
         TopologyWalkKind.Routes => "routing-table read",
+        TopologyWalkKind.Vlans => "VLAN read",
         _ => "neighbour walk"
     };
 }

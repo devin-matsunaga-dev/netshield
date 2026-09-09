@@ -18,8 +18,8 @@ using NetShield.Platform.Time;
 namespace NetShield.Inventory.Topology;
 
 /// <summary>
-/// One pass of the topology schedule: find the devices whose neighbour tables or routing tables
-/// are due to be read, queue one walk for each, and record when the next is expected.
+/// One pass of the topology schedule: find the devices whose neighbour tables, routing tables or
+/// VLAN tables are due to be read, queue one walk for each, and record when the next is expected.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -30,15 +30,17 @@ namespace NetShield.Inventory.Topology;
 /// <c>Discover</c> outstanding so that a collector outage cannot build a backlog nobody will run.
 /// </para>
 /// <para>
-/// <strong>Two walks, one pass, one job per device at a time.</strong> A device may be due for
-/// both reads at once, and only one is queued — the outstanding-walk rule refuses the second
-/// anyway, and queueing it to be refused would burn a lease slot to learn nothing. The neighbour
-/// walk goes first when both are due, because it is the primary source for adjacency and the
-/// routing read is a supplement to it; the route walk's due time is left where it is, so it wins
-/// the next pass.
+/// <strong>Three walks, one pass, one job per device at a time.</strong> A device may be due for
+/// all three reads at once, and only one is queued — the outstanding-walk rule refuses the others
+/// anyway, and queueing them to be refused would burn lease slots to learn nothing. The neighbour
+/// walk goes first when several are due, because it is the primary source for adjacency and the
+/// other two are supplements to it, then the route walk and then the VLAN walk; the due times of
+/// the ones not chosen are left where they are, so they win the passes that follow. WP-2.2 keeps
+/// that rule rather than widening it, which is why a device due for everything takes three passes
+/// to be caught up and why <c>ScanIntervalSeconds</c> is a minute rather than an hour.
 /// </para>
 /// <para>
-/// <strong>Only devices with an SNMP credential are scheduled.</strong> Both reads need one, and
+/// <strong>Only devices with an SNMP credential are scheduled.</strong> All three reads need one,
 /// a device without would produce one failed job per interval for ever, each recording the same
 /// sentence on the scan row. It is skipped instead, and the absence shows on the device rather
 /// than as a queue full of failures — the rule WP-1.8's client schedule settled.
@@ -79,6 +81,7 @@ internal sealed class TopologySchedulePass(
             TopologyWalkKind.Neighbors);
 
         JsonElement routes = QueueTopologyWalkHandler.Parameters(settings, TopologyWalkKind.Routes);
+        JsonElement vlans = QueueTopologyWalkHandler.Parameters(settings, TopologyWalkKind.Vlans);
 
         int queued = 0;
 
@@ -88,11 +91,12 @@ internal sealed class TopologySchedulePass(
 
             if (profileId is not { } chosen)
             {
-                // Both due times are pushed forward anyway, for the reason a discovery seed's
-                // next run is: the pass would otherwise find this device, refuse it and log the
-                // same sentence on every scan for as long as it had no credential.
+                // All three due times are pushed forward anyway, for the reason a discovery
+                // seed's next run is: the pass would otherwise find this device, refuse it and log
+                // the same sentence on every scan for as long as it had no credential.
                 Reschedule(device.Scan, TopologyWalkKind.Neighbors, settings, now);
                 Reschedule(device.Scan, TopologyWalkKind.Routes, settings, now);
+                Reschedule(device.Scan, TopologyWalkKind.Vlans, settings, now);
 
                 continue;
             }
@@ -105,7 +109,7 @@ internal sealed class TopologySchedulePass(
                     CollectorJobKind.Discover,
                     device.DeviceId,
                     chosen,
-                    walk == TopologyWalkKind.Routes ? routes : neighbors,
+                    Parameters(walk, neighbors, routes, vlans),
                     DueAt: now),
                 cancellationToken);
 
@@ -152,7 +156,10 @@ internal sealed class TopologySchedulePass(
             join scan in context.DeviceTopologyScans on device.Id equals scan.DeviceId into matched
             from scan in matched.DefaultIfEmpty()
             where device.DeletedAt == null
-                && (scan == null || scan.NextNeighborWalkAt <= now || scan.NextRouteWalkAt <= now)
+                && (scan == null
+                    || scan.NextNeighborWalkAt <= now
+                    || scan.NextRouteWalkAt <= now
+                    || scan.NextVlanWalkAt <= now)
                 && !context.CollectorJobs.Any(job =>
                     job.DeviceId == device.Id
                     && job.Kind == CollectorJobKind.Discover
@@ -169,11 +176,13 @@ internal sealed class TopologySchedulePass(
         {
             DeviceTopologyScan scan = candidate.Scan ?? Create(candidate.DeviceId, now);
 
-            // The neighbour walk wins a tie, because it is what establishes adjacency; the route
-            // walk's due time is untouched and it takes the next pass.
+            // The neighbour walk wins a tie, because it is what establishes adjacency, then the
+            // route walk; the due times of the others are untouched and they take the next passes.
             TopologyWalkKind walk = scan.NextNeighborWalkAt <= now
                 ? TopologyWalkKind.Neighbors
-                : TopologyWalkKind.Routes;
+                : scan.NextRouteWalkAt <= now
+                    ? TopologyWalkKind.Routes
+                    : TopologyWalkKind.Vlans;
 
             due.Add(new DueDevice(candidate.DeviceId, scan, walk));
         }
@@ -189,6 +198,7 @@ internal sealed class TopologySchedulePass(
             DeviceId = deviceId,
             NextNeighborWalkAt = now,
             NextRouteWalkAt = now,
+            NextVlanWalkAt = now,
             CreatedAt = now,
             UpdatedAt = now
         };
@@ -213,18 +223,37 @@ internal sealed class TopologySchedulePass(
     {
         int spread = scan.DeviceId.ToByteArray()[^1] % settings.ScanIntervalSeconds;
 
-        if (walk == TopologyWalkKind.Routes)
+        switch (walk)
         {
-            scan.NextRouteWalkAt = now.AddSeconds(settings.RouteWalkIntervalSeconds + spread);
-        }
-        else
-        {
-            scan.NextNeighborWalkAt = now.AddSeconds(settings.NeighborWalkIntervalSeconds + spread);
+            case TopologyWalkKind.Routes:
+                scan.NextRouteWalkAt = now.AddSeconds(settings.RouteWalkIntervalSeconds + spread);
+                break;
+
+            case TopologyWalkKind.Vlans:
+                scan.NextVlanWalkAt = now.AddSeconds(settings.VlanWalkIntervalSeconds + spread);
+                break;
+
+            default:
+                scan.NextNeighborWalkAt =
+                    now.AddSeconds(settings.NeighborWalkIntervalSeconds + spread);
+                break;
         }
 
         scan.UpdatedAt = now;
     }
 
-    /// <summary>A device that is due, which read it is due for, and the row recording both.</summary>
+    /// <summary>The parameter document for the walk that was chosen.</summary>
+    private static JsonElement Parameters(
+        TopologyWalkKind walk,
+        JsonElement neighbors,
+        JsonElement routes,
+        JsonElement vlans) => walk switch
+        {
+            TopologyWalkKind.Routes => routes,
+            TopologyWalkKind.Vlans => vlans,
+            _ => neighbors
+        };
+
+    /// <summary>A device that is due, which read it is due for, and the row recording it.</summary>
     private sealed record DueDevice(Guid DeviceId, DeviceTopologyScan Scan, TopologyWalkKind Walk);
 }

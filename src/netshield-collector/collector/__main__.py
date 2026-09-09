@@ -26,6 +26,7 @@ from collector.snmp import (
     NeighborWalkExecutor,
     RouteWalkExecutor,
     SnmpWalkExecutor,
+    VlanWalkExecutor,
 )
 from collector.vendors import VendorRegistry, snmp_adapters
 
@@ -37,19 +38,21 @@ def build_registries() -> tuple[ExecutorRegistry, VendorRegistry]:
 
     ``IcmpExecutor`` answers for ``Poll`` jobs whose parameters name the ICMP probe, which is
     every job the reachability schedule queues. ``DiscoverExecutor`` answers for ``Discover``
-    jobs and dispatches on ``parameters.walk`` to one of the five walks a ``Discover`` can be:
+    jobs and dispatches on ``parameters.walk`` to one of the six walks a ``Discover`` can be:
     the SNMP fingerprint of a device an on-demand walk asked for, the range sweep a discovery run
     queued, the read of a device's ARP and forwarding tables the client schedule queued, the read
-    of its neighbour protocols, or the read of its routing table. A job of a kind or a walk this
-    build cannot run is reported as a failure naming the reason rather than dropped.
+    of its neighbour protocols, the read of its routing table, or the read of its VLAN inventory.
+    A job of a kind or a walk this build cannot run is reported as a failure naming the reason
+    rather than dropped.
 
-    Two walks are handed the vendor registry and three are not. ICMP needs no adapter — an echo
+    Two walks are handed the vendor registry and four are not. ICMP needs no adapter — an echo
     request is the same question whoever made the box — and neither does the sweep. Nor does the
-    client walk, nor the route walk: IP-MIB, BRIDGE-MIB and IP-FORWARD-MIB are the same
-    everywhere, which is exactly why client tracking and L3 adjacency work on a device NetShield
-    cannot otherwise identify. What differs by vendor is which *private* MIB is worth reading —
-    the fingerprint asks that of the scalars, and the neighbour walk asks it of CDP, which is
-    Cisco's protocol in Cisco's MIB and is declared by the two Cisco adapters alone.
+    client walk, the route walk or the VLAN walk: IP-MIB, BRIDGE-MIB, Q-BRIDGE-MIB and
+    IP-FORWARD-MIB are the same everywhere, which is exactly why client tracking, L3 adjacency and
+    the VLAN inventory work on a device NetShield cannot otherwise identify. What differs by
+    vendor is which *private* MIB is worth reading — the fingerprint asks that of the scalars, and
+    the neighbour walk asks it of CDP, which is Cisco's protocol in Cisco's MIB and is declared by
+    the two Cisco adapters alone.
     """
     vendors = VendorRegistry(snmp_adapters())
 
@@ -60,6 +63,7 @@ def build_registries() -> tuple[ExecutorRegistry, VendorRegistry]:
             ClientWalkExecutor(),
             NeighborWalkExecutor(vendors),
             RouteWalkExecutor(),
+            VlanWalkExecutor(),
         ]
     )
 

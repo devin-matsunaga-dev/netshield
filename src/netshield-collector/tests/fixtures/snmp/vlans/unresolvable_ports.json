@@ -1,0 +1,13 @@
+{
+  "description": "A switch whose VLAN bitmaps name bridge ports its own dot1dBasePortTable does not",
+  "synthetic": true,
+  "note": "Hand-authored. VLAN 10's bitmap names bridge ports 1, 2 and 9; the base-port table places only port 1. The two that cannot be placed are counted and dropped rather than reported as bare numbers, which mean nothing outside this bridge.",
+  "values": {
+    "1.3.6.1.2.1.17.1.4.1.2.1": "7",
+
+    "1.3.6.1.2.1.17.7.1.4.3.1.1.10": "Server VLAN",
+    "1.3.6.1.2.1.17.7.1.4.3.1.2.10": "C0:80",
+    "1.3.6.1.2.1.17.7.1.4.3.1.4.10": "",
+    "1.3.6.1.2.1.17.7.1.4.3.1.5.10": "1"
+  }
+}

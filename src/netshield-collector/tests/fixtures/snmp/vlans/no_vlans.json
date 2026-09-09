@@ -1,0 +1,10 @@
+{
+  "description": "A router that implements neither Q-BRIDGE VLAN table",
+  "synthetic": true,
+  "note": "Hand-authored. It answers the interface tables and nothing under 1.3.6.1.2.1.17, which is what an agent on something that is not a bridge does. The reading is supported: false, and an absence then withdraws nothing.",
+  "values": {
+    "1.3.6.1.2.1.2.2.1.2.1": "GigabitEthernet0/0/0",
+    "1.3.6.1.2.1.31.1.1.1.1.1": "Gi0/0/0",
+    "1.3.6.1.2.1.1.1.0": "Cisco IOS Software, ISR Software, Version 17.9.4"
+  }
+}

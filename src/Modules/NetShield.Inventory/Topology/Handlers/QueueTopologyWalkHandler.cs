@@ -32,10 +32,10 @@ namespace NetShield.Inventory.Topology.Handlers;
 /// different privilege from editing that device's notes.
 /// </para>
 /// <para>
-/// One handler serves both walks. They differ in which parameters they carry and in nothing else
-/// that queueing has an opinion about — the permission, the outstanding-walk refusal, the
-/// credential choice and the audit target are identical, and writing them twice would be two
-/// places for them to drift apart.
+/// One handler serves all three walks. They differ in which parameters they carry and in nothing
+/// else that queueing has an opinion about — the permission, the outstanding-walk refusal, the
+/// credential choice and the audit target are identical, and writing them three times would be
+/// three places for them to drift apart.
 /// </para>
 /// <para>
 /// It refuses a device that already has a <c>Discover</c> outstanding, which for these walks is
@@ -128,13 +128,20 @@ internal sealed class QueueTopologyWalkHandler(
 
     internal static JsonElement Parameters(TopologyOptions settings, TopologyWalkKind walk)
     {
-        using JsonDocument document = walk == TopologyWalkKind.Routes
-            ? JsonSerializer.SerializeToDocument(
+        using JsonDocument document = walk switch
+        {
+            TopologyWalkKind.Routes => JsonSerializer.SerializeToDocument(
                 RouteWalkParameters.From(settings),
-                TopologySerializerContext.Default.RouteWalkParameters)
-            : JsonSerializer.SerializeToDocument(
+                TopologySerializerContext.Default.RouteWalkParameters),
+
+            TopologyWalkKind.Vlans => JsonSerializer.SerializeToDocument(
+                VlanWalkParameters.From(settings),
+                TopologySerializerContext.Default.VlanWalkParameters),
+
+            _ => JsonSerializer.SerializeToDocument(
                 NeighborWalkParameters.From(settings),
-                TopologySerializerContext.Default.NeighborWalkParameters);
+                TopologySerializerContext.Default.NeighborWalkParameters)
+        };
 
         return document.RootElement.Clone();
     }

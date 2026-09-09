@@ -351,3 +351,46 @@ IP_ROUTE_TYPE: Final = "1.3.6.1.2.1.4.21.1.8"
 """``ipRouteType`` — other(1), invalid(2), direct(3), indirect(4)."""
 
 IP_ROUTE_TYPE_INDIRECT: Final = 4
+
+# --- Q-BRIDGE-MIB, the VLAN tables (RFC 4363). Under 1.3.6.1.2.1.17.7.1.4. ---
+
+DOT1Q_VLAN_STATIC_TABLE: Final = "1.3.6.1.2.1.17.7.1.4.3.1"
+"""``dot1qVlanStaticEntry`` — the VLANs an operator configured, indexed by the VLAN id itself.
+
+The only standard table that carries a VLAN's *name*, which is why it is read first. Its
+membership columns are ``PortList`` bitmaps over bridge ports rather than over interfaces, so
+they need the same ``dot1dBasePortTable`` hop the forwarding database needs.
+"""
+
+DOT1Q_VLAN_STATIC_NAME: Final = "1.3.6.1.2.1.17.7.1.4.3.1.1"
+"""``dot1qVlanStaticName`` — what the operator called it."""
+
+DOT1Q_VLAN_STATIC_EGRESS_PORTS: Final = "1.3.6.1.2.1.17.7.1.4.3.1.2"
+"""``dot1qVlanStaticEgressPorts`` — every port the VLAN is configured on, tagged or not."""
+
+DOT1Q_VLAN_STATIC_UNTAGGED_PORTS: Final = "1.3.6.1.2.1.17.7.1.4.3.1.4"
+"""``dot1qVlanStaticUntaggedPorts`` — the subset that leaves untagged. An access port, usually."""
+
+DOT1Q_VLAN_STATIC_ROW_STATUS: Final = "1.3.6.1.2.1.17.7.1.4.3.1.5"
+"""``dot1qVlanStaticRowStatus`` — active(1), notInService(2), notReady(3), and the write values."""
+
+DOT1Q_VLAN_STATIC_ROW_STATUS_ACTIVE: Final = 1
+
+DOT1Q_VLAN_CURRENT_TABLE: Final = "1.3.6.1.2.1.17.7.1.4.2.1"
+"""``dot1qVlanCurrentEntry`` — the VLANs the bridge is actually running, names excluded.
+
+The fallback, reached only when the static table produced nothing, for the reason
+``ipNetToMediaTable`` and ``dot1dTpFdbTable`` are fallbacks: a device implementing both would
+otherwise be walked twice. Its index is ``dot1qVlanTimeMark.dot1qVlanIndex``, so the VLAN id is
+the *second* sub-identifier and not the first.
+"""
+
+DOT1Q_VLAN_CURRENT_EGRESS_PORTS: Final = "1.3.6.1.2.1.17.7.1.4.2.1.4"
+DOT1Q_VLAN_CURRENT_UNTAGGED_PORTS: Final = "1.3.6.1.2.1.17.7.1.4.2.1.5"
+
+DOT1Q_VLAN_STATUS: Final = "1.3.6.1.2.1.17.7.1.4.2.1.6"
+"""``dot1qVlanStatus`` — other(1), permanent(2), dynamicGvrp(3)."""
+
+VLAN_ID_MIN: Final = 1
+VLAN_ID_MAX: Final = 4094
+"""``VlanIndex`` is ``1..4094``. A value outside it is not a VLAN and is dropped."""

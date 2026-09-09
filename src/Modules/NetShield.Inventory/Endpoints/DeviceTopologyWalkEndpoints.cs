@@ -14,8 +14,8 @@ using NetShield.Platform.Results;
 namespace NetShield.Inventory.Endpoints;
 
 /// <summary>
-/// The on-demand topology reads, under <c>/api/v1/devices/{id}/neighbor-walk</c> and
-/// <c>/route-walk</c>.
+/// The on-demand topology reads, under <c>/api/v1/devices/{id}/neighbor-walk</c>,
+/// <c>/route-walk</c> and <c>/vlan-walk</c>.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -25,10 +25,11 @@ namespace NetShield.Inventory.Endpoints;
 /// collector performs (ARCHITECTURE.md §7).
 /// </para>
 /// <para>
-/// <strong>Two routes rather than one with a parameter</strong>, because they are two jobs with
-/// two schedules and two failure modes. A neighbour table is small and predictable and a routing
-/// table is neither, and an operator who wants their edges refreshed should not have to wait on —
-/// or be failed by — a read of forty thousand routes.
+/// <strong>Three routes rather than one with a parameter</strong>, because they are three jobs
+/// with three schedules and three failure modes. A neighbour table is small and predictable, a
+/// routing table is neither, and a Q-BRIDGE table is the one an old agent is likeliest to hang
+/// on; an operator who wants their edges refreshed should not have to wait on — or be failed by —
+/// either of the other two.
 /// </para>
 /// </remarks>
 public static class DeviceTopologyWalkEndpoints
@@ -67,6 +68,15 @@ public static class DeviceTopologyWalkEndpoints
             .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status409Conflict);
 
+        group.MapPost("/{id:guid}/vlan-walk", VlanWalkAsync)
+            .RequirePermission(Permission.DiscoveryRun)
+            .Audits("inventory.device-vlan-walk", TargetType)
+            .WithName("QueueDeviceVlanWalk")
+            .Produces<NeighborWalkQueued>(StatusCodes.Status202Accepted)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status409Conflict);
+
         return endpoints;
     }
 
@@ -81,6 +91,12 @@ public static class DeviceTopologyWalkEndpoints
         QueueTopologyWalkHandler handler,
         CancellationToken cancellationToken) =>
         WalkAsync(id, TopologyWalkKind.Routes, handler, cancellationToken);
+
+    private static Task<IResult> VlanWalkAsync(
+        Guid id,
+        QueueTopologyWalkHandler handler,
+        CancellationToken cancellationToken) =>
+        WalkAsync(id, TopologyWalkKind.Vlans, handler, cancellationToken);
 
     private static async Task<IResult> WalkAsync(
         Guid id,
