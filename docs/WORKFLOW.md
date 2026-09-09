@@ -163,25 +163,58 @@ You cannot build this against production kit, and you should not try. Before Pha
 
 Record fixtures from these once and commit them under `tests/fixtures/`. Never commit a capture or config from your real network — see `CONVENTIONS.md` §9.
 
-## Running the stack — the DCP workaround
-
-`aspire run` on its own brings `web-host` up **unhealthy** roughly half the time, and when it does, `web-client` and `collector` never start at all: both `WaitFor(webHost)`, and both take `NETSHIELD_API_URL` from that resource's endpoint. Start it like this instead:
+## Running the stack
 
 ```bash
-env "DcpPublisher__CliPath=$HOME/.nuget/packages/aspire.hosting.orchestration.linux-x64/13.4.6/tools/dcp" aspire run
+aspire run
 ```
 
-**Why.** DCP — Aspire's orchestrator — proxies every resource endpoint, and the build shipped with Aspire 13.5.3 (DCP `0.25.13`) intermittently never wires an upstream to that proxy: it accepts the TCP connection and never dials the API, which is answering `200 Healthy` on its own port throughout. It picks a different endpoint to break on each run. DCP ships as the NuGet package `Aspire.Hosting.Orchestration.linux-x64` and its path is plain configuration, so the variable above runs the identical AppHost against 13.4.6's DCP `0.24.3`, which does not have the bug. Nothing in the repository changes; `AppHost.cs` is untouched.
+That is the whole of it. There is no workaround and no environment variable to remember.
 
-If the package is not in your NuGet cache, `dotnet restore` a checkout pinned to 13.4.6 once, or adjust the path to any `Aspire.Hosting.Orchestration.linux-x64` version below 13.5.3.
+**There used to be**, and if you find the `DcpPublisher__CliPath` incantation in an old note or a
+shell history, it is obsolete — delete it. What it worked around is described below, because the
+underlying defect is still there and a future change could walk back into it.
 
-**Do not** try to fix this in `AppHost.cs`. Three ways were tried and all three failed — pinning the health check to the http endpoint (the stall is not scheme-specific), restarting (works about half the time, which reads as a fix from one run and is not), and `WithEndpoint("http", e => e.IsProxied = false)`, which is actively worse: DCP binds the proxy port anyway and then hands the same port to the API, which dies at startup with `address already in use`. `STATUS.md` carries the full diagnosis and the evidence for an upstream report.
+**The defect.** DCP — Aspire's orchestrator — proxies every resource endpoint by default, and the
+build shipped with Aspire 13.5.3 (DCP `0.25.13`) intermittently never wires an upstream to one of
+those proxies: it accepts the TCP connection and never dials the application, which is answering
+`200 Healthy` on its own port throughout. It picks a different endpoint to break on each run.
+**13.4.6's DCP `0.24.3` does it too** — an earlier note here claimed otherwise and was wrong; it
+was written after a run where the pin happened to come up clean, and a later session watched
+13.4.6 break `web-host`'s https endpoint while the http one worked. Pinning the DCP version was
+never a fix, only a different roll of the same dice. There is no newer DCP to move to: 13.5.3 is
+the newest `Aspire.Hosting.Orchestration.linux-x64` on NuGet.
 
-Drop the variable once Aspire ships a DCP newer than `0.25.13` with the fix, and check by starting once without it.
+**Why it was so damaging.** The AppHost depended on the proxy twice, independently.
+`WithHttpHealthCheck` probes the endpoint URL, so a dead proxy left `web-host` permanently
+unhealthy and the two resources that `WaitFor` it — `collector` and `web-client` — never started
+at all. And `webHost.GetEndpoint("http")` handed that same URL to both as `NETSHIELD_API_URL`, so
+even on a run where they did start, the collector leased nothing and the dev server answered
+`/api` with a hang. The visible symptoms were a blank page on a dark background, a device whose
+fingerprint and state never changed, and walks that sat `Pending` for hours.
+
+**The fix, in `AppHost.cs`.** `web-host` and `web-client` declare their endpoints with
+`isProxied: false`, so the endpoint URL *is* the address the process is listening on and DCP's
+proxy is out of both the health-check path and the data path. `web-host` also takes
+`launchProfileName: null`, which is the half that was missing when this was tried before:
+`Properties/launchSettings.json` pins 7235 and 5295, Aspire takes those as the *endpoint* ports
+and gives the application random target ports behind them, so turning the proxy off while the
+profile still pinned 5295 handed the API a port DCP had already bound and it died with "address
+already in use". That read as the approach failing when it was the launch profile that had to go.
+
+**Two things to keep in mind if you touch this.** The launch profile also carried
+`ASPNETCORE_ENVIRONMENT`, so the resource sets it explicitly from the AppHost's own environment —
+without it the API comes up in Production, the health endpoints are never mapped, and
+`/health/ready` falls through to the SPA fallback and answers `200` with `index.html`, which is a
+health check passing for the wrong reason. And the ports are Aspire-allocated now rather than the
+5295/7235 in `launchSettings.json`; read them off the dashboard.
+
+`db-migrator` still uses the launch profile. It binds no socket and exits, so nothing waits on an
+endpoint of its own and there is nothing for a proxy to break.
 
 ## Phase gates
 
-After a phase's final package, run the 🏁 gate from `ROADMAP.md`, plus the dependency-health pass: `aspire update`, review Dependabot, confirm nothing in the version table has crossed EOL. `aspire update` is also the moment to retest without the `DcpPublisher__CliPath` variable above — a new Aspire brings a new DCP, and that workaround should be dropped the release it stops being needed. Then:
+After a phase's final package, run the 🏁 gate from `ROADMAP.md`, plus the dependency-health pass: `aspire update`, review Dependabot, confirm nothing in the version table has crossed EOL. `aspire update` is also the moment to retest with the endpoints proxied again — a new Aspire brings a new DCP, and `isProxied: false` should be dropped the release it stops being needed. Then:
 ```bash
 git tag v0.N-phaseN && git push --tags
 ```
@@ -199,4 +232,4 @@ git tag v0.N-phaseN && git push --tags
 | A manual check fails | Same session: state the expected and actual, ask for the fix |
 | Diff contains a device write path | Do not merge. The package crossed a hard line. |
 | Phase finished | Run the ROADMAP gate, `aspire update`, tag |
-| `web-host` unhealthy, collector and SPA never start | Restart with the `DcpPublisher__CliPath` variable — see *Running the stack* |
+| `web-host` unhealthy, collector and SPA never start | Should not happen since the endpoints were unproxied — see *Running the stack*. If it does, check nothing has re-proxied them. |

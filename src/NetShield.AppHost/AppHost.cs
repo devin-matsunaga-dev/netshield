@@ -116,7 +116,39 @@ IResourceBuilder<ProjectResource> migrator = builder.AddProject<Projects.NetShie
 
 // The API. /health/ready covers PostgreSQL and Redis, so the dashboard reports this
 // resource healthy only once the stores it depends on are actually reachable.
-IResourceBuilder<ProjectResource> webHost = builder.AddProject<Projects.NetShield_Web_Host>("web-host")
+//
+// **Its endpoints are not proxied, and that is what makes `aspire run` work on its own.**
+// DCP proxies every resource endpoint by default, and the build shipped with Aspire 13.5.3
+// intermittently never wires an upstream to one of them: the proxy accepts the TCP connection
+// and never dials the API, which is answering 200 Healthy on its own port throughout. It picks
+// a different endpoint to break on each run — an earlier session watched it take the http one
+// and this one watched it take the https one — and 13.4.6's DCP does it too, so the version
+// pin that used to be documented here was never a fix.
+//
+// The damage came through two seams, both of which ran through the proxy. `WithHttpHealthCheck`
+// probes the endpoint URL, so a dead proxy left `web-host` for ever unhealthy and the two
+// resources that `WaitFor` it never started at all. And `GetEndpoint("http")` below hands that
+// same URL to the collector and the dev server, so even when they did start they could not
+// reach the API. Unproxied, the endpoint URL *is* the address the API is listening on, and both
+// seams are fixed by the one change.
+//
+// `launchProfileName: null` is the half of it that was missing when this was tried before.
+// `Properties/launchSettings.json` pins 7235 and 5295; Aspire takes those as the *endpoint*
+// ports and gives the application random target ports behind them. Turning the proxy off while
+// the profile still pinned 5295 handed the API the port DCP had already bound, and it died with
+// "address already in use" — which read as the approach failing when it was the launch profile
+// that had to go. Without the profile, Aspire allocates the ports and the API binds them itself.
+IResourceBuilder<ProjectResource> webHost = builder
+    .AddProject<Projects.NetShield_Web_Host>("web-host", launchProfileName: null)
+    .WithHttpEndpoint(name: "http", isProxied: false)
+    .WithHttpsEndpoint(name: "https", isProxied: false)
+    // The launch profile carried two things and the endpoints above replace only one of them.
+    // The other is the environment name, and without it the API comes up in Production: the
+    // health endpoints are mapped only in development (ServiceDefaults), so `/health/ready`
+    // fell through to the SPA fallback and answered 200 with index.html — a health check that
+    // passes for the wrong reason, which is worse than one that fails. Taken from the AppHost's
+    // own environment rather than hard-coded, which is what the profile was doing.
+    .WithEnvironment("ASPNETCORE_ENVIRONMENT", builder.Environment.EnvironmentName)
     .WithReference(database).WaitFor(database)
     .WithReference(cache).WaitFor(cache)
     .WithReference(mailConnection).WaitFor(mail)
@@ -148,7 +180,10 @@ IResourceBuilder<ProjectResource> webHost = builder.AddProject<Projects.NetShiel
 // index.html, which the SPA reads as "Unexpected token '<'". NETSHIELD_API_URL carries the same
 // value under a name a shell will pass on. The reference stays for the dashboard's dependency
 // graph and for whatever reads it in a non-shell launcher.
+// Its endpoint is unproxied for the reason the API's is: the page is what a person opens, and
+// a dead proxy in front of it is a blank screen with no error on it.
 builder.AddViteApp("web-client", "../NetShield.Web.Client")
+    .WithEndpoint("http", endpoint => endpoint.IsProxied = false)
     .WithNpm()
     .WithReference(webHost)
     .WithEnvironment("NETSHIELD_API_URL", webHost.GetEndpoint("http"))
