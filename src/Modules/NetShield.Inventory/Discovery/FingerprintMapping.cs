@@ -55,7 +55,12 @@ internal static class FingerprintMapping
     /// else the device said is <see cref="InterfaceStatus.Unknown"/>, and the raw integer stays
     /// on the row for whoever is diagnosing why.
     /// </summary>
-    private static InterfaceStatus ToAdminStatus(int? value) => value switch
+    /// <remarks>
+    /// Internal rather than private since WP-2.6: the port view names the same statuses for the
+    /// same rows, and two mappings of one MIB enumeration are two things that can come to
+    /// different answers about what <c>ifOperStatus 7</c> is called.
+    /// </remarks>
+    internal static InterfaceStatus ToAdminStatus(int? value) => value switch
     {
         1 => InterfaceStatus.Up,
         2 => InterfaceStatus.Down,
@@ -69,7 +74,8 @@ internal static class FingerprintMapping
     /// the device saying something nobody can read are not distinctions a screen can act on
     /// differently.
     /// </summary>
-    private static InterfaceStatus ToOperStatus(int? value) => value switch
+    /// <remarks>Internal for the reason <see cref="ToAdminStatus"/> is.</remarks>
+    internal static InterfaceStatus ToOperStatus(int? value) => value switch
     {
         1 => InterfaceStatus.Up,
         2 => InterfaceStatus.Down,

@@ -151,6 +151,40 @@ export function deviceInterfacesQuery(id: string) {
 }
 
 /**
+ * A device's ports and what is on the other end of each.
+ *
+ * Not the interface inventory, although the two overlap: `/interfaces` is what a fingerprint
+ * walk read about every interface the device has, and this is what is connected to the ones a
+ * cable reaches. They share an `ifIndex` and nothing else.
+ *
+ * Paged for the same reason the interface list is — a stacked switch answers with over a
+ * thousand rows — and a port carries its occupants inline, so a row is a whole answer rather
+ * than a key into a second request per port.
+ */
+export function devicePortsQuery(id: string) {
+  return infiniteQueryOptions({
+    queryKey: deviceKeys.ports(id),
+    queryFn: async ({ pageParam, signal }) => {
+      const { data, response } = await api.GET('/api/v1/devices/{id}/ports', {
+        params: {
+          path: { id },
+          query: { limit: pageSize, ...(pageParam === undefined ? {} : { cursor: pageParam }) },
+        },
+        signal,
+      });
+
+      if (!response.ok || data === undefined) {
+        throw new ApiError('Could not load the port list.', response.status);
+      }
+
+      return data;
+    },
+    initialPageParam: undefined as string | undefined,
+    getNextPageParam: (last) => last.nextCursor ?? undefined,
+  });
+}
+
+/**
  * The credential profiles assigned to a device, and every profile that could be.
  *
  * Behind `CredentialsManage`, which is Administrator-only (WP-1.2): a profile's username is half

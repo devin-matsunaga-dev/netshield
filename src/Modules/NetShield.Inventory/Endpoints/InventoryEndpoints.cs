@@ -36,6 +36,7 @@ public static class InventoryEndpoints
         endpoints.MapDeviceReachabilityEndpoints();
         endpoints.MapDeviceClientWalkEndpoints();
         endpoints.MapDeviceAdjacencyEndpoints();
+        endpoints.MapDevicePortEndpoints();
         endpoints.MapDeviceVlanEndpoints();
         endpoints.MapDeviceTopologyWalkEndpoints();
         endpoints.MapDiscoverySeedEndpoints();

@@ -1153,6 +1153,86 @@
         }
       }
     },
+    "/api/v1/devices/{id}/ports": {
+      "get": {
+        "tags": [
+          "Devices"
+        ],
+        "operationId": "ListDevicePorts",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CursorPageOfDevicePortSummary"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpValidationProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/devices/{id}/vlans": {
       "get": {
         "tags": [
@@ -4738,6 +4818,36 @@
           }
         }
       },
+      "CursorPageOfDevicePortSummary": {
+        "required": [
+          "items",
+          "nextCursor"
+        ],
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DevicePortSummary"
+            }
+          },
+          "nextCursor": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "totalCount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          }
+        }
+      },
       "CursorPageOfDeviceSummary": {
         "required": [
           "items",
@@ -5431,6 +5541,100 @@
           "lastSeenAt": {
             "type": "string",
             "format": "date-time"
+          }
+        }
+      },
+      "DevicePortSummary": {
+        "required": [
+          "ifIndex",
+          "name",
+          "description",
+          "alias",
+          "interfaceKnown",
+          "adminStatus",
+          "operStatus",
+          "role",
+          "roleReason",
+          "learnedAddressCount",
+          "clientCount",
+          "clientsListed",
+          "neighbors",
+          "clients"
+        ],
+        "type": "object",
+        "properties": {
+          "ifIndex": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "name": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "description": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "alias": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "interfaceKnown": {
+            "type": "boolean"
+          },
+          "adminStatus": {
+            "$ref": "#/components/schemas/InterfaceStatus"
+          },
+          "operStatus": {
+            "$ref": "#/components/schemas/InterfaceStatus"
+          },
+          "role": {
+            "$ref": "#/components/schemas/PortRole"
+          },
+          "roleReason": {
+            "$ref": "#/components/schemas/PortRoleReason"
+          },
+          "learnedAddressCount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "clientCount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "clientsListed": {
+            "type": "boolean"
+          },
+          "neighbors": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PortNeighbor"
+            }
+          },
+          "clients": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PortClient"
+            }
           }
         }
       },
@@ -6579,6 +6783,172 @@
           "SystemAdminister"
         ]
       },
+      "PortClient": {
+        "required": [
+          "clientId",
+          "macAddress",
+          "hostname",
+          "oui",
+          "locallyAdministered",
+          "ipAddress",
+          "vlanId",
+          "observedFrom",
+          "lastSeenAt"
+        ],
+        "type": "object",
+        "properties": {
+          "clientId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "macAddress": {
+            "type": "string"
+          },
+          "hostname": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "oui": {
+            "type": "string"
+          },
+          "locallyAdministered": {
+            "type": "boolean"
+          },
+          "ipAddress": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "vlanId": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "observedFrom": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "lastSeenAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "PortNeighbor": {
+        "required": [
+          "adjacencyId",
+          "deviceId",
+          "managed",
+          "hostname",
+          "systemName",
+          "systemDescription",
+          "chassisId",
+          "chassisIdKind",
+          "remotePortName",
+          "confidence",
+          "bidirectional",
+          "sources",
+          "capabilities",
+          "firstDiscoveredAt",
+          "lastSeenAt"
+        ],
+        "type": "object",
+        "properties": {
+          "adjacencyId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "deviceId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "managed": {
+            "type": "boolean"
+          },
+          "hostname": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "systemName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "systemDescription": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "chassisId": {
+            "type": "string"
+          },
+          "chassisIdKind": {
+            "$ref": "#/components/schemas/NeighborIdKind"
+          },
+          "remotePortName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "confidence": {
+            "$ref": "#/components/schemas/AdjacencyConfidence"
+          },
+          "bidirectional": {
+            "type": "boolean"
+          },
+          "sources": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/NeighborSource"
+            }
+          },
+          "capabilities": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SystemCapability"
+            }
+          },
+          "firstDiscoveredAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "lastSeenAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "PortRole": {
+        "enum": [
+          "Empty",
+          "Access",
+          "Uplink"
+        ]
+      },
+      "PortRoleReason": {
+        "enum": [
+          "NoEvidence",
+          "ManagedDevice",
+          "InfrastructureNeighbor",
+          "LearnedAddressCount",
+          "Endpoints"
+        ]
+      },
       "ProblemDetails": {
         "type": "object",
         "properties": {
@@ -6716,6 +7086,18 @@
           "Aes192",
           "Aes256",
           null
+        ]
+      },
+      "SystemCapability": {
+        "enum": [
+          "Other",
+          "Repeater",
+          "Bridge",
+          "WlanAccessPoint",
+          "Router",
+          "Telephone",
+          "DocsisCableDevice",
+          "Station"
         ]
       },
       "TopologyGraph": {

@@ -62,3 +62,19 @@ quietly replaced by the identity.
 | `router_routes` | `inetCidrRouteTable` with IPv4 and IPv6 remote routes, local routes that name no gateway, and two routes sharing one next hop. |
 | `legacy_routes` | `ipRouteTable` alone — the RFC 1213 fallback, where `indirect(4)` is the word for a remote route. |
 | `no_routes` | No routing table at all. `supported: false`. |
+| `edge_sw_endpoints` | An access switch whose LLDP neighbours are *endpoints* — an access point, an IP phone, a workstation — beside one uplink. The capability column in all four of its shapes. |
+
+## The capability column is not a number
+
+`lldpRemSysCapEnabled` is `BITS (SIZE (2))` and `cdpCacheCapabilities` is
+`OCTET STRING (SIZE (4))`. Both therefore reach a fixture as whatever
+`collector.snmp.session.decode` would have written, which for either is colon-separated hex —
+a capability word always has a zero octet in it, and a zero byte is not printable. So a
+bridge-and-router neighbour is `28:00` and never `28` or `40`.
+
+The two are read by different rules and the difference is deliberate. `BITS` numbers its
+members from the *most* significant bit of the first octet, so `28:00` is bits 2 and 4 —
+bridge and router. CISCO-CDP-MIB's four octets are one big-endian integer whose bit 0 is worth
+1, so `00:00:00:0B` is router, transparent bridge and switch. Reading either with the other's
+rule names the wrong capabilities rather than failing, which is why
+`collector.snmp.octets` has a function per shape and neither is the default.

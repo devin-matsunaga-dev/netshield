@@ -26,6 +26,7 @@ from typing import Final
 import structlog
 
 from collector.snmp import oids
+from collector.snmp.octets import big_endian_int
 from collector.snmp.ports import PortNames
 from collector.snmp.session import SnmpSession
 from collector.snmp.tables import number, rows, text
@@ -128,7 +129,10 @@ def parse_cache(walked: Mapping[str, str], ports: PortNames) -> tuple[CdpNeighbo
                     text(row, oids.CDP_CACHE_ADDRESS),
                     number(row, oids.CDP_CACHE_ADDRESS_TYPE),
                 ),
-                capabilities=number(row, oids.CDP_CACHE_CAPABILITIES),
+                capabilities=big_endian_int(
+                    text(row, oids.CDP_CACHE_CAPABILITIES),
+                    max_octets=oids.CDP_CACHE_CAPABILITY_OCTETS,
+                ),
             )
         )
 

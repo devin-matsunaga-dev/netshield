@@ -241,6 +241,15 @@ LLDP_REM_PORT_DESC: Final = "1.0.8802.1.1.2.1.4.1.1.8"
 LLDP_REM_SYS_NAME: Final = "1.0.8802.1.1.2.1.4.1.1.9"
 LLDP_REM_SYS_DESC: Final = "1.0.8802.1.1.2.1.4.1.1.10"
 LLDP_REM_SYS_CAP_ENABLED: Final = "1.0.8802.1.1.2.1.4.1.1.12"
+"""``lldpRemSysCapEnabled`` — what the neighbour says it *is*.
+
+IEEE 802.1AB ``LldpSystemCapabilitiesMap``: ``BITS`` of ``SIZE (2)``, numbered from the most
+significant bit of the first octet — other(0), repeater(1), bridge(2), wlanAccessPoint(3),
+router(4), telephone(5), docsisCableDevice(6), stationOnly(7). Read with
+:func:`collector.snmp.octets.bit_positions`, never as an integer.
+"""
+
+LLDP_SYS_CAP_OCTETS: Final = 2
 
 LLDP_REM_MAN_ADDR_TABLE: Final = "1.0.8802.1.1.2.1.4.2.1"
 """``lldpRemManAddrEntry`` — a neighbour's management addresses.
@@ -306,6 +315,17 @@ identity. That is the whole reason LLDP outranks CDP where the two disagree."""
 CDP_CACHE_DEVICE_PORT: Final = "1.3.6.1.4.1.9.9.23.1.2.1.1.7"
 CDP_CACHE_PLATFORM: Final = "1.3.6.1.4.1.9.9.23.1.2.1.1.8"
 CDP_CACHE_CAPABILITIES: Final = "1.3.6.1.4.1.9.9.23.1.2.1.1.9"
+"""``cdpCacheCapabilities`` — the same question, a different answer shape.
+
+CISCO-CDP-MIB declares it ``OCTET STRING (SIZE (4))`` carrying the capability word from the
+CDP frame: one big-endian 32-bit number whose bit 0 is worth 1 — router(0), transparent
+bridge(1), source-route bridge(2), switch(3), host(4), IGMP(5), repeater(6). It is neither
+LLDP's bit numbering nor LLDP's vocabulary, and reading one with the other's rule names the
+wrong capabilities rather than failing. Read with
+:func:`collector.snmp.octets.big_endian_int`.
+"""
+
+CDP_CACHE_CAPABILITY_OCTETS: Final = 4
 
 CDP_ADDRESS_TYPE_IP: Final = 1
 CDP_ADDRESS_TYPE_IPV6: Final = 20

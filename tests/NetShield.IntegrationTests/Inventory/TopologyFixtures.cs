@@ -106,7 +106,9 @@ internal static class TopologyFixtures
         string portIdKind = "InterfaceName",
         string? systemName = null,
         string? managementAddress = null,
-        string? localPortName = null) =>
+        string? localPortName = null,
+        string? systemDescription = null,
+        int? capabilities = Capabilities.Switch) =>
         $$"""
           {
             "localIfIndex": {{Number(localIfIndex)}},
@@ -117,11 +119,39 @@ internal static class TopologyFixtures
             "portIdKind": {{Text(portIdKind)}},
             "portDescription": null,
             "systemName": {{Text(systemName)}},
-            "systemDescription": null,
+            "systemDescription": {{Text(systemDescription)}},
             "managementAddress": {{Text(managementAddress)}},
-            "capabilities": 28
+            "capabilities": {{Number(capabilities)}}
           }
           """;
+
+    /// <summary>
+    /// The capability masks a test means, as the collector delivers them.
+    /// </summary>
+    /// <remarks>
+    /// <strong>These are bit positions, not the octets on the wire.</strong> IEEE 802.1AB numbers
+    /// its <c>BITS</c> map from the most significant bit of the first octet, so a switch
+    /// advertises the octets <c>28:00</c> and <c>collector.snmp.octets.bit_positions</c> hands the
+    /// API bits 2 and 4 — which is 20, not 40. Writing the wire spelling here is the mistake the
+    /// old fixtures made, and it read as an access point and a telephone.
+    /// </remarks>
+    public static class Capabilities
+    {
+        /// <summary>Bridge and router: a core or distribution switch.</summary>
+        public const int Switch = (1 << 2) | (1 << 4);
+
+        /// <summary>Bridge and wireless access point.</summary>
+        public const int AccessPoint = (1 << 2) | (1 << 3);
+
+        /// <summary>Bridge and telephone: a desk phone with a PC port on the back.</summary>
+        public const int Phone = (1 << 2) | (1 << 5);
+
+        /// <summary>An end station and nothing else.</summary>
+        public const int Station = 1 << 7;
+
+        /// <summary>CISCO-CDP-MIB's own numbering: router, transparent bridge and switch.</summary>
+        public const int CdpSwitch = (1 << 0) | (1 << 1) | (1 << 3);
+    }
 
     /// <summary>One entry of a CDP cache, as the collector reports it.</summary>
     public static string Cdp(
@@ -129,7 +159,8 @@ internal static class TopologyFixtures
         string deviceId,
         string? devicePort = null,
         string? address = null,
-        string? localPortName = null) =>
+        string? localPortName = null,
+        int? capabilities = Capabilities.CdpSwitch) =>
         $$"""
           {
             "localIfIndex": {{Number(localIfIndex)}},
@@ -139,7 +170,7 @@ internal static class TopologyFixtures
             "platform": "Fixture Platform",
             "version": null,
             "address": {{Text(address)}},
-            "capabilities": 40
+            "capabilities": {{Number(capabilities)}}
           }
           """;
 
@@ -358,6 +389,9 @@ internal static class TopologyFixtures
     private static string Bool(bool value) => value ? "true" : "false";
 
     private static string Number(int value) => value.ToString(CultureInfo.InvariantCulture);
+
+    private static string Number(int? value) =>
+        value is null ? "null" : value.Value.ToString(CultureInfo.InvariantCulture);
 
     private static string Text(string? value) =>
         value is null ? "null" : JsonSerializer.Serialize(value);

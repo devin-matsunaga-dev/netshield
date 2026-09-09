@@ -34,6 +34,7 @@ from typing import Final
 import structlog
 
 from collector.snmp import oids
+from collector.snmp.octets import bit_positions
 from collector.snmp.ports import PortNames
 from collector.snmp.session import SnmpSession
 from collector.snmp.tables import number, rows, text
@@ -230,7 +231,10 @@ def parse_remote(
                 system_name=text(row, oids.LLDP_REM_SYS_NAME),
                 system_description=text(row, oids.LLDP_REM_SYS_DESC),
                 management_address=addresses.get((port_num, rem_index)),
-                capabilities=number(row, oids.LLDP_REM_SYS_CAP_ENABLED),
+                capabilities=bit_positions(
+                    text(row, oids.LLDP_REM_SYS_CAP_ENABLED),
+                    max_octets=oids.LLDP_SYS_CAP_OCTETS,
+                ),
             )
         )
 

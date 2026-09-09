@@ -187,6 +187,7 @@ public static class InventoryServiceCollectionExtensions
         builder.Services.TryAddScoped<TopologyWalkResultReader>();
         builder.Services.TryAddScoped<QueueTopologyWalkHandler>();
         builder.Services.TryAddScoped<GetDeviceAdjacencyListHandler>();
+        builder.Services.TryAddScoped<GetDevicePortListHandler>();
         builder.Services.TryAddScoped<GetDeviceTopologyScanHandler>();
         builder.Services.AddScoped<IIntegrationEventHandler<CollectorJobCompleted>,
             RecordNeighborWalkResultHandler>();

@@ -260,6 +260,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/devices/{id}/ports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ListDevicePorts"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/devices/{id}/vlans": {
         parameters: {
             query?: never;
@@ -959,6 +975,12 @@ export interface components {
             /** Format: int64 */
             totalCount?: null | number | string;
         };
+        CursorPageOfDevicePortSummary: {
+            items: components["schemas"]["DevicePortSummary"][];
+            nextCursor: null | string;
+            /** Format: int64 */
+            totalCount?: null | number | string;
+        };
         CursorPageOfDeviceSummary: {
             items: components["schemas"]["DeviceSummary"][];
             nextCursor: null | string;
@@ -1105,6 +1127,25 @@ export interface components {
             firstSeenAt: string;
             /** Format: date-time */
             lastSeenAt: string;
+        };
+        DevicePortSummary: {
+            /** Format: int32 */
+            ifIndex: number | string;
+            name: null | string;
+            description: null | string;
+            alias: null | string;
+            interfaceKnown: boolean;
+            adminStatus: components["schemas"]["InterfaceStatus"];
+            operStatus: components["schemas"]["InterfaceStatus"];
+            role: components["schemas"]["PortRole"];
+            roleReason: components["schemas"]["PortRoleReason"];
+            /** Format: int32 */
+            learnedAddressCount: null | number | string;
+            /** Format: int32 */
+            clientCount: number | string;
+            clientsListed: boolean;
+            neighbors: components["schemas"]["PortNeighbor"][];
+            clients: components["schemas"]["PortClient"][];
         };
         DeviceReachabilityDetail: {
             /** Format: uuid */
@@ -1392,6 +1433,46 @@ export interface components {
         };
         /** @enum {unknown} */
         Permission: "InventoryRead" | "InventoryWrite" | "CredentialsManage" | "DiscoveryRun" | "TopologyRead" | "TelemetryRead" | "FlowsRead" | "LogsRead" | "AlertsRead" | "AlertsManage" | "AlertRulesWrite" | "ConfigsRead" | "ConfigsManage" | "ComplianceRead" | "ComplianceManage" | "VulnerabilitiesRead" | "VulnerabilitiesManage" | "ReportsRead" | "ReportsManage" | "PoliciesWrite" | "AuditRead" | "SystemAdminister";
+        PortClient: {
+            /** Format: uuid */
+            clientId: string;
+            macAddress: string;
+            hostname: null | string;
+            oui: string;
+            locallyAdministered: boolean;
+            ipAddress: null | string;
+            /** Format: int32 */
+            vlanId: null | number | string;
+            /** Format: date-time */
+            observedFrom: string;
+            /** Format: date-time */
+            lastSeenAt: string;
+        };
+        PortNeighbor: {
+            /** Format: uuid */
+            adjacencyId: string;
+            /** Format: uuid */
+            deviceId: null | string;
+            managed: boolean;
+            hostname: null | string;
+            systemName: null | string;
+            systemDescription: null | string;
+            chassisId: string;
+            chassisIdKind: components["schemas"]["NeighborIdKind"];
+            remotePortName: null | string;
+            confidence: components["schemas"]["AdjacencyConfidence"];
+            bidirectional: boolean;
+            sources: components["schemas"]["NeighborSource"][];
+            capabilities: components["schemas"]["SystemCapability"][];
+            /** Format: date-time */
+            firstDiscoveredAt: string;
+            /** Format: date-time */
+            lastSeenAt: string;
+        };
+        /** @enum {unknown} */
+        PortRole: "Empty" | "Access" | "Uplink";
+        /** @enum {unknown} */
+        PortRoleReason: "NoEvidence" | "ManagedDevice" | "InfrastructureNeighbor" | "LearnedAddressCount" | "Endpoints";
         ProblemDetails: {
             type?: null | string;
             title?: null | string;
@@ -1420,6 +1501,8 @@ export interface components {
         SnmpAuthAlgorithm: "Md5" | "Sha1" | "Sha224" | "Sha256" | "Sha384" | "Sha512" | null;
         /** @enum {unknown} */
         SnmpPrivacyAlgorithm: "None" | "Des" | "Aes128" | "Aes192" | "Aes256" | null;
+        /** @enum {unknown} */
+        SystemCapability: "Other" | "Repeater" | "Bridge" | "WlanAccessPoint" | "Router" | "Telephone" | "DocsisCableDevice" | "Station";
         TopologyGraph: {
             nodes: components["schemas"]["TopologyGraphNode"][];
             edges: components["schemas"]["TopologyGraphEdge"][];
@@ -2422,6 +2505,58 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["DeviceTopologyScanDetail"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    ListDevicePorts: {
+        parameters: {
+            query?: {
+                cursor?: string;
+                limit?: number | string;
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CursorPageOfDevicePortSummary"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
                 };
             };
             /** @description Forbidden */

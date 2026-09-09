@@ -1,4 +1,4 @@
-import { screen } from '@testing-library/react';
+import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, it } from 'vitest';
 
@@ -11,6 +11,9 @@ import {
   makeFingerprint,
   makeInterface,
   makeJob,
+  makePort,
+  makePortClient,
+  makePortNeighbor,
   makeReachability,
   makeRun,
   makeRunDetail,
@@ -67,6 +70,29 @@ function anEstate() {
     ignores: [],
     deviceProfiles: new Map([[deviceId, []]]),
     jobs: new Map([[deviceId, [makeJob()]]]),
+    ports: new Map([
+      [
+        deviceId,
+        [
+          makePort({
+            role: 'Uplink',
+            roleReason: 'ManagedDevice',
+            clientsListed: false,
+            neighbors: [
+              makePortNeighbor({ managed: true, hostname: 'core-sw-1', deviceId: 'device-2' }),
+            ],
+          }),
+          makePort({
+            ifIndex: 2,
+            name: 'Gi1/0/2',
+            role: 'Access',
+            roleReason: 'Endpoints',
+            clientCount: 1,
+            clients: [makePortClient()],
+          }),
+        ],
+      ],
+    ]),
   });
 }
 
@@ -107,6 +133,28 @@ describe('the inventory screens', () => {
 
     const { container } = renderApp(`/devices/${deviceId}`);
     await screen.findByRole('heading', { name: 'core-sw-01' });
+
+    await expectNoAccessibilityViolations(container);
+  });
+
+  it('has no accessibility violation on the ports tab', async () => {
+    anEstate();
+
+    const { container } = renderApp(`/devices/${deviceId}?tab=ports`);
+    await screen.findByRole('table', { name: 'Ports' });
+
+    await expectNoAccessibilityViolations(container);
+  });
+
+  it('has no accessibility violation with a port detail panel open', async () => {
+    anEstate();
+
+    const { container } = renderApp(`/devices/${deviceId}?tab=ports`);
+    const table = await screen.findByRole('table', { name: 'Ports' });
+
+    await userEvent.click(within(table).getByRole('button', { name: 'Detail for port Gi1/0/2' }));
+
+    await screen.findByRole('region', { name: 'Learned addresses' });
 
     await expectNoAccessibilityViolations(container);
   });

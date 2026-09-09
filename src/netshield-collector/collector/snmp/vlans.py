@@ -25,8 +25,6 @@ than guessing at an enterprise subtree the vendor seam exists to keep out of sha
 
 from __future__ import annotations
 
-import re
-import string
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from typing import Any, Final
@@ -37,6 +35,7 @@ from pydantic import Field, ValidationError
 from collector.models import LeasedJob, WireModel
 from collector.snmp import oids
 from collector.snmp.bridge import parse_base_ports
+from collector.snmp.octets import octets
 from collector.snmp.session import PySnmpSession, SnmpSession, SnmpSessionFactory
 from collector.snmp.tables import number, rows, text
 
@@ -202,7 +201,7 @@ def port_list(value: str | None) -> tuple[int, ...]:
     RFC 4363: each octet carries eight ports, the first octet carries ports 1 to 8, and within an
     octet the *most* significant bit is the lowest numbered port.
     """
-    raw = _octets(value)
+    raw = octets(value)
     ports: list[int] = []
 
     for offset, byte in enumerate(raw):
@@ -211,42 +210,6 @@ def port_list(value: str | None) -> tuple[int, ...]:
                 ports.append(offset * 8 + bit + 1)
 
     return tuple(ports)
-
-
-# Everything `collector.snmp.session.decode` treats as text: it decodes an octet string as UTF-8
-# and keeps it only when every character is printable, rendering anything else as colon-separated
-# uppercase hex. `_octets` is the inverse of exactly that, which is why this set has to match.
-_TEXTUAL: Final = frozenset(string.printable) - frozenset("\x0b\x0c")
-
-_HEX: Final = re.compile(r"^[0-9A-Fa-f]{2}(?::[0-9A-Fa-f]{2})*$")
-
-
-def _octets(value: str | None) -> bytes:
-    """A decoded octet string back as the bytes it came from.
-
-    A ``PortList`` is a bitmap and arrives here already decoded, which makes it the one value in
-    this collector where ``decode``'s choice has to be undone rather than read. Almost always it
-    is colon-separated hex, because a bitmap with an empty group of eight ports contains a zero
-    byte and a zero byte is not printable. But a dense bitmap can be all-printable — ``0x41`` is
-    ``A`` — and would then have been decoded as text.
-
-    So the rule is ``decode`` read backwards: the hex spelling is taken only when it could not
-    itself have been produced as text, meaning at least one of the bytes it decodes to is one
-    ``decode`` would have hexed. Where both readings are possible the text one wins, because that
-    is the one ``decode`` would have chosen. A bitmap that is genuinely ambiguous — five printable
-    bytes that also spell valid hex — is a lossiness of the recorded format rather than of this,
-    and is documented in the fixture README.
-    """
-    if not value:
-        return b""
-
-    if _HEX.match(value):
-        candidate = bytes(int(part, 16) for part in value.split(":"))
-
-        if any(chr(byte) not in _TEXTUAL for byte in candidate):
-            return candidate
-
-    return value.encode("utf-8", errors="ignore")
 
 
 def _record(

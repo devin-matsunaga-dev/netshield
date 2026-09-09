@@ -15,6 +15,9 @@ type DiscoverySeedSummary = Schemas['DiscoverySeedSummary'];
 type DiscoveryIgnoreEntry = Schemas['DiscoveryIgnoreEntry'];
 type CredentialProfileSummary = Schemas['CredentialProfileSummary'];
 type CollectorJobSummary = Schemas['CollectorJobSummary'];
+type DevicePortSummary = Schemas['DevicePortSummary'];
+type PortNeighbor = Schemas['PortNeighbor'];
+type PortClient = Schemas['PortClient'];
 
 /**
  * The inventory API a test sees.
@@ -34,6 +37,10 @@ export interface InventoryApiState {
   detail: Map<string, DeviceDetail>;
   fingerprints: Map<string, DeviceFingerprintDetail>;
   interfaces: Map<string, DeviceInterfaceSummary[]>;
+  /** What is connected to each of a device's ports, in `ifIndex` order. */
+  ports: Map<string, DevicePortSummary[]>;
+  /** Turn the port read into a 500, to reach the error state (DESIGN.md §8). */
+  failPortList: boolean;
   reachability: Map<string, DeviceReachabilityDetail>;
   deviceProfiles: Map<string, CredentialProfileSummary[]>;
   /** What each device has queued, newest first — the order the API returns them in. */
@@ -161,6 +168,65 @@ export function makeInterface(
   };
 }
 
+/** One port, defaulted to an empty fingerprinted access port. */
+export function makePort(overrides: Partial<DevicePortSummary> = {}): DevicePortSummary {
+  return {
+    ifIndex: 1,
+    name: 'Gi1/0/1',
+    description: 'GigabitEthernet1/0/1',
+    alias: null,
+    interfaceKnown: true,
+    adminStatus: 'Up',
+    operStatus: 'Up',
+    role: 'Empty',
+    roleReason: 'NoEvidence',
+    learnedAddressCount: null,
+    clientCount: 0,
+    clientsListed: true,
+    neighbors: [],
+    clients: [],
+    ...overrides,
+  };
+}
+
+/** One thing that announced itself on a port. */
+export function makePortNeighbor(overrides: Partial<PortNeighbor> = {}): PortNeighbor {
+  return {
+    adjacencyId: '019226b4-6000-7000-8000-000000000001',
+    deviceId: null,
+    managed: false,
+    hostname: null,
+    systemName: 'ap-floor-1',
+    systemDescription: 'ArubaOS (MODEL: 535), Version 8.10.0.6',
+    chassisId: '00:0B:86:AA:BB:CC',
+    chassisIdKind: 'MacAddress',
+    remotePortName: 'eth0',
+    confidence: 'Probable',
+    bidirectional: false,
+    sources: ['Lldp'],
+    capabilities: ['Bridge', 'WlanAccessPoint'],
+    firstDiscoveredAt: at,
+    lastSeenAt: at,
+    ...overrides,
+  };
+}
+
+/** One silent host on a port. */
+export function makePortClient(overrides: Partial<PortClient> = {}): PortClient {
+  return {
+    clientId: '019226b4-7000-7000-8000-000000000001',
+    macAddress: 'AA:BB:CC:00:00:01',
+    hostname: null,
+    oui: 'AA:BB:CC',
+    locallyAdministered: false,
+    ipAddress: '10.20.0.50',
+    vlanId: 30,
+    observedFrom: at,
+    lastSeenAt: at,
+    ...overrides,
+  };
+}
+
 export function makeCandidate(
   overrides: Partial<DiscoveryCandidateSummary> = {},
 ): DiscoveryCandidateSummary {
@@ -260,6 +326,8 @@ export function createInventoryApi(overrides: Partial<InventoryApiState> = {}): 
     detail: new Map(),
     fingerprints: new Map(),
     interfaces: new Map(),
+    ports: new Map(),
+    failPortList: false,
     reachability: new Map(),
     deviceProfiles: new Map(),
     jobs: new Map(),
@@ -344,6 +412,16 @@ export function inventoryHandlers(
         totalCount: (current().interfaces.get(String(params['id'])) ?? []).length,
       }),
     ),
+
+    http.get('/api/v1/devices/:id/ports', ({ params }) => {
+      if (current().failPortList) {
+        return HttpResponse.json({ title: 'Server error', status: 500 }, { status: 500 });
+      }
+
+      const ports = current().ports.get(String(params['id'])) ?? [];
+
+      return HttpResponse.json({ items: ports, nextCursor: null, totalCount: ports.length });
+    }),
 
     http.get('/api/v1/devices/:id/reachability', ({ params }) => {
       const reachability = current().reachability.get(String(params['id']));

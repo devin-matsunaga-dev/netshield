@@ -24,8 +24,9 @@ namespace NetShield.Inventory.Endpoints;
 /// without one.
 /// </para>
 /// <para>
-/// <c>TopologyGraph</c> names only itself: the generator reaches the node, edge, component and
-/// layout shapes through it, so listing them again would be four more lines saying the same thing.
+/// <c>TopologyGraph</c> and <c>CursorPage&lt;DevicePortSummary&gt;</c> name only themselves: the
+/// generator reaches the node, edge, component, layout, neighbour and client shapes through them,
+/// so listing those again would be six more lines saying the same thing.
 /// The shapes WP-2.1 and WP-2.2 added are meanwhile absent — see the note in <c>STATUS.md</c>;
 /// they serialise correctly through reflection today and this list is what <c>CONVENTIONS.md</c>
 /// §4 actually asks for.
@@ -69,4 +70,5 @@ namespace NetShield.Inventory.Endpoints;
 [JsonSerializable(typeof(IReadOnlyList<CredentialProfileSummary>))]
 [JsonSerializable(typeof(CursorPage<CredentialProfileSummary>))]
 [JsonSerializable(typeof(TopologyGraph))]
+[JsonSerializable(typeof(CursorPage<DevicePortSummary>))]
 public sealed partial class InventorySerializerContext : JsonSerializerContext;

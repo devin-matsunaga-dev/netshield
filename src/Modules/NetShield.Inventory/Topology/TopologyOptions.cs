@@ -149,4 +149,27 @@ public sealed class TopologyOptions
     /// <summary>The most walks one scan will queue, across all three kinds.</summary>
     [Range(1, 5_000)]
     public int MaxJobsPerScan { get; set; } = 100;
+
+    /// <summary>
+    /// How many learned MAC addresses make a port an uplink rather than an access port.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <strong>A default classification threshold, not a protocol truth.</strong> Nothing on the
+    /// network says "this is an uplink"; a MAC address is learned by every bridge on the path to
+    /// it, so the port facing the rest of the estate has learned every host beyond it while an
+    /// access port has learned one or two. Eight is high enough that an IP phone with a PC
+    /// daisy-chained behind it, or a small hypervisor with a handful of guests, is still read as
+    /// an access port, and low enough to catch a real uplink long before the two-hundred-address
+    /// case. It is configuration precisely because the right number depends on the estate.
+    /// </para>
+    /// <para>
+    /// It is only ever consulted when nothing on the port said what it is:
+    /// <c>PortOccupancyRule</c> takes a monitored device or a self-declared bridge or router
+    /// first, so a threshold an operator sets badly cannot contradict something the network
+    /// actually stated.
+    /// </para>
+    /// </remarks>
+    [Range(2, 4_096)]
+    public int UplinkAddressThreshold { get; set; } = 8;
 }
